@@ -69,18 +69,13 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
+  text-decoration: none;
+  border-radius: var(--radius);
+  transition: background 0.15s;
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.profile:hover {
   background: var(--sidebar-accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--sidebar-primary);
-  flex-shrink: 0;
 }
 
 .profileInfo {

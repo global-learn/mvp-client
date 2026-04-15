@@ -6,38 +6,55 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import type { User } from './types';
+import type { User, UserAvatar } from './types';
 
 // ================================================================
 // AUTH CONTEXT — cookie-based авторизация (mock до подключения бэкенда)
 // ================================================================
 //
 // Архитектура (когда появится бэкенд):
-//   login()  → POST /auth/login  → бэкенд ставит access + refresh cookies
-//   logout() → POST /auth/logout → бэкенд очищает cookies
-//   При 401  → axios interceptor  → POST /auth/refresh → новый access token
-//
-// Пока бэкенда нет — имитируем через sessionStorage.
-// Чтобы подключить бэкенд: замени тело login() и logout(),
-// а инициализацию useEffect — на GET /auth/me.
+//   login()        → POST /auth/login  → бэкенд ставит access + refresh cookies
+//   logout()       → POST /auth/logout → бэкенд очищает cookies
+//   updateAvatar() → PATCH /users/me/avatar { avatarId }
+//   При 401        → axios interceptor  → POST /auth/refresh → новый access token
 //
 // Два хука:
 //   useAuth() — для LoginPage и публичных компонентов. user может быть null.
 //   useUser() — только внутри защищённых маршрутов. user гарантированно не null.
 
-interface MockCredential {
-  password: string;
-  user: User;
-}
-
-const MOCK_CREDENTIALS: Record<string, MockCredential> = {
+const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
   'admin@test.com': {
     password: 'admin',
-    user: { id: 'user-admin', name: 'Алексей', email: 'admin@test.com', role: 'admin' },
+    user: {
+      id: 'user-admin',
+      email: 'admin@test.com',
+      fullname: 'Алексей Петров',
+      type: 'EMPLOYEE',
+      avatar: { id: 'sys-blue', name: 'Синий', isSystem: true, bgColor: '#4299e1' },
+      employee: {
+        id: 'emp-admin',
+        department: { id: 'dept-1', name: 'IT отдел' },
+        role: { id: 'role-admin', name: 'admin' },
+        birthDate: '1990-05-15',
+        employmentDate: '2020-01-01',
+      },
+    },
   },
   'user@test.com': {
     password: 'user',
-    user: { id: 'user-emp', name: 'Мария', email: 'user@test.com', role: 'employee' },
+    user: {
+      id: 'user-emp',
+      email: 'user@test.com',
+      fullname: 'Мария Иванова',
+      type: 'EMPLOYEE',
+      employee: {
+        id: 'emp-2',
+        department: { id: 'dept-2', name: 'Продажи' },
+        role: { id: 'role-emp', name: 'employee' },
+        birthDate: '1995-08-22',
+        employmentDate: '2022-06-01',
+      },
+    },
   },
 };
 
@@ -49,6 +66,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  updateAvatar: (avatar: UserAvatar | undefined) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -57,8 +75,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Восстановить сессию при перезагрузке страницы.
-  // TODO: заменить на GET /auth/me (бэкенд вернёт юзера если cookie валидна)
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
     if (stored) {
@@ -72,46 +88,50 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    // TODO: заменить на реальный запрос:
-    // await api.post('/auth/login', { email, password });
-    // const { data } = await api.get<User>('/auth/me');
-    // setUser(data);
-
+    // TODO: await api.post('/auth/login', { email, password });
+    //       const { data } = await api.get<User>('/auth/me');
     const credential = MOCK_CREDENTIALS[email.toLowerCase()];
     if (!credential || credential.password !== password) {
       throw new Error('Invalid credentials');
     }
-    await new Promise<void>(resolve => setTimeout(resolve, 300)); // имитация задержки
+    await new Promise<void>(resolve => setTimeout(resolve, 300));
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(credential.user));
     setUser(credential.user);
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
-    // TODO: заменить на реальный запрос:
-    // await api.post('/auth/logout');
-
+    // TODO: await api.post('/auth/logout');
     sessionStorage.removeItem(SESSION_KEY);
     setUser(null);
   }, []);
 
+  const updateAvatar = useCallback((avatar: UserAvatar | undefined) => {
+    // TODO: await api.patch('/users/me/avatar', { avatarId: avatar?.id });
+    setUser(prev => {
+      if (!prev) return null;
+      const updated: User = { ...prev, avatar };
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, isLoading, login, logout }}
+      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
 
-// useAuth — для компонентов где user может быть null (LoginPage, ProtectedRoute)
+// useAuth — для LoginPage и ProtectedRoute (user может быть null)
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth должен вызываться внутри <UserProvider>');
   return context;
 }
 
-// useUser — только внутри защищённых маршрутов, где user гарантированно не null.
-// CoursesContext, Sidebar и все страницы используют этот хук.
+// useUser — только внутри защищённых маршрутов, user гарантированно не null
 export function useUser() {
   const { user, ...rest } = useAuth();
   if (!user) throw new Error('useUser требует авторизованного пользователя');

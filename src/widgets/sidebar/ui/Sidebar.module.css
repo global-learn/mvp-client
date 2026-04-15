@@ -2,7 +2,7 @@
   width: 260px;
   min-height: 100vh;
   background: var(--white);
-  border-right: 10px solid var(--sidebar-border);
+  border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;
@@ -72,6 +72,7 @@
   width: 36px;
   height: 36px;
   border-radius: 50%;
+  border: 1px solid var(--sidebar-border);
   background: var(--sidebar-accent);
   display: flex;
   align-items: center;
@@ -105,7 +106,7 @@
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem;
+  padding: 1rem;
   border: none;
   border-radius: var(--radius);
   background: transparent;

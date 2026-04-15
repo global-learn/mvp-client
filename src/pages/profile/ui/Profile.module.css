@@ -1,0 +1,147 @@
+.page {
+  max-width: 680px;
+  width: 100%;
+}
+
+.pageTitle {
+  margin: 0 0 1.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Секция аватара */
+.avatarSection {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
+}
+
+.avatarWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.editAvatarBtn {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+  background: var(--secondary);
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.editAvatarBtn:hover {
+  background: var(--border);
+}
+
+.fullname {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.email {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.typeBadge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--primary);
+  background: oklch(0.95 0.04 250);
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+}
+
+/* Статистика */
+.stats {
+  display: flex;
+  gap: 2rem;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.statIconGreen { color: #48bb78; }
+.statIconBlue  { color: #4299e1; }
+.statIconOrange{ color: #ed8936; }
+
+.statValue {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+/* Секция информации */
+.sectionTitle {
+  margin: 0 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 0.625rem 1rem;
+  margin: 0;
+}
+
+.infoLabel {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+}
+
+.infoValue {
+  font-size: 0.875rem;
+  color: var(--foreground);
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.roleBadge {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: var(--secondary);
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+}

@@ -1,19 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@entities/user/model/UserContext';
+import { isAdmin } from '@entities/user/model/types';
 
-// Feature "Создать курс"
-// ---------------------------------------------------------------
-// Видна только admin. Компонент сам знает кому показываться —
-// удобнее чем дублировать проверку роли на каждой странице.
-//
-// Если user.role !== 'admin' — возвращаем null (React ничего не рендерит).
-// Это называется "conditional rendering" — условный рендеринг.
+// Видна только admin (EMPLOYEE с role.name === 'admin').
+// Компонент сам знает кому показываться — не нужно дублировать проверку снаружи.
 
 export function CreateCourseButton() {
   const { user } = useUser();
   const navigate = useNavigate();
 
-  if (user.role !== 'admin') return null;
+  if (!isAdmin(user)) return null;
 
   return (
     <button
@@ -22,11 +18,12 @@ export function CreateCourseButton() {
         padding: '10px 20px',
         borderRadius: 8,
         border: 'none',
-        background: '#48bb78',
-        color: '#fff',
+        background: 'var(--primary)',
+        color: 'var(--primary-foreground)',
         fontSize: 14,
         fontWeight: 600,
         cursor: 'pointer',
+        fontFamily: 'inherit',
       }}
     >
       + Создать курс

@@ -4,6 +4,7 @@ import {
   TrendingUp, Award, Calendar, ArrowRight,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
+import { displayName } from '@entities/user/model/types';
 import styles from './Dashboard.module.css';
 
 // Данные захардкожены пока нет API.
@@ -48,7 +49,7 @@ export function DashboardPage() {
     <div className={styles.dashboard}>
       <header className={styles.header}>
         <div>
-          <h1 className={styles.greeting}>Добро пожаловать, {user.name}!</h1>
+          <h1 className={styles.greeting}>Добро пожаловать, {displayName(user)}!</h1>
           <p className={styles.subtitle}>Продолжайте обучение с того места, где остановились</p>
         </div>
         <div className={styles.weeklyGoal}>

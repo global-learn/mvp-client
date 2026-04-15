@@ -5,18 +5,24 @@ import { DashboardPage } from '@pages/dashboard/ui/DashboardPage';
 import { CoursesListPage } from '@pages/courses-list/ui/CoursesListPage';
 import { CourseDetailPage } from '@pages/course-detail/ui/CourseDetailPage';
 import { CourseCreatePage } from '@pages/course-create/ui/CourseCreatePage';
+import { ProfilePage } from '@pages/profile/ui/ProfilePage';
+import { ClientsPage } from '@pages/clients/ui/ClientsPage';
+import { CompanyPage } from '@pages/company/ui/CompanyPage';
 import { LoginPage } from '@pages/login/ui/LoginPage';
 
 // Структура маршрутов:
 //
 //   /login              → LoginPage (публичный, без Sidebar)
 //   ProtectedRoute      → проверяет isAuthenticated, иначе → /login
-//     AppLayout         → рендерит Sidebar + <Outlet />
-//       /               → редирект на /dashboard
+//     AppLayout         → Sidebar + CoursesProvider + <Outlet />
+//       /               → /dashboard
 //       /dashboard      → DashboardPage
 //       /courses        → CoursesListPage
 //       /courses/create → CourseCreatePage (доступна только admin)
 //       /courses/:id    → CourseDetailPage
+//       /profile        → ProfilePage (все пользователи)
+//       /clients        → ClientsPage (только EMPLOYEE)
+//       /company        → CompanyPage (только admin)
 
 export function AppRouter() {
   return (
@@ -30,6 +36,9 @@ export function AppRouter() {
           <Route path="/courses" element={<CoursesListPage />} />
           <Route path="/courses/create" element={<CourseCreatePage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/company" element={<CompanyPage />} />
         </Route>
       </Route>
     </Routes>

@@ -1,62 +1,119 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react';
 import type { User } from './types';
 
 // ================================================================
-// ЧТО ТАКОЕ REACT CONTEXT?
+// AUTH CONTEXT — cookie-based авторизация (mock до подключения бэкенда)
 // ================================================================
-// Проблема: данные нужны в компонентах глубоко в дереве.
 //
-// БЕЗ Context (prop drilling):
-//   App → Page → Widget → Feature → Button (user пробрасывается через каждый!)
+// Архитектура (когда появится бэкенд):
+//   login()  → POST /auth/login  → бэкенд ставит access + refresh cookies
+//   logout() → POST /auth/logout → бэкенд очищает cookies
+//   При 401  → axios interceptor  → POST /auth/refresh → новый access token
 //
-// С Context:
-//   App (UserProvider) → ... → Button вызывает useUser() и сразу получает данные.
-//   Промежуточные компоненты не знают о user вообще.
+// Пока бэкенда нет — имитируем через sessionStorage.
+// Чтобы подключить бэкенд: замени тело login() и logout(),
+// а инициализацию useEffect — на GET /auth/me.
 //
-// Когда использовать Context:
-//   ✓ Данные нужны много где: текущий пользователь, тема, язык
-//   ✓ Данные меняются редко
-//   ✗ Часто меняющиеся данные (лучше локальный state или React Query)
+// Два хука:
+//   useAuth() — для LoginPage и публичных компонентов. user может быть null.
+//   useUser() — только внутри защищённых маршрутов. user гарантированно не null.
 
-// Моковые пользователи — для демонстрации ролей пока нет бэкенда
-const MOCK_USERS: User[] = [
-  { id: 'user-admin', name: 'Алексей', role: 'admin' },
-  { id: 'user-emp', name: 'Мария', role: 'employee' },
-];
-
-interface UserContextValue {
+interface MockCredential {
+  password: string;
   user: User;
-  switchUser: () => void; // только для демо — переключение между ролями
 }
 
-// ШАГ 1: createContext — создаём "контейнер".
-// undefined как дефолтное значение — проверяем его в хуке useUser.
-const UserContext = createContext<UserContextValue | undefined>(undefined);
+const MOCK_CREDENTIALS: Record<string, MockCredential> = {
+  'admin@test.com': {
+    password: 'admin',
+    user: { id: 'user-admin', name: 'Алексей', email: 'admin@test.com', role: 'admin' },
+  },
+  'user@test.com': {
+    password: 'user',
+    user: { id: 'user-emp', name: 'Мария', email: 'user@test.com', role: 'employee' },
+  },
+};
 
-// ШАГ 2: Provider — компонент который "поставляет" данные всем потомкам.
-// children — всё дерево которое мы оборачиваем.
+const SESSION_KEY = 'gl_auth_user';
+
+interface AuthContextValue {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
 export function UserProvider({ children }: { children: ReactNode }) {
-  const [index, setIndex] = useState(0);
-  const user = MOCK_USERS[index];
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const switchUser = () => setIndex(prev => (prev + 1) % MOCK_USERS.length);
+  // Восстановить сессию при перезагрузке страницы.
+  // TODO: заменить на GET /auth/me (бэкенд вернёт юзера если cookie валидна)
+  useEffect(() => {
+    const stored = sessionStorage.getItem(SESSION_KEY);
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored) as User);
+      } catch {
+        sessionStorage.removeItem(SESSION_KEY);
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = useCallback(async (email: string, password: string): Promise<void> => {
+    // TODO: заменить на реальный запрос:
+    // await api.post('/auth/login', { email, password });
+    // const { data } = await api.get<User>('/auth/me');
+    // setUser(data);
+
+    const credential = MOCK_CREDENTIALS[email.toLowerCase()];
+    if (!credential || credential.password !== password) {
+      throw new Error('Invalid credentials');
+    }
+    await new Promise<void>(resolve => setTimeout(resolve, 300)); // имитация задержки
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(credential.user));
+    setUser(credential.user);
+  }, []);
+
+  const logout = useCallback(async (): Promise<void> => {
+    // TODO: заменить на реальный запрос:
+    // await api.post('/auth/logout');
+
+    sessionStorage.removeItem(SESSION_KEY);
+    setUser(null);
+  }, []);
 
   return (
-    <UserContext.Provider value={{ user, switchUser }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated: user !== null, isLoading, login, logout }}
+    >
       {children}
-    </UserContext.Provider>
+    </AuthContext.Provider>
   );
 }
 
-// ШАГ 3: Кастомный хук — единственный способ читать контекст.
-// ПРАВИЛО: всегда оборачивай useContext в свой хук. Почему:
-//   а) Проверяет что провайдер подключён (ошибка с понятным текстом)
-//   б) Если изменится логика — меняешь только здесь, не во всех компонентах
-//   в) В компоненте: const { user } = useUser() — лаконично и понятно
-export function useUser() {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error('useUser должен вызываться внутри <UserProvider>');
-  }
+// useAuth — для компонентов где user может быть null (LoginPage, ProtectedRoute)
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth должен вызываться внутри <UserProvider>');
   return context;
+}
+
+// useUser — только внутри защищённых маршрутов, где user гарантированно не null.
+// CoursesContext, Sidebar и все страницы используют этот хук.
+export function useUser() {
+  const { user, ...rest } = useAuth();
+  if (!user) throw new Error('useUser требует авторизованного пользователя');
+  return { user, ...rest };
 }

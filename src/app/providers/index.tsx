@@ -1,22 +1,22 @@
 import { BrowserRouter } from 'react-router-dom';
 import { type ReactNode } from 'react';
 import { UserProvider } from '@entities/user/model/UserContext';
-import { CoursesProvider } from '@entities/course/model/CoursesContext';
 
 // ================================================================
-// ПОРЯДОК ПРОВАЙДЕРОВ ВАЖЕН
+// ПОРЯДОК ПРОВАЙДЕРОВ
 // ================================================================
 //
-//   BrowserRouter
-//   └── UserProvider          ← должен быть ВЫШЕ CoursesProvider
-//       └── CoursesProvider   ← внутри вызывает useUser()
-//           └── children      ← всё приложение
+//   BrowserRouter  — самый внешний (Link, Navigate, useNavigate нужны везде)
+//   └── UserProvider (AuthContext)
+//         └── children → AppRouter
+//               ├── /login → LoginPage (публичный)
+//               └── ProtectedRoute
+//                     └── AppLayout
+//                           └── CoursesProvider  ← только для авторизованных
+//                                 └── страницы
 //
-// Правило: если провайдер A использует данные провайдера B,
-// то B должен оборачивать A (стоять выше в дереве).
-//
-// BrowserRouter — самый внешний, т.к. Link, Navigate, useNavigate
-// нужны в любой части приложения, включая сами провайдеры.
+// CoursesProvider перенесён в AppLayout — загружать данные курсов
+// нужно только после успешной авторизации.
 
 interface ProvidersProps {
   children: ReactNode;
@@ -25,9 +25,7 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <BrowserRouter>
-      <UserProvider>
-        <CoursesProvider>{children}</CoursesProvider>
-      </UserProvider>
+      <UserProvider>{children}</UserProvider>
     </BrowserRouter>
   );
 }

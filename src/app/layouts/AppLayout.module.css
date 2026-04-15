@@ -1,11 +1,12 @@
 .layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .main {
   flex: 1;
-  padding: 2rem;
   overflow-y: auto;
-  min-width: 0; /* предотвращает переполнение flex-child */
+  padding: 2rem 2.5rem;
+  min-width: 0;
 }

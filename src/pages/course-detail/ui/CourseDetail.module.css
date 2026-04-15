@@ -1,0 +1,107 @@
+.page {
+  max-width: 720px;
+  width: 100%;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  color: var(--muted-foreground);
+}
+
+.notFound {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  gap: 1rem;
+}
+
+.notFoundText {
+  margin: 0;
+  color: var(--muted-foreground);
+}
+
+.backLink {
+  font-size: 0.875rem;
+  color: var(--primary);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 1.75rem;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+}
+
+.title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.meta {
+  margin: 0 0 2rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.descriptionCard {
+  background: var(--secondary);
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.75rem;
+}
+
+.descriptionTitle {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.descriptionText {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--secondary-foreground);
+  font-size: 0.9375rem;
+}
+
+.progressSection {
+  margin-bottom: 1.5rem;
+}
+
+.progressHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.progressLabel {
+  font-size: 0.875rem;
+  color: var(--secondary-foreground);
+}
+
+.progressValue {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.progressBar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.3s;
+}

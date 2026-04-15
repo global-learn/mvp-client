@@ -1,22 +1,38 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, BookOpen, PlusCircle, Settings, LogOut, GraduationCap, User } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import styles from './Sidebar.module.css';
 
-// next/link → Link from react-router-dom
-// usePathname() → useLocation().pathname
-// href → to
+type NavItem = { to: string; label: string; icon: typeof Home };
 
-const navItems = [
+const navItems: NavItem[] = [
   { to: '/dashboard', label: 'Главная', icon: Home },
   { to: '/courses', label: 'Мои курсы', icon: BookOpen },
   { to: '/courses/create', label: 'Создать курс', icon: PlusCircle },
   { to: '/settings', label: 'Настройки', icon: Settings },
 ];
 
+// Более специфичный nav item всегда побеждает.
+// Пример: находимся на /courses/create.
+//   /courses     → startsWith('/courses/') = true, НО /courses/create тоже есть в nav → не активен
+//   /courses/create → точное совпадение → активен
+// Пример: находимся на /courses/abc-123 (детальная страница).
+//   /courses     → startsWith('/courses/') = true, нет более специфичного nav item → активен
+function getIsActive(itemTo: string, pathname: string): boolean {
+  if (pathname === itemTo) return true;
+  if (!pathname.startsWith(itemTo + '/')) return false;
+  return !navItems.some(other => other.to !== itemTo && pathname.startsWith(other.to));
+}
+
 export function Sidebar() {
   const { pathname } = useLocation();
-  const { user } = useUser();
+  const { user, logout } = useUser();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <aside className={styles.sidebar}>
@@ -28,7 +44,7 @@ export function Sidebar() {
       <nav className={styles.nav}>
         {navItems.map(item => {
           const Icon = item.icon;
-          const isActive = pathname === item.to || pathname.startsWith(item.to + '/');
+          const isActive = getIsActive(item.to, pathname);
           return (
             <Link
               key={item.to}
@@ -52,7 +68,7 @@ export function Sidebar() {
             <span className={styles.profileRole}>{user.role}</span>
           </div>
         </div>
-        <button className={styles.logoutBtn}>
+        <button className={styles.logoutBtn} onClick={() => { void handleLogout(); }}>
           <LogOut size={20} />
           <span>Выйти</span>
         </button>

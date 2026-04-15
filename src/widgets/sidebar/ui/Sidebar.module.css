@@ -1,8 +1,8 @@
 .sidebar {
   width: 260px;
   min-height: 100vh;
-  background: var(--sidebar);
-  border-right: 1px solid var(--sidebar-border);
+  background: var(--white);
+  border-right: 10px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1rem;

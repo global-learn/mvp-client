@@ -10,6 +10,7 @@
 
 import {Providers} from "@app/providers";
 import {AppRouter} from "@app/router";
+import './styles/index.css'
 
 function App() {
   return (

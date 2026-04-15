@@ -1,3 +1,53 @@
+// ================================================================
+// Типы для контента курса (Builder + Player)
+// ================================================================
+
+export interface TestOption {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface TestQuestion {
+  id: string;
+  question: string;
+  options: TestOption[];
+}
+
+export interface LessonContent {
+  id: string;
+  title: string;
+  type: 'lesson';
+  content: string; // markdown
+}
+
+export interface TestContent {
+  id: string;
+  title: string;
+  type: 'test';
+  questions: TestQuestion[];
+  passingPercent: number; // минимальный % для прохождения
+}
+
+// Дискриминированное объединение — TypeScript определяет тип по полю `type`
+export type StepItem = LessonContent | TestContent;
+
+export interface Step {
+  id: string;
+  title: string;
+  items: StepItem[];
+}
+
+export interface Module {
+  id: string;
+  title: string;
+  steps: Step[];
+}
+
+// ================================================================
+// Типы для API (список курсов, записи)
+// ================================================================
+
 export type CourseStatus = 'draft' | 'published' | 'archived';
 
 export type EnrollmentStatus = 'not_enrolled' | 'in_progress' | 'completed';
@@ -6,21 +56,19 @@ export interface Course {
   id: string;
   title: string;
   description: string;
-  authorId: string;    // id пользователя-создателя
+  authorId: string;
   status: CourseStatus;
-  createdAt: string;   // ISO date string: "2024-01-15"
+  createdAt: string;
   lessonsCount: number;
+  modules?: Module[]; // опционально — загружается при открытии курса
 }
 
-// Запись на курс — связывает пользователя с курсом.
-// Один пользователь + один курс = одна запись.
+// Запись пользователя на курс
 export interface Enrollment {
   courseId: string;
   userId: string;
   status: EnrollmentStatus;
-  progress: number; // 0-100, процент прохождения
+  progress: number; // 0-100
 }
 
-// DTO = Data Transfer Object — данные которые отправляем на сервер при создании.
-// Omit убирает поля которые генерирует сервер (id, createdAt).
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;

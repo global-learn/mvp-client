@@ -1,0 +1,87 @@
+/* ================================================================
+   Design Tokens — CSS переменные для всего приложения.
+   Меняешь здесь — меняется везде. Так работает design system.
+   ================================================================ */
+
+:root {
+  /* Базовые цвета */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+
+  /* Primary — основной цвет бренда */
+  --primary: oklch(0.55 0.18 250);
+  --primary-foreground: #ffffff;
+
+  /* Secondary — нейтральный фон для второстепенных элементов */
+  --secondary: #f1f5f9;
+  --secondary-foreground: #334155;
+
+  /* Muted — приглушённый текст и фоны */
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  /* Accent — акцентный цвет */
+  --accent: oklch(0.65 0.18 250);
+
+  /* Destructive — цвет для опасных действий (удаление) */
+  --destructive: oklch(0.58 0.22 25);
+
+  /* UI элементы */
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: oklch(0.55 0.18 250);
+
+  /* Скругление углов */
+  --radius: 8px;
+
+  /* Sidebar — отдельная палитра для боковой панели */
+  --sidebar: #1e293b;
+  --sidebar-foreground: #94a3b8;
+  --sidebar-primary: #60a5fa;
+  --sidebar-primary-foreground: #1e293b;
+  --sidebar-accent: rgba(255, 255, 255, 0.06);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Базовый сброс ---- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  /* Убираем ограничения из старой Vite-темы */
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  text-align: left;
+  border: none;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  line-height: 1.2;
+}
+
+p {
+  margin: 0;
+}
+
+input, textarea, button, select {
+  font-family: inherit;
+}

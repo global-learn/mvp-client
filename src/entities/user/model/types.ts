@@ -31,6 +31,12 @@ export interface EmployeeProfile {
   employmentDate: string;   // ISO date string
 }
 
+export interface ClientProfile {
+  id: string;
+  company: string;
+}
+
+
 export interface User {
   id: string;
   email: string;
@@ -38,6 +44,7 @@ export interface User {
   type: UserType;
   avatar?: UserAvatar;
   employee?: EmployeeProfile; // присутствует только когда type === 'EMPLOYEE'
+  client?: ClientProfile;
 }
 
 // ---- Вспомогательные функции ----

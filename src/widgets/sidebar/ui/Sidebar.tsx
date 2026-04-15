@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Users, Building2,
-  UserCircle, Settings, LogOut, GraduationCap,
+  UserCircle, LogOut, GraduationCap,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, displayName, type User } from '@entities/user/model/types';
@@ -22,7 +22,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/clients',        label: 'Клиенты',       icon: Users,      visible: u => u.type === 'EMPLOYEE' },
   { to: '/company',        label: 'Компания',      icon: Building2,  visible: isAdmin },
   { to: '/profile',        label: 'Профиль',       icon: UserCircle, visible: () => true },
-  { to: '/settings',       label: 'Настройки',     icon: Settings,   visible: () => true },
 ];
 
 // Более специфичный nav item всегда побеждает.
@@ -50,7 +49,7 @@ export function Sidebar() {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.logo}>
-        <GraduationCap size={28} />
+        <GraduationCap size={34} />
         <span>GlobalLearn</span>
       </div>
 

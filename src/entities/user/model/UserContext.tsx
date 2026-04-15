@@ -46,13 +46,10 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       id: 'user-emp',
       email: 'user@test.com',
       fullname: 'Мария Иванова',
-      type: 'EMPLOYEE',
-      employee: {
+      type: 'CLIENT',
+      client: {
         id: 'emp-2',
-        department: { id: 'dept-2', name: 'Продажи' },
-        role: { id: 'role-emp', name: 'employee' },
-        birthDate: '1995-08-22',
-        employmentDate: '2022-06-01',
+        company: 'a'
       },
     },
   },

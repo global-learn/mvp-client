@@ -7,8 +7,9 @@
 // App.tsx только: подключает провайдеры + рендерит роутер.
 // Никакой бизнес-логики здесь нет и быть не должно.
 
-import { Providers } from './app/providers';
-import { AppRouter } from './app/router';
+
+import {Providers} from "@app/providers";
+import {AppRouter} from "@app/router";
 
 function App() {
   return (

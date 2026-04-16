@@ -41,7 +41,7 @@
   /* Sidebar — отдельная палитра для боковой панели */
   --sidebar-foreground: black;
   --sidebar-foreground-active: #fff;
-  --sidebar-primary: #60a5fa;
+  --sidebar-primary: #147cff;
   --sidebar-primary-foreground: #1e293b;
   --sidebar-accent: rgba(255, 255, 255, 0.06);
   --sidebar-border: rgba(77, 77, 77, 0.1);

@@ -4,7 +4,7 @@
   position: sticky;
   top: 0;
   overflow-y: auto;
-  background: var(--sidebar);
+  background: var(--white);
   border-right: 1px solid var(--sidebar-border);
   display: flex;
   flex-direction: column;

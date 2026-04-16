@@ -1,248 +1,95 @@
-.page {
-  max-width: 720px;
-  width: 100%;
-}
+.page { max-width: 760px; width: 100%; }
 
-.loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 50vh;
+.loading, .notFound {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 50vh; gap: 1rem;
   color: var(--muted-foreground);
 }
-
-.notFound {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-  gap: 1rem;
-}
-
-.notFoundText {
-  margin: 0;
-  color: var(--muted-foreground);
-}
+.notFoundText { margin: 0; }
 
 .backLink {
-  font-size: 0.875rem;
-  color: var(--primary);
-  text-decoration: none;
-  display: inline-block;
-  margin-bottom: 1.75rem;
+  font-size: 0.875rem; color: var(--primary); text-decoration: none;
+  display: inline-block; margin-bottom: 1.75rem;
 }
-
-.backLink:hover {
-  text-decoration: underline;
-}
+.backLink:hover { text-decoration: underline; }
 
 .titleRow {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
+  display: flex; align-items: flex-start;
+  justify-content: space-between; gap: 1rem; margin-bottom: 0.5rem;
 }
-
-.title {
-  margin: 0;
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--foreground);
-  flex: 1;
-}
-
-.meta {
-  margin: 0 0 2rem;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
+.title { margin: 0; font-size: 1.75rem; font-weight: 700; color: var(--foreground); flex: 1; }
+.meta { margin: 0 0 1.75rem; color: var(--muted-foreground); font-size: 0.875rem; }
 
 .descriptionCard {
-  background: var(--secondary);
-  border-radius: calc(var(--radius) * 1.5);
-  padding: 1.5rem 1.75rem;
-  margin-bottom: 1.75rem;
+  background: var(--secondary); border-radius: calc(var(--radius) * 1.5);
+  padding: 1.5rem 1.75rem; margin-bottom: 1.75rem;
 }
-
-.descriptionTitle {
-  margin: 0 0 0.75rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.descriptionText {
-  margin: 0;
-  line-height: 1.7;
-  color: var(--secondary-foreground);
-  font-size: 0.9375rem;
-}
+.descriptionTitle { margin: 0 0 0.75rem; font-size: 1.125rem; font-weight: 600; color: var(--foreground); }
+.descriptionText { margin: 0; line-height: 1.7; color: var(--secondary-foreground); font-size: 0.9375rem; }
 
 /* Прогресс */
-.progressSection {
-  margin-bottom: 1.5rem;
-}
+.progressSection { margin-bottom: 1.5rem; }
+.progressHeader { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+.progressLabel { font-size: 0.875rem; color: var(--secondary-foreground); }
+.progressValue { font-size: 0.875rem; font-weight: 600; color: var(--foreground); }
+.progressBar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.progressFill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.3s; }
 
-.progressHeader {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
+/* Кнопки */
+.actions { display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap; }
 
-.progressLabel {
-  font-size: 0.875rem;
-  color: var(--secondary-foreground);
+.playBtn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.75rem 1.5rem; background: var(--primary); color: var(--primary-foreground);
+  border: none; border-radius: var(--radius); font-size: 0.9375rem; font-weight: 600;
+  font-family: inherit; cursor: pointer; transition: opacity 0.15s;
 }
+.playBtn:hover { opacity: 0.88; }
 
-.progressValue {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
+/* Содержание курса */
+.modulesLoading { color: var(--muted-foreground); font-size: 0.875rem; margin: 1rem 0; }
 
-.progressBar {
-  height: 8px;
-  background: var(--border);
-  border-radius: 4px;
-  overflow: hidden;
-}
+.modulesSection { margin-top: 0.5rem; }
+.modulesTitle { margin: 0 0 1rem; font-size: 1.125rem; font-weight: 600; color: var(--foreground); }
 
-.progressFill {
-  height: 100%;
-  background: var(--primary);
-  border-radius: 4px;
-  transition: width 0.3s;
-}
-
-/* Кнопки действий */
-.actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.lessonBtn {
-  padding: 0.625rem 1.25rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--foreground);
-  font-size: 0.875rem;
-  font-weight: 500;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-
-.lessonBtn:hover {
-  background: var(--secondary);
-}
-
-/* Список уроков */
-.lessonsSection {
-  margin-top: 0.5rem;
-}
-
-.lessonsTitle {
-  margin: 0 0 1rem;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.lessonList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.lessonItem {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+.moduleBlock {
+  border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; margin-bottom: 0.625rem;
   background: var(--card);
-  transition: background 0.1s;
 }
 
-.lessonItem.lessonDone {
-  opacity: 0.7;
+.moduleHeader {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1rem; background: var(--secondary);
+  border-bottom: 1px solid var(--border);
 }
+.moduleIndex { font-size: 0.75rem; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; }
+.moduleName { flex: 1; font-size: 0.9375rem; font-weight: 600; color: var(--foreground); }
+.moduleCount { font-size: 0.8125rem; color: var(--muted-foreground); background: var(--background); padding: 0.125rem 0.5rem; border-radius: 999px; }
 
-.lessonItem.lessonCurrent {
-  border-color: var(--primary);
-  background: var(--secondary);
-}
+.stepList { list-style: none; padding: 0; margin: 0; }
 
-.lessonIcon {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
+.stepItem {
+  display: flex; align-items: center; gap: 0.625rem;
+  padding: 0.625rem 1rem; cursor: pointer;
+  border-bottom: 1px solid var(--border); transition: background 0.1s;
+  font-size: 0.875rem;
 }
+.stepItem:last-child { border-bottom: none; }
+.stepItem:not(.stepLocked):hover { background: var(--secondary); }
 
-.iconDone {
-  color: #48bb78;
-}
+.stepItem.stepDone { opacity: 0.75; }
+.stepItem.stepLocked { cursor: default; }
 
-.iconCurrent {
-  color: var(--primary);
-}
-
-.iconPending {
-  color: var(--muted-foreground);
-}
-
-.lessonTitle {
-  flex: 1;
-  font-size: 0.9375rem;
-  color: var(--foreground);
-}
-
-.completeBtn {
-  padding: 0.375rem 0.875rem;
-  border-radius: var(--radius);
-  border: none;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-  transition: opacity 0.15s;
-  flex-shrink: 0;
-}
-
-.completeBtn:hover {
-  opacity: 0.88;
-}
-
-.lessonDoneLabel {
-  font-size: 0.75rem;
-  color: #48bb78;
-  font-weight: 500;
-  flex-shrink: 0;
-}
+.stepNum { font-size: 0.75rem; color: var(--muted-foreground); min-width: 28px; }
+.stepType { font-size: 0.875rem; }
+.stepTitle { flex: 1; color: var(--foreground); }
+.stepStatus { display: flex; align-items: center; flex-shrink: 0; }
+.iconDone { color: #48bb78; }
 
 /* Баннер завершения */
 .completedBanner {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  margin-top: 1.5rem;
-  padding: 1rem 1.25rem;
-  background: #f0fff4;
-  border: 1px solid #9ae6b4;
-  border-radius: var(--radius);
-  color: #276749;
-  font-weight: 600;
-  font-size: 0.9375rem;
+  display: flex; align-items: center; gap: 0.625rem; margin-top: 1.5rem;
+  padding: 1rem 1.25rem; background: #f0fff4; border: 1px solid #9ae6b4;
+  border-radius: var(--radius); color: #276749; font-weight: 600; font-size: 0.9375rem;
 }

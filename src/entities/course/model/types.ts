@@ -68,8 +68,8 @@ export interface Enrollment {
   courseId: string;
   userId: string;
   status: EnrollmentStatus;
-  progress: number;           // 0-100, вычисляется из completedLessonCount
-  completedLessonCount: number; // сколько уроков пройдено
+  progress: number;           // 0-100
+  completedStepIds: string[]; // ID пройденных шагов (Step.id)
 }
 
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;

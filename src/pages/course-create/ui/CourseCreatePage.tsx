@@ -1,23 +1,23 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin } from '@entities/user/model/types';
+import { canCreateCourses } from '@entities/user/model/types';
 import { CourseBuilder } from '@widgets/course-builder/ui/CourseBuilder';
 
 // CourseCreatePage защищает маршрут и рендерит CourseBuilder.
-// Только admin (EMPLOYEE с role.name === 'admin') может создавать курсы.
+// Доступна admin и departmentHead.
 
 export function CourseCreatePage() {
   const { user } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAdmin(user)) {
+    if (!canCreateCourses(user)) {
       navigate('/courses', { replace: true });
     }
   }, [user, navigate]);
 
-  if (!isAdmin(user)) return null;
+  if (!canCreateCourses(user)) return null;
 
   return <CourseBuilder />;
 }

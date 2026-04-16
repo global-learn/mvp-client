@@ -1,6 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
+import { CheckCircle2, Circle } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { EnrollButton } from '@features/enroll-course/ui/EnrollButton';
+import { AssignCourseButton } from '@features/assign-course/ui/AssignCourseButton';
 import styles from './CourseDetail.module.css';
 
 // Page "Детальная страница курса" — /courses/:id
@@ -9,7 +11,7 @@ import styles from './CourseDetail.module.css';
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { courses, getEnrollment, isLoading } = useCourses();
+  const { courses, getEnrollment, isLoading, completeLesson } = useCourses();
 
   if (isLoading) {
     return <div className={styles.loading}>Загрузка...</div>;
@@ -27,12 +29,29 @@ export function CourseDetailPage() {
   }
 
   const enrollment = getEnrollment(course.id);
+  const isEnrolled = enrollment !== undefined;
+  const completedCount = enrollment?.completedLessonCount ?? 0;
+  const isCompleted = enrollment?.status === 'completed';
+
+  // Генерируем список уроков из lessonsCount (пока нет реального контента)
+  const lessons = Array.from({ length: course.lessonsCount }, (_, i) => ({
+    id: `lesson-${course.id}-${i}`,
+    index: i,
+    title: `Урок ${i + 1}`,
+  }));
+
+  const handleCompleteLesson = () => {
+    void completeLesson(course.id, course.lessonsCount);
+  };
 
   return (
     <div className={styles.page}>
       <Link to="/courses" className={styles.backLink}>← Все курсы</Link>
 
-      <h1 className={styles.title}>{course.title}</h1>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{course.title}</h1>
+        <AssignCourseButton courseId={course.id} courseTitle={course.title} />
+      </div>
       <p className={styles.meta}>{course.lessonsCount} уроков · Добавлен {course.createdAt}</p>
 
       <div className={styles.descriptionCard}>
@@ -40,10 +59,12 @@ export function CourseDetailPage() {
         <p className={styles.descriptionText}>{course.description}</p>
       </div>
 
-      {enrollment && enrollment.progress > 0 && (
+      {isEnrolled && (
         <div className={styles.progressSection}>
           <div className={styles.progressHeader}>
-            <span className={styles.progressLabel}>Ваш прогресс</span>
+            <span className={styles.progressLabel}>
+              Прогресс: {completedCount} / {course.lessonsCount} уроков
+            </span>
             <span className={styles.progressValue}>{enrollment.progress}%</span>
           </div>
           <div className={styles.progressBar}>
@@ -55,7 +76,58 @@ export function CourseDetailPage() {
         </div>
       )}
 
-      <EnrollButton courseId={course.id} />
+      <div className={styles.actions}>
+        <EnrollButton courseId={course.id} />
+        {isEnrolled && !isCompleted && (
+          <button className={styles.lessonBtn} onClick={handleCompleteLesson}>
+            Отметить урок пройденным
+          </button>
+        )}
+      </div>
+
+      {/* Список уроков — доступен после записи на курс */}
+      {isEnrolled && (
+        <div className={styles.lessonsSection}>
+          <h2 className={styles.lessonsTitle}>Содержание курса</h2>
+          <ul className={styles.lessonList}>
+            {lessons.map(lesson => {
+              const done = lesson.index < completedCount;
+              const isCurrent = lesson.index === completedCount && !isCompleted;
+              return (
+                <li
+                  key={lesson.id}
+                  className={`${styles.lessonItem} ${done ? styles.lessonDone : ''} ${isCurrent ? styles.lessonCurrent : ''}`}
+                >
+                  <span className={styles.lessonIcon}>
+                    {done ? (
+                      <CheckCircle2 size={18} className={styles.iconDone} />
+                    ) : (
+                      <Circle size={18} className={isCurrent ? styles.iconCurrent : styles.iconPending} />
+                    )}
+                  </span>
+                  <span className={styles.lessonTitle}>{lesson.title}</span>
+                  {isCurrent && (
+                    <button
+                      className={styles.completeBtn}
+                      onClick={handleCompleteLesson}
+                    >
+                      Завершить
+                    </button>
+                  )}
+                  {done && <span className={styles.lessonDoneLabel}>Пройдено</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+      {isCompleted && (
+        <div className={styles.completedBanner}>
+          <CheckCircle2 size={22} />
+          Курс пройден! Отличная работа.
+        </div>
+      )}
     </div>
   );
 }

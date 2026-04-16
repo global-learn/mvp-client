@@ -5,7 +5,7 @@ export type UserType = 'EMPLOYEE' | 'CLIENT';
 
 export interface UserRole {
   id: string;
-  name: string; // динамические роли: 'admin', 'manager', 'developer', 'employee', etc.
+  name: string; // 'admin' | 'departmentHead' | 'seniorManager' | 'manager' | 'developer' | 'employee' | 'accountant' | …
 }
 
 export interface UserDepartment {
@@ -63,7 +63,27 @@ export function userInitials(user: User): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Проверка роли admin: только EMPLOYEE с role.name === 'admin' */
+/** Admin: полный доступ */
 export function isAdmin(user: User): boolean {
   return user.type === 'EMPLOYEE' && user.employee?.role.name === 'admin';
+}
+
+/** DepartmentHead: управляет своим отделом */
+export function isDepartmentHead(user: User): boolean {
+  return user.type === 'EMPLOYEE' && user.employee?.role.name === 'departmentHead';
+}
+
+/** SeniorManager: назначает курсы менеджерам своего отдела */
+export function isSeniorManager(user: User): boolean {
+  return user.type === 'EMPLOYEE' && user.employee?.role.name === 'seniorManager';
+}
+
+/** Может назначать курсы другим сотрудникам */
+export function canAssignCourses(user: User): boolean {
+  return isAdmin(user) || isDepartmentHead(user) || isSeniorManager(user);
+}
+
+/** Может создавать курсы */
+export function canCreateCourses(user: User): boolean {
+  return isAdmin(user) || isDepartmentHead(user);
 }

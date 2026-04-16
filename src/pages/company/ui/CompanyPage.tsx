@@ -19,32 +19,33 @@ const INITIAL_DEPARTMENTS: Department[] = [
     id: 'dept-1',
     name: 'IT отдел',
     employees: [
-      { id: 'emp-admin', fullname: 'Алексей Петров',  email: 'admin@test.com', role: { id: 'r1', name: 'admin' },     department: { id: 'dept-1', name: 'IT отдел' },   birthDate: '1990-05-15', employmentDate: '2020-01-01' },
-      { id: 'emp-5',     fullname: 'Дмитрий Козлов',  email: 'dmitry@corp.ru', role: { id: 'r2', name: 'developer' }, department: { id: 'dept-1', name: 'IT отдел' },   birthDate: '1993-09-12', employmentDate: '2021-03-20' },
-      { id: 'emp-6',     fullname: 'Анна Серова',      email: 'anna@corp.ru',   role: { id: 'r2', name: 'developer' }, department: { id: 'dept-1', name: 'IT отдел' },   birthDate: '1997-01-30', employmentDate: '2023-02-10' },
+      { id: 'emp-admin', fullname: 'Алексей Петров',  email: 'admin@test.com',  role: { id: 'role-admin',    name: 'admin' },          department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1990-05-15', employmentDate: '2020-01-01' },
+      { id: 'emp-head',  fullname: 'Дмитрий Козлов',  email: 'head@test.com',   role: { id: 'role-depthead', name: 'departmentHead' }, department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1988-03-22', employmentDate: '2019-06-01' },
+      { id: 'emp-1',     fullname: 'Анна Серова',      email: 'anna@corp.ru',    role: { id: 'r2',            name: 'developer' },      department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1997-01-30', employmentDate: '2023-02-10' },
+      { id: 'emp-2',     fullname: 'Иван Соколов',     email: 'ivan@corp.ru',    role: { id: 'r4',            name: 'manager' },         department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1993-09-12', employmentDate: '2021-03-20' },
     ],
   },
   {
     id: 'dept-2',
     name: 'Продажи',
     employees: [
-      { id: 'emp-2', fullname: 'Мария Иванова',  email: 'user@test.com',  role: { id: 'r3', name: 'employee' }, department: { id: 'dept-2', name: 'Продажи' }, birthDate: '1995-08-22', employmentDate: '2022-06-01' },
-      { id: 'emp-3', fullname: 'Сергей Волков',  email: 'serg@corp.ru',   role: { id: 'r3', name: 'employee' }, department: { id: 'dept-2', name: 'Продажи' }, birthDate: '1988-12-10', employmentDate: '2019-03-15' },
+      { id: 'emp-senior', fullname: 'Наталья Орлова',  email: 'senior@test.com', role: { id: 'role-senior', name: 'seniorManager' }, department: { id: 'dept-2', name: 'Продажи' }, birthDate: '1992-07-10', employmentDate: '2021-01-15' },
+      { id: 'emp-3',      fullname: 'Мария Иванова',   email: 'user@test.com',   role: { id: 'r3',          name: 'employee' },       department: { id: 'dept-2', name: 'Продажи' }, birthDate: '1995-08-22', employmentDate: '2022-06-01' },
+      { id: 'emp-4',      fullname: 'Сергей Волков',   email: 'serg@corp.ru',    role: { id: 'r4',          name: 'manager' },         department: { id: 'dept-2', name: 'Продажи' }, birthDate: '1988-12-10', employmentDate: '2019-03-15' },
+      { id: 'emp-5',      fullname: 'Елена Попова',    email: 'elena@corp.ru',   role: { id: 'r4',          name: 'manager' },         department: { id: 'dept-2', name: 'Продажи' }, birthDate: '1991-04-18', employmentDate: '2020-09-01' },
     ],
   },
   {
     id: 'dept-3',
     name: 'HR',
     employees: [
-      { id: 'emp-4', fullname: 'Наталья Орлова', email: 'nataly@corp.ru', role: { id: 'r4', name: 'manager' },  department: { id: 'dept-3', name: 'HR' },         birthDate: '1992-03-27', employmentDate: '2021-07-01' },
+      { id: 'emp-6', fullname: 'Ольга Смирнова', email: 'olga@corp.ru', role: { id: 'r5', name: 'accountant' }, department: { id: 'dept-3', name: 'HR' }, birthDate: '1987-07-05', employmentDate: '2018-09-01' },
     ],
   },
   {
     id: 'dept-4',
     name: 'Финансы',
-    employees: [
-      { id: 'emp-7', fullname: 'Ольга Смирнова', email: 'olga@corp.ru',   role: { id: 'r5', name: 'accountant' }, department: { id: 'dept-4', name: 'Финансы' },    birthDate: '1987-07-05', employmentDate: '2018-09-01' },
-    ],
+    employees: [],
   },
 ];
 

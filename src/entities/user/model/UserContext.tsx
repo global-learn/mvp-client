@@ -40,6 +40,42 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       },
     },
   },
+  // DepartmentHead — управляет своим отделом (может назначать курсы всем в отделе, создавать курсы)
+  'head@test.com': {
+    password: 'head',
+    user: {
+      id: 'user-head',
+      email: 'head@test.com',
+      fullname: 'Дмитрий Козлов',
+      type: 'EMPLOYEE',
+      avatar: { id: 'sys-green', name: 'Зелёный', isSystem: true, bgColor: '#48bb78' },
+      employee: {
+        id: 'emp-head',
+        department: { id: 'dept-1', name: 'IT отдел' },
+        role: { id: 'role-depthead', name: 'departmentHead' },
+        birthDate: '1988-03-22',
+        employmentDate: '2019-06-01',
+      },
+    },
+  },
+  // SeniorManager — может назначать курсы только менеджерам своего отдела
+  'senior@test.com': {
+    password: 'senior',
+    user: {
+      id: 'user-senior',
+      email: 'senior@test.com',
+      fullname: 'Наталья Орлова',
+      type: 'EMPLOYEE',
+      avatar: { id: 'sys-purple', name: 'Фиолетовый', isSystem: true, bgColor: '#9f7aea' },
+      employee: {
+        id: 'emp-senior',
+        department: { id: 'dept-2', name: 'Продажи' },
+        role: { id: 'role-senior', name: 'seniorManager' },
+        birthDate: '1992-07-10',
+        employmentDate: '2021-01-15',
+      },
+    },
+  },
   'user@test.com': {
     password: 'user',
     user: {

@@ -68,7 +68,17 @@ export interface Enrollment {
   courseId: string;
   userId: string;
   status: EnrollmentStatus;
-  progress: number; // 0-100
+  progress: number;           // 0-100, вычисляется из completedLessonCount
+  completedLessonCount: number; // сколько уроков пройдено
 }
 
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;
+
+// Сотрудник для назначения курса
+export interface EmployeeForAssignment {
+  userId: string;
+  fullname: string | null;
+  email: string;
+  role: { id: string; name: string };
+  department: { id: string; name: string };
+}

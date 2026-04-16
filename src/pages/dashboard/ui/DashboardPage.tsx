@@ -1,124 +1,146 @@
 import { Link } from 'react-router-dom';
 import {
   Play, Clock, BookOpen, CheckCircle2,
-  TrendingUp, Award, Calendar, ArrowRight,
+  TrendingUp, Award, ArrowRight,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName } from '@entities/user/model/types';
+import { useCourses } from '@entities/course/model/CoursesContext';
 import styles from './Dashboard.module.css';
-
-// Данные захардкожены пока нет API.
-// Когда появится бэкенд — заменяешь на useCourses() и реальные запросы.
-
-const currentCourse = {
-  id: '1',
-  title: 'React и TypeScript для начинающих',
-  currentModule: 'Модуль 3: Хуки React',
-  currentLesson: 'Урок 2: useState и useEffect',
-  progress: 45,
-  totalLessons: 24,
-  completedLessons: 11,
-  lastAccessed: '2 часа назад',
-};
-
-const stats = [
-  { label: 'Курсов пройдено', value: 3, icon: CheckCircle2, color: 'green' },
-  { label: 'В процессе', value: 2, icon: BookOpen, color: 'blue' },
-  { label: 'Часов обучения', value: 48, icon: Clock, color: 'orange' },
-  { label: 'Сертификатов', value: 2, icon: Award, color: 'purple' },
-] as const;
-
-const myCourses = [
-  { id: '1', title: 'React и TypeScript для начинающих', progress: 45, lessons: 24 },
-  { id: '2', title: 'Node.js: серверная разработка', progress: 20, lessons: 18 },
-];
-
-const recentActivity = [
-  { id: '1', type: 'lesson', title: 'useState и useEffect', course: 'React и TypeScript', time: '2 часа назад' },
-  { id: '2', type: 'test', title: 'Тест: Основы React', course: 'React и TypeScript', time: 'Вчера' },
-  { id: '3', type: 'lesson', title: 'Введение в Express', course: 'Node.js', time: '2 дня назад' },
-  { id: '4', type: 'lesson', title: 'Работа с базой данных', course: 'Node.js', time: '3 дня назад' },
-];
-
-const weeklyGoal = { target: 10, current: 6 };
 
 export function DashboardPage() {
   const { user } = useUser();
+  const { courses, enrollments, isLoading } = useCourses();
+
+  // Записи текущего пользователя
+  const myEnrollments = enrollments.filter(e => e.userId === user.id);
+
+  // Курсы в процессе и завершённые
+  const inProgress  = myEnrollments.filter(e => e.status === 'in_progress');
+  const completed   = myEnrollments.filter(e => e.status === 'completed');
+
+  // Текущий курс — in_progress с наибольшим прогрессом
+  const currentEnrollment = [...inProgress].sort((a, b) => b.progress - a.progress)[0];
+  const currentCourse = currentEnrollment
+    ? courses.find(c => c.id === currentEnrollment.courseId)
+    : null;
+
+  // Курсы для секции "Мои курсы" (до 3)
+  const myCourses = inProgress
+    .slice(0, 3)
+    .map(e => ({ course: courses.find(c => c.id === e.courseId), enrollment: e }))
+    .filter((x): x is { course: NonNullable<typeof x.course>; enrollment: typeof x.enrollment } =>
+      x.course !== undefined,
+    );
+
+  const weeklyHours = Math.round(completed.length * 1.5 + inProgress.length * 0.5);
 
   return (
     <div className={styles.dashboard}>
       <header className={styles.header}>
         <div>
           <h1 className={styles.greeting}>Добро пожаловать, {displayName(user)}!</h1>
-          <p className={styles.subtitle}>Продолжайте обучение с того места, где остановились</p>
+          <p className={styles.subtitle}>
+            {isLoading
+              ? 'Загрузка...'
+              : currentCourse
+              ? 'Продолжайте обучение с того места, где остановились'
+              : 'Выберите курс и начните обучение'}
+          </p>
         </div>
         <div className={styles.weeklyGoal}>
           <div className={styles.goalHeader}>
             <TrendingUp size={16} />
-            <span>Цель недели</span>
+            <span>Часов на неделе</span>
           </div>
           <div className={styles.goalProgress}>
             <div className={styles.goalBar}>
               <div
                 className={styles.goalFill}
-                style={{ width: `${(weeklyGoal.current / weeklyGoal.target) * 100}%` }}
+                style={{ width: `${Math.min((weeklyHours / 10) * 100, 100)}%` }}
               />
             </div>
-            <span className={styles.goalText}>{weeklyGoal.current}/{weeklyGoal.target} ч</span>
+            <span className={styles.goalText}>{weeklyHours}/10 ч</span>
           </div>
         </div>
       </header>
 
-      <section className={styles.currentCourse}>
-        <div className={styles.courseCard}>
-          <span className={styles.courseLabel}>Продолжить обучение</span>
-          <h2 className={styles.courseTitle}>{currentCourse.title}</h2>
-          <p className={styles.courseModule}>{currentCourse.currentModule}</p>
-          <p className={styles.courseLesson}>{currentCourse.currentLesson}</p>
-
-          <div className={styles.progressSection}>
-            <div className={styles.progressHeader}>
-              <span>Прогресс курса</span>
-              <span className={styles.progressPercent}>{currentCourse.progress}%</span>
-            </div>
-            <div className={styles.progressBar}>
-              <div className={styles.progressFill} style={{ width: `${currentCourse.progress}%` }} />
-            </div>
-            <p className={styles.progressText}>
-              {currentCourse.completedLessons} из {currentCourse.totalLessons} уроков пройдено
+      {/* Продолжить обучение */}
+      {!isLoading && currentCourse && currentEnrollment && (
+        <section className={styles.currentCourse}>
+          <div className={styles.courseCard}>
+            <span className={styles.courseLabel}>Продолжить обучение</span>
+            <h2 className={styles.courseTitle}>{currentCourse.title}</h2>
+            <p className={styles.courseLesson}>
+              {currentEnrollment.completedLessonCount} из {currentCourse.lessonsCount} уроков пройдено
             </p>
-          </div>
 
-          <div className={styles.courseActions}>
-            <Link to={`/courses/${currentCourse.id}`} className={styles.continueBtn}>
-              <Play size={18} />
-              Продолжить
-            </Link>
-            <span className={styles.lastAccessed}>
-              <Clock size={14} />
-              {currentCourse.lastAccessed}
-            </span>
-          </div>
-        </div>
-      </section>
+            <div className={styles.progressSection}>
+              <div className={styles.progressHeader}>
+                <span>Прогресс курса</span>
+                <span className={styles.progressPercent}>{currentEnrollment.progress}%</span>
+              </div>
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${currentEnrollment.progress}%` }} />
+              </div>
+            </div>
 
+            <div className={styles.courseActions}>
+              <Link to={`/courses/${currentCourse.id}`} className={styles.continueBtn}>
+                <Play size={18} />
+                Продолжить
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Нет активных курсов */}
+      {!isLoading && !currentCourse && (
+        <section className={styles.currentCourse}>
+          <div className={`${styles.courseCard} ${styles.emptyCourseCard}`}>
+            <span className={styles.courseLabel}>Начните обучение</span>
+            <h2 className={styles.courseTitle}>Вы ещё не записаны ни на один курс</h2>
+            <p className={styles.courseLesson}>Перейдите в каталог и выберите подходящий курс</p>
+            <div className={styles.courseActions}>
+              <Link to="/courses" className={styles.continueBtn}>
+                <BookOpen size={18} />
+                Каталог курсов
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Статистика */}
       <section className={styles.statsSection}>
         <h3 className={styles.sectionTitle}>Ваша статистика</h3>
         <div className={styles.statsGrid}>
-          {stats.map(stat => {
-            const Icon = stat.icon;
-            return (
-              <div key={stat.label} className={`${styles.statCard} ${styles[stat.color]}`}>
-                <Icon size={22} className={styles.statIcon} />
-                <span className={styles.statValue}>{stat.value}</span>
-                <span className={styles.statLabel}>{stat.label}</span>
-              </div>
-            );
-          })}
+          <div className={`${styles.statCard} ${styles.green}`}>
+            <CheckCircle2 size={22} className={styles.statIcon} />
+            <span className={styles.statValue}>{completed.length}</span>
+            <span className={styles.statLabel}>Курсов пройдено</span>
+          </div>
+          <div className={`${styles.statCard} ${styles.blue}`}>
+            <BookOpen size={22} className={styles.statIcon} />
+            <span className={styles.statValue}>{inProgress.length}</span>
+            <span className={styles.statLabel}>В процессе</span>
+          </div>
+          <div className={`${styles.statCard} ${styles.orange}`}>
+            <Clock size={22} className={styles.statIcon} />
+            <span className={styles.statValue}>{weeklyHours}</span>
+            <span className={styles.statLabel}>Часов обучения</span>
+          </div>
+          <div className={`${styles.statCard} ${styles.purple}`}>
+            <Award size={22} className={styles.statIcon} />
+            <span className={styles.statValue}>{completed.length}</span>
+            <span className={styles.statLabel}>Сертификатов</span>
+          </div>
         </div>
       </section>
 
       <div className={styles.bottomGrid}>
+        {/* Мои курсы */}
         <section className={styles.coursesSection}>
           <div className={styles.sectionHeader}>
             <h3 className={styles.sectionTitle}>Мои курсы</h3>
@@ -127,43 +149,55 @@ export function DashboardPage() {
             </Link>
           </div>
           <div className={styles.coursesList}>
-            {myCourses.map(course => (
-              <Link key={course.id} to={`/courses/${course.id}`} className={styles.courseItem}>
-                <div className={styles.courseItemInfo}>
-                  <span className={styles.courseItemTitle}>{course.title}</span>
-                  <span className={styles.courseItemMeta}>{course.lessons} уроков</span>
-                </div>
-                <div className={styles.courseItemProgress}>
-                  <div className={styles.miniProgressBar}>
-                    <div className={styles.miniProgressFill} style={{ width: `${course.progress}%` }} />
+            {myCourses.length === 0 ? (
+              <p className={styles.noCoursesNote}>
+                Нет активных курсов.{' '}
+                <Link to="/courses" className={styles.inlineLink}>Перейти в каталог</Link>
+              </p>
+            ) : (
+              myCourses.map(({ course, enrollment }) => (
+                <Link key={course.id} to={`/courses/${course.id}`} className={styles.courseItem}>
+                  <div className={styles.courseItemInfo}>
+                    <span className={styles.courseItemTitle}>{course.title}</span>
+                    <span className={styles.courseItemMeta}>{course.lessonsCount} уроков</span>
                   </div>
-                  <span className={styles.courseItemPercent}>{course.progress}%</span>
-                </div>
-              </Link>
-            ))}
+                  <div className={styles.courseItemProgress}>
+                    <div className={styles.miniProgressBar}>
+                      <div className={styles.miniProgressFill} style={{ width: `${enrollment.progress}%` }} />
+                    </div>
+                    <span className={styles.courseItemPercent}>{enrollment.progress}%</span>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </section>
 
+        {/* Завершённые курсы */}
         <section className={styles.activitySection}>
           <div className={styles.sectionHeader}>
-            <h3 className={styles.sectionTitle}>Недавняя активность</h3>
+            <h3 className={styles.sectionTitle}>Завершённые курсы</h3>
           </div>
           <div className={styles.activityList}>
-            {recentActivity.map(item => (
-              <div key={item.id} className={styles.activityItem}>
-                <div className={`${styles.activityIcon} ${item.type === 'test' ? styles.testIcon : ''}`}>
-                  {item.type === 'lesson' ? <BookOpen size={14} /> : <CheckCircle2 size={14} />}
-                </div>
-                <div className={styles.activityInfo}>
-                  <span className={styles.activityTitle}>{item.title}</span>
-                  <span className={styles.activityCourse}>{item.course}</span>
-                </div>
-                <span className={styles.activityTime}>
-                  <Calendar size={12} />
-                  {item.time}
-                </span>
-              </div>
-            ))}
+            {completed.length === 0 ? (
+              <p className={styles.noCoursesNote}>Пока нет пройденных курсов</p>
+            ) : (
+              completed.map(e => {
+                const course = courses.find(c => c.id === e.courseId);
+                if (!course) return null;
+                return (
+                  <Link key={e.courseId} to={`/courses/${e.courseId}`} className={styles.activityItem}>
+                    <div className={styles.activityIcon}>
+                      <CheckCircle2 size={14} />
+                    </div>
+                    <div className={styles.activityInfo}>
+                      <span className={styles.activityTitle}>{course.title}</span>
+                      <span className={styles.activityCourse}>{course.lessonsCount} уроков</span>
+                    </div>
+                  </Link>
+                );
+              })
+            )}
           </div>
         </section>
       </div>

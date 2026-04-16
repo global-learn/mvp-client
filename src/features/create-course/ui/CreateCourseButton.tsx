@@ -1,15 +1,15 @@
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin } from '@entities/user/model/types';
+import { canCreateCourses } from '@entities/user/model/types';
 
-// Видна только admin (EMPLOYEE с role.name === 'admin').
+// Видна admin и departmentHead.
 // Компонент сам знает кому показываться — не нужно дублировать проверку снаружи.
 
 export function CreateCourseButton() {
   const { user } = useUser();
   const navigate = useNavigate();
 
-  if (!isAdmin(user)) return null;
+  if (!canCreateCourses(user)) return null;
 
   return (
     <button

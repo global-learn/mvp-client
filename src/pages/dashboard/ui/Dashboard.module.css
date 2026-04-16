@@ -395,3 +395,27 @@
   color: var(--muted-foreground);
   white-space: nowrap;
 }
+
+.activityItem {
+  text-decoration: none;
+}
+
+.emptyCourseCard {
+  opacity: 0.85;
+}
+
+.noCoursesNote {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+  padding: 0.5rem 0;
+}
+
+.inlineLink {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.inlineLink:hover {
+  text-decoration: underline;
+}

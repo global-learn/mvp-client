@@ -134,3 +134,24 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+.addEmpBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.addEmpBtn:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}

@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import type { Department } from '@entities/company/model/types';
 import styles from './DepartmentList.module.css';
 
 interface DepartmentListProps {
   departments: Department[];
+  onAddEmployee?: (departmentId: string) => void;
 }
 
-export function DepartmentList({ departments }: DepartmentListProps) {
+export function DepartmentList({ departments, onAddEmployee }: DepartmentListProps) {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const toggle = (id: string) => {
@@ -62,6 +63,16 @@ export function DepartmentList({ departments }: DepartmentListProps) {
                       </span>
                     </div>
                   ))
+                )}
+
+                {onAddEmployee && (
+                  <button
+                    className={styles.addEmpBtn}
+                    onClick={() => onAddEmployee(dept.id)}
+                  >
+                    <Plus size={14} />
+                    Добавить сотрудника
+                  </button>
                 )}
               </div>
             )}

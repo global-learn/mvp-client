@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, Plus, X } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin } from '@entities/user/model/types';
 import type { Department, EmployeeListItem } from '@entities/company/model/types';
@@ -11,8 +11,10 @@ import styles from './Company.module.css';
 // Заменить на API когда появится бэкенд:
 //   GET /departments          → список отделов с сотрудниками
 //   GET /employees            → плоский список сотрудников (с фильтрами)
+//   POST /departments         → создать отдел
+//   POST /employees           → добавить сотрудника
 
-const MOCK_DEPARTMENTS: Department[] = [
+const INITIAL_DEPARTMENTS: Department[] = [
   {
     id: 'dept-1',
     name: 'IT отдел',
@@ -46,7 +48,12 @@ const MOCK_DEPARTMENTS: Department[] = [
   },
 ];
 
-const ALL_EMPLOYEES: EmployeeListItem[] = MOCK_DEPARTMENTS.flatMap(d => d.employees);
+const ROLES = ['admin', 'developer', 'manager', 'employee', 'accountant'] as const;
+
+type Modal =
+  | { type: 'addDepartment' }
+  | { type: 'addEmployee'; departmentId?: string }
+  | null;
 
 type Tab = 'departments' | 'employees';
 
@@ -56,12 +63,30 @@ function formatDate(iso: string): string {
   });
 }
 
+function today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export function CompanyPage() {
   const { user } = useUser();
   const navigate = useNavigate();
+
+  const [departments, setDepartments] = useState<Department[]>(INITIAL_DEPARTMENTS);
   const [tab, setTab] = useState<Tab>('departments');
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
+  const [modal, setModal] = useState<Modal>(null);
+
+  // Форма "Добавить отдел"
+  const [deptName, setDeptName] = useState('');
+
+  // Форма "Добавить сотрудника"
+  const [empEmail, setEmpEmail]           = useState('');
+  const [empFullname, setEmpFullname]     = useState('');
+  const [empBirth, setEmpBirth]           = useState('');
+  const [empEmployed, setEmpEmployed]     = useState(today);
+  const [empDeptId, setEmpDeptId]         = useState('');
+  const [empRole, setEmpRole]             = useState<string>(ROLES[3]);
 
   useEffect(() => {
     if (!isAdmin(user)) navigate('/dashboard', { replace: true });
@@ -69,8 +94,10 @@ export function CompanyPage() {
 
   if (!isAdmin(user)) return null;
 
+  const allEmployees: EmployeeListItem[] = departments.flatMap(d => d.employees);
+
   const filtered = useMemo(() => {
-    let list = ALL_EMPLOYEES;
+    let list = allEmployees;
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(e =>
@@ -82,15 +109,77 @@ export function CompanyPage() {
       list = list.filter(e => e.department.id === deptFilter);
     }
     return list;
-  }, [search, deptFilter]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, deptFilter, departments]);
 
-  const totalEmployees = ALL_EMPLOYEES.length;
+  const closeModal = () => {
+    setModal(null);
+    setDeptName('');
+    setEmpEmail('');
+    setEmpFullname('');
+    setEmpBirth('');
+    setEmpEmployed(today());
+    setEmpRole(ROLES[3]);
+    setEmpDeptId('');
+  };
+
+  const openAddEmployee = (departmentId?: string) => {
+    setEmpDeptId(departmentId ?? (departments[0]?.id ?? ''));
+    setModal({ type: 'addEmployee', departmentId });
+  };
+
+  const handleAddDepartment = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = deptName.trim();
+    if (!name) return;
+    const newDept: Department = {
+      id: `dept-${Date.now()}`,
+      name,
+      employees: [],
+    };
+    setDepartments(prev => [...prev, newDept]);
+    closeModal();
+  };
+
+  const handleAddEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!empEmail.trim() || !empDeptId || !empBirth || !empEmployed) return;
+    const dept = departments.find(d => d.id === empDeptId);
+    if (!dept) return;
+    const newEmp: EmployeeListItem = {
+      id: `emp-${Date.now()}`,
+      email: empEmail.trim(),
+      fullname: empFullname.trim() || null,
+      role: { id: `role-${empRole}`, name: empRole },
+      department: { id: dept.id, name: dept.name },
+      birthDate: empBirth,
+      employmentDate: empEmployed,
+    };
+    setDepartments(prev =>
+      prev.map(d =>
+        d.id === empDeptId ? { ...d, employees: [...d.employees, newEmp] } : d,
+      ),
+    );
+    closeModal();
+  };
 
   return (
     <div className={styles.page}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Компания</h1>
-        <span className={styles.totalBadge}>{totalEmployees} сотрудников</span>
+        <div className={styles.pageTitleRow}>
+          <h1 className={styles.pageTitle}>Компания</h1>
+          <span className={styles.totalBadge}>{allEmployees.length} сотрудников</span>
+        </div>
+        <div className={styles.headerActions}>
+          <button className={styles.actionBtn} onClick={() => setModal({ type: 'addDepartment' })}>
+            <Plus size={16} />
+            Добавить отдел
+          </button>
+          <button className={styles.actionBtn} onClick={() => openAddEmployee()}>
+            <Plus size={16} />
+            Добавить сотрудника
+          </button>
+        </div>
       </div>
 
       {/* Табы */}
@@ -111,7 +200,7 @@ export function CompanyPage() {
 
       {/* Таб: отделы */}
       {tab === 'departments' && (
-        <DepartmentList departments={MOCK_DEPARTMENTS} />
+        <DepartmentList departments={departments} onAddEmployee={openAddEmployee} />
       )}
 
       {/* Таб: все сотрудники */}
@@ -134,7 +223,7 @@ export function CompanyPage() {
               onChange={e => setDeptFilter(e.target.value)}
             >
               <option value="">Все отделы</option>
-              {MOCK_DEPARTMENTS.map(d => (
+              {departments.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
@@ -168,8 +257,123 @@ export function CompanyPage() {
           )}
 
           <p className={styles.resultsNote}>
-            Показано {filtered.length} из {ALL_EMPLOYEES.length}
+            Показано {filtered.length} из {allEmployees.length}
           </p>
+        </div>
+      )}
+
+      {/* Модалка: добавить отдел */}
+      {modal?.type === 'addDepartment' && (
+        <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Новый отдел</h2>
+              <button className={styles.closeBtn} onClick={closeModal}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleAddDepartment} className={styles.form}>
+              <label className={styles.label}>
+                Название отдела
+                <input
+                  className={styles.input}
+                  value={deptName}
+                  onChange={e => setDeptName(e.target.value)}
+                  placeholder="Например: Маркетинг"
+                  required
+                  autoFocus
+                />
+              </label>
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.cancelBtn} onClick={closeModal}>Отмена</button>
+                <button type="submit" className={styles.submitBtn}>Добавить</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка: добавить сотрудника */}
+      {modal?.type === 'addEmployee' && (
+        <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
+          <div className={styles.modal}>
+            <div className={styles.modalHeader}>
+              <h2 className={styles.modalTitle}>Новый сотрудник</h2>
+              <button className={styles.closeBtn} onClick={closeModal}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleAddEmployee} className={styles.form}>
+              <label className={styles.label}>
+                Email
+                <input
+                  className={styles.input}
+                  type="email"
+                  value={empEmail}
+                  onChange={e => setEmpEmail(e.target.value)}
+                  placeholder="employee@corp.ru"
+                  required
+                  autoFocus
+                />
+              </label>
+              <label className={styles.label}>
+                Полное имя (необязательно)
+                <input
+                  className={styles.input}
+                  value={empFullname}
+                  onChange={e => setEmpFullname(e.target.value)}
+                  placeholder="Иван Иванов"
+                />
+              </label>
+              <div className={styles.formRow}>
+                <label className={styles.label}>
+                  Дата рождения
+                  <input
+                    className={styles.input}
+                    type="date"
+                    value={empBirth}
+                    onChange={e => setEmpBirth(e.target.value)}
+                    required
+                  />
+                </label>
+                <label className={styles.label}>
+                  Дата найма
+                  <input
+                    className={styles.input}
+                    type="date"
+                    value={empEmployed}
+                    onChange={e => setEmpEmployed(e.target.value)}
+                    required
+                  />
+                </label>
+              </div>
+              <label className={styles.label}>
+                Отдел
+                <select
+                  className={styles.input}
+                  value={empDeptId}
+                  onChange={e => setEmpDeptId(e.target.value)}
+                  required
+                >
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.label}>
+                Роль
+                <select
+                  className={styles.input}
+                  value={empRole}
+                  onChange={e => setEmpRole(e.target.value)}
+                >
+                  {ROLES.map(r => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </label>
+              <div className={styles.modalActions}>
+                <button type="button" className={styles.cancelBtn} onClick={closeModal}>Отмена</button>
+                <button type="submit" className={styles.submitBtn}>Добавить</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

@@ -67,3 +67,9 @@ export function canControl(user: User): boolean {
   const role = user.employee?.role.name;
   return role === 'admin' || role === 'manager';
 }
+
+export function canCreateCourses(user: User): boolean {
+  if (user.type !== 'EMPLOYEE') return false;
+  const role = user.employee?.role.name;
+  return role === 'admin' || role === 'manager';
+}

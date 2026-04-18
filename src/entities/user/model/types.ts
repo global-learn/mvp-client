@@ -5,7 +5,7 @@ export type UserType = 'EMPLOYEE' | 'CLIENT';
 
 export interface UserRole {
   id: string;
-  name: string; // 'admin' | 'departmentHead' | 'seniorManager' | 'manager' | 'developer' | 'employee' | 'accountant' | …
+  name: string; // динамические роли: 'admin', 'manager', 'developer', 'employee', etc.
 }
 
 export interface UserDepartment {
@@ -31,12 +31,6 @@ export interface EmployeeProfile {
   employmentDate: string;   // ISO date string
 }
 
-export interface ClientProfile {
-  id: string;
-  company: string;
-}
-
-
 export interface User {
   id: string;
   email: string;
@@ -44,7 +38,6 @@ export interface User {
   type: UserType;
   avatar?: UserAvatar;
   employee?: EmployeeProfile; // присутствует только когда type === 'EMPLOYEE'
-  client?: ClientProfile;
 }
 
 // ---- Вспомогательные функции ----
@@ -63,27 +56,14 @@ export function userInitials(user: User): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Admin: полный доступ */
+/** Проверка роли admin: только EMPLOYEE с role.name === 'admin' */
 export function isAdmin(user: User): boolean {
   return user.type === 'EMPLOYEE' && user.employee?.role.name === 'admin';
 }
 
-/** DepartmentHead: управляет своим отделом */
-export function isDepartmentHead(user: User): boolean {
-  return user.type === 'EMPLOYEE' && user.employee?.role.name === 'departmentHead';
-}
-
-/** SeniorManager: назначает курсы менеджерам своего отдела */
-export function isSeniorManager(user: User): boolean {
-  return user.type === 'EMPLOYEE' && user.employee?.role.name === 'seniorManager';
-}
-
-/** Может назначать курсы другим сотрудникам */
-export function canAssignCourses(user: User): boolean {
-  return isAdmin(user) || isDepartmentHead(user) || isSeniorManager(user);
-}
-
-/** Может создавать курсы */
-export function canCreateCourses(user: User): boolean {
-  return isAdmin(user) || isDepartmentHead(user);
+/** Может контролировать прохождение курсов: admin или manager */
+export function canControl(user: User): boolean {
+  if (user.type !== 'EMPLOYEE') return false;
+  const role = user.employee?.role.name;
+  return role === 'admin' || role === 'manager';
 }

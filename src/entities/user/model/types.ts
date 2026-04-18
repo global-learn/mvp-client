@@ -60,3 +60,10 @@ export function userInitials(user: User): string {
 export function isAdmin(user: User): boolean {
   return user.type === 'EMPLOYEE' && user.employee?.role.name === 'admin';
 }
+
+/** Может контролировать прохождение курсов: admin или manager */
+export function canControl(user: User): boolean {
+  if (user.type !== 'EMPLOYEE') return false;
+  const role = user.employee?.role.name;
+  return role === 'admin' || role === 'manager';
+}

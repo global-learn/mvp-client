@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Users, Building2,
-  UserCircle, Settings, LogOut, GraduationCap,
+  UserCircle, Settings, LogOut, GraduationCap, BarChart2,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, displayName, type User } from '@entities/user/model/types';
+import { isAdmin, canControl, displayName, type User } from '@entities/user/model/types';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
 import styles from './Sidebar.module.css';
 
@@ -21,6 +21,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/courses/create', label: 'Создать курс',  icon: PlusCircle, visible: isAdmin },
   { to: '/clients',        label: 'Клиенты',       icon: Users,      visible: u => u.type === 'EMPLOYEE' },
   { to: '/company',        label: 'Компания',      icon: Building2,  visible: isAdmin },
+  { to: '/control',        label: 'Контроль',      icon: BarChart2,  visible: canControl },
   { to: '/profile',        label: 'Профиль',       icon: UserCircle, visible: () => true },
   { to: '/settings',       label: 'Настройки',     icon: Settings,   visible: () => true },
 ];

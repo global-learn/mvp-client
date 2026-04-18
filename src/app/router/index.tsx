@@ -8,6 +8,7 @@ import { CourseCreatePage } from '@pages/course-create/ui/CourseCreatePage';
 import { ProfilePage } from '@pages/profile/ui/ProfilePage';
 import { ClientsPage } from '@pages/clients/ui/ClientsPage';
 import { CompanyPage } from '@pages/company/ui/CompanyPage';
+import { ControlPage } from '@pages/control/ui/ControlPage';
 import { LoginPage } from '@pages/login/ui/LoginPage';
 
 // Структура маршрутов:
@@ -39,6 +40,7 @@ export function AppRouter() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/company" element={<CompanyPage />} />
+          <Route path="/control" element={<ControlPage />} />
         </Route>
       </Route>
     </Routes>

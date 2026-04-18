@@ -56,7 +56,7 @@ export function LoginPage() {
               className={styles.input}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@company.com"
+              placeholder="admin@test.com"
               required
               autoComplete="email"
             />

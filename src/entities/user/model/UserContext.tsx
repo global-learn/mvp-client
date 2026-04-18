@@ -28,7 +28,7 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
     user: {
       id: 'user-admin',
       email: 'admin@test.com',
-      fullname: 'Алексей Петров',
+      fullname: 'Ислам Гадиляев',
       type: 'EMPLOYEE',
       avatar: { id: 'sys-blue', name: 'Синий', isSystem: true, bgColor: '#4299e1' },
       employee: {

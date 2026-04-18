@@ -19,7 +19,7 @@ const INITIAL_DEPARTMENTS: Department[] = [
     id: 'dept-1',
     name: 'IT отдел',
     employees: [
-      { id: 'emp-admin', fullname: 'Алексей Петров',  email: 'admin@test.com',  role: { id: 'role-admin',    name: 'admin' },          department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1990-05-15', employmentDate: '2020-01-01' },
+      { id: 'emp-admin', fullname: 'Ислам Гадиляев',  email: 'admin@test.com',  role: { id: 'role-admin',    name: 'admin' },          department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1990-05-15', employmentDate: '2020-01-01' },
       { id: 'emp-head',  fullname: 'Дмитрий Козлов',  email: 'head@test.com',   role: { id: 'role-depthead', name: 'departmentHead' }, department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1988-03-22', employmentDate: '2019-06-01' },
       { id: 'emp-1',     fullname: 'Анна Серова',      email: 'anna@corp.ru',    role: { id: 'r2',            name: 'developer' },      department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1997-01-30', employmentDate: '2023-02-10' },
       { id: 'emp-2',     fullname: 'Иван Соколов',     email: 'ivan@corp.ru',    role: { id: 'r4',            name: 'manager' },         department: { id: 'dept-1', name: 'IT отдел' }, birthDate: '1993-09-12', employmentDate: '2021-03-20' },

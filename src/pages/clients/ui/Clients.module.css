@@ -190,6 +190,43 @@
   color: var(--muted-foreground);
 }
 
+.pendingBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #7b4e0e;
+  background: #fefcbf;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+}
+
+.statusBadge {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.panelLabel {
+  margin: 0.5rem 0 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.modalSubtitle {
+  margin: 0.125rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.req {
+  color: var(--destructive);
+}
+
 /* Модальные окна */
 .overlay {
   position: fixed;

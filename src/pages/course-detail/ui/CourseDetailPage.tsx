@@ -1,15 +1,18 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
+import { useUser } from '@entities/user/model/UserContext';
+import { isAdmin } from '@entities/user/model/types';
+import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { EnrollButton } from '@features/enroll-course/ui/EnrollButton';
+import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import styles from './CourseDetail.module.css';
-
-// Page "Детальная страница курса" — /courses/:id
-// useParams — хук React Router, достаёт параметры из URL.
-// Для /courses/42 → { id: '42' }
 
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { courses, getEnrollment, isLoading } = useCourses();
+  const { user } = useUser();
+  const [assignOpen, setAssignOpen] = useState(false);
 
   if (isLoading) {
     return <div className={styles.loading}>Загрузка...</div>;
@@ -32,8 +35,19 @@ export function CourseDetailPage() {
     <div className={styles.page}>
       <Link to="/courses" className={styles.backLink}>← Все курсы</Link>
 
-      <h1 className={styles.title}>{course.title}</h1>
-      <p className={styles.meta}>{course.lessonsCount} уроков · Добавлен {course.createdAt}</p>
+      <div className={styles.titleRow}>
+        <h1 className={styles.title}>{course.title}</h1>
+        {isAdmin(user) && (
+          <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
+            Назначить сотрудникам
+          </button>
+        )}
+      </div>
+
+      <div className={styles.metaRow}>
+        <span className={styles.meta}>{course.lessonsCount} уроков · Добавлен {course.createdAt}</span>
+        <span className={styles.courseTypeBadge}>{COURSE_TYPE_LABELS[course.courseType]}</span>
+      </div>
 
       <div className={styles.descriptionCard}>
         <h2 className={styles.descriptionTitle}>О курсе</h2>
@@ -47,15 +61,20 @@ export function CourseDetailPage() {
             <span className={styles.progressValue}>{enrollment.progress}%</span>
           </div>
           <div className={styles.progressBar}>
-            <div
-              className={styles.progressFill}
-              style={{ width: `${enrollment.progress}%` }}
-            />
+            <div className={styles.progressFill} style={{ width: `${enrollment.progress}%` }} />
           </div>
         </div>
       )}
 
       <EnrollButton courseId={course.id} />
+
+      {assignOpen && (
+        <AssignCourseModal
+          courseId={course.id}
+          courseTitle={course.title}
+          onClose={() => setAssignOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -5,48 +5,55 @@ import type { Course, Enrollment, CreateCourseDto } from '../model/types';
 // ================================================================
 // Сейчас: возвращает мок-данные с симуляцией задержки.
 // Когда появится бэкенд — меняешь реализацию функций, НЕ их сигнатуры.
-// Контекст и компоненты не трогаешь — они не знают мок это или нет.
 //
 // Для реального API раскомментируй:
 // import { api } from '@shared/api/axios';
 
-// ---- Мок-данные (изменяемые через let — имитируем "базу данных") ----
 let mockCourses: Course[] = [
   {
     id: '1',
     title: 'Основы JavaScript',
-    description:
-      'Переменные, функции, объекты, асинхронность. Обязательный базовый курс для всех разработчиков компании.',
+    description: 'Переменные, функции, объекты, асинхронность. Обязательный базовый курс для всех разработчиков компании.',
     authorId: 'user-admin',
     status: 'published',
+    courseType: 'employee',
     createdAt: '2024-01-15',
     lessonsCount: 12,
   },
   {
     id: '2',
     title: 'React для начинающих',
-    description:
-      'Компоненты, хуки, роутинг. Практический курс — строим реальный портал обучения.',
+    description: 'Компоненты, хуки, роутинг. Практический курс — строим реальный портал обучения.',
     authorId: 'user-admin',
     status: 'published',
+    courseType: 'employee',
     createdAt: '2024-02-10',
     lessonsCount: 8,
   },
   {
     id: '3',
     title: 'Git и командная разработка',
-    description:
-      'Ветки, мёрж, конфликты, pull requests. Как продуктивно работать в команде.',
+    description: 'Ветки, мёрж, конфликты, pull requests. Как продуктивно работать в команде.',
     authorId: 'user-admin',
     status: 'published',
+    courseType: 'all',
     createdAt: '2024-03-05',
     lessonsCount: 6,
+  },
+  {
+    id: '4',
+    title: 'Введение в продукт для клиентов',
+    description: 'Обзор возможностей платформы. Как пользоваться порталом обучения и отслеживать прогресс.',
+    authorId: 'user-admin',
+    status: 'published',
+    courseType: 'client',
+    createdAt: '2024-04-01',
+    lessonsCount: 4,
   },
 ];
 
 let mockEnrollments: Enrollment[] = [];
 
-// Имитация задержки сети (чтобы видеть состояния загрузки)
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 export const courseApi = {
@@ -83,18 +90,18 @@ export const courseApi = {
   async enroll(courseId: string, userId: string): Promise<Enrollment> {
     await delay(300);
     // Реальный API: return (await api.post<Enrollment>('/enrollments', { courseId, userId })).data;
-    const existing = mockEnrollments.find(
-      e => e.courseId === courseId && e.userId === userId,
-    );
+    const existing = mockEnrollments.find(e => e.courseId === courseId && e.userId === userId);
     if (existing) return existing;
 
-    const enrollment: Enrollment = {
-      courseId,
-      userId,
-      status: 'in_progress',
-      progress: 0,
-    };
+    const enrollment: Enrollment = { courseId, userId, status: 'in_progress', progress: 0 };
     mockEnrollments = [...mockEnrollments, enrollment];
     return enrollment;
+  },
+
+  // Назначение курса другому пользователю (только admin)
+  async assignCourse(courseId: string, userId: string): Promise<Enrollment> {
+    await delay(200);
+    // Реальный API: return (await api.post<Enrollment>('/enrollments/assign', { courseId, userId })).data;
+    return this.enroll(courseId, userId);
   },
 };

@@ -7,8 +7,9 @@ import {
 } from 'lucide-react';
 import type {
   Module, Step, StepItem,
-  LessonContent, TestContent, TestQuestion, TestOption,
+  LessonContent, TestContent, TestQuestion, TestOption, CourseType,
 } from '@entities/course/model/types';
+import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import styles from './CourseBuilder.module.css';
 
@@ -24,6 +25,7 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 type BuilderCourse = {
   title: string;
   description: string;
+  courseType: CourseType;
   modules: Module[];
 };
 
@@ -34,6 +36,7 @@ export function CourseBuilder() {
   const [course, setCourse] = useState<BuilderCourse>({
     title: '',
     description: '',
+    courseType: 'all',
     modules: [],
   });
 
@@ -56,6 +59,7 @@ export function CourseBuilder() {
       await createCourse({
         title: course.title,
         description: course.description,
+        courseType: course.courseType,
         lessonsCount,
         modules: course.modules,
         status: 'published',
@@ -440,6 +444,18 @@ export function CourseBuilder() {
                 value={course.description}
                 onChange={e => setCourse({ ...course, description: e.target.value })}
               />
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Тип курса</label>
+              <select
+                className={styles.input}
+                value={course.courseType}
+                onChange={e => setCourse({ ...course, courseType: e.target.value as CourseType })}
+              >
+                {(Object.entries(COURSE_TYPE_LABELS) as [CourseType, string][]).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
             </div>
           </div>
 

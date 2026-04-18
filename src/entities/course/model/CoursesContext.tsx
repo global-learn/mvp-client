@@ -15,6 +15,8 @@ interface CoursesContextValue {
   enrollments: Enrollment[];
   isLoading: boolean;
   enroll: (courseId: string) => Promise<void>;
+  // Назначение курса другому пользователю (только admin)
+  assignCourse: (courseId: string, userId: string) => Promise<void>;
   // Принимает всё из CreateCourseDto кроме authorId — его добавляет контекст сам
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>) => Promise<Course>;
   getEnrollment: (courseId: string) => Enrollment | undefined;
@@ -58,12 +60,19 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     return course;
   };
 
+  const assignCourse = async (courseId: string, userId: string): Promise<void> => {
+    // Admin записывает конкретного пользователя на курс
+    await courseApi.assignCourse(courseId, userId);
+    // В реальной системе enrollment появится у другого пользователя при следующем входе.
+    // В mock — ничего в локальном стейте не меняем (мы смотрим enrollments только своего пользователя).
+  };
+
   const getEnrollment = (courseId: string): Enrollment | undefined =>
     enrollments.find(e => e.courseId === courseId && e.userId === user.id);
 
   return (
     <CoursesContext.Provider
-      value={{ courses, enrollments, isLoading, enroll, createCourse, getEnrollment }}
+      value={{ courses, enrollments, isLoading, enroll, assignCourse, createCourse, getEnrollment }}
     >
       {children}
     </CoursesContext.Provider>

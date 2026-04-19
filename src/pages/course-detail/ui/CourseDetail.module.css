@@ -148,3 +148,412 @@
   border-radius: 4px;
   transition: width 0.3s;
 }
+
+/* ── Кнопка «Начать / Продолжить курс» ──────────────────── */
+.startBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-bottom: 2rem;
+}
+
+.startBtn:hover {
+  opacity: 0.88;
+}
+
+.completedBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.75rem;
+  background: #c6f6d5;
+  color: #276749;
+  border-radius: var(--radius);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+}
+
+/* ── Плеер курса ─────────────────────────────────────────── */
+.player {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  align-items: start;
+}
+
+@media (max-width: 700px) {
+  .player {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Дерево модулей (левая панель) */
+.tree {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  overflow: hidden;
+  position: sticky;
+  top: 1.5rem;
+}
+
+.treeTitle {
+  padding: 0.875rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--border);
+}
+
+.treeModule {
+  border-bottom: 1px solid var(--border);
+}
+
+.treeModule:last-child {
+  border-bottom: none;
+}
+
+.treeModuleBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.treeModuleBtn:hover {
+  background: var(--secondary);
+}
+
+.treeSteps {
+  padding: 0 0 0.375rem;
+}
+
+.treeStep {
+  padding: 0.25rem 1rem 0.25rem 1.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.treeItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4375rem 1rem 0.4375rem 1.5rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+  border-left: 2px solid transparent;
+}
+
+.treeItem:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+.treeItem.treeItemActive {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  color: var(--primary);
+  border-left-color: var(--primary);
+  font-weight: 600;
+}
+
+.treeItem.treeItemDone {
+  color: #276749;
+}
+
+.treeItemIcon {
+  flex-shrink: 0;
+  width: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.treeItemLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Контент (правая панель) */
+.contentPane {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 1.75rem 2rem;
+  min-height: 300px;
+}
+
+.contentTitle {
+  margin: 0 0 0.25rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.contentTypeBadge {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+}
+
+/* Отображение текста урока */
+.lessonContent {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+  color: var(--foreground);
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.lessonContent h1,
+.lessonContent h2,
+.lessonContent h3 {
+  margin: 1.25rem 0 0.5rem;
+  font-weight: 700;
+  color: var(--foreground);
+}
+
+.lessonContent h1 { font-size: 1.375rem; }
+.lessonContent h2 { font-size: 1.125rem; }
+.lessonContent h3 { font-size: 1rem; }
+
+.lessonContent code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  background: var(--secondary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+.lessonContent pre {
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  margin: 0.75rem 0;
+}
+
+.lessonContent pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+.markDoneBtn {
+  margin-top: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.markDoneBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.markDoneBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.doneBanner {
+  margin-top: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  background: #c6f6d5;
+  color: #276749;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+/* Тест */
+.testQuestion {
+  margin-bottom: 1.5rem;
+}
+
+.testQuestionText {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  margin: 0 0 0.75rem;
+}
+
+.testOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.testOption {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+  transition: background 0.12s, border-color 0.12s;
+  background: var(--background);
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.testOption:hover:not(:disabled) {
+  background: var(--secondary);
+  border-color: var(--primary);
+}
+
+.testOption.optionSelected {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.testOption.optionCorrect {
+  border-color: #38a169;
+  background: #c6f6d5;
+  color: #276749;
+}
+
+.testOption.optionWrong {
+  border-color: #e53e3e;
+  background: #fed7d7;
+  color: #9b2c2c;
+}
+
+.testOption input[type="radio"] {
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
+
+.testSubmitBtn {
+  margin-top: 1.5rem;
+  padding: 0.625rem 1.5rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.testSubmitBtn:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.testSubmitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.testResult {
+  margin-top: 1.25rem;
+  padding: 0.875rem 1.125rem;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.testResultPass {
+  background: #c6f6d5;
+  color: #276749;
+}
+
+.testResultFail {
+  background: #fed7d7;
+  color: #9b2c2c;
+}
+
+.retryBtn {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: block;
+}
+
+.retryBtn:hover {
+  background: var(--secondary);
+}
+
+.noItemSelected {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  color: var(--muted-foreground);
+  gap: 0.5rem;
+  text-align: center;
+}
+
+.pageWide {
+  max-width: 960px;
+  width: 100%;
+}

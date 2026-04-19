@@ -1,12 +1,11 @@
 import { useState, type CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
 
 // Feature "Запись на курс"
-// ---------------------------------------------------------------
-// Feature — это пользовательское действие с бизнес-ценностью.
-// CourseCard просто отображает данные (entity).
-// EnrollButton — делает действие: записывает пользователя на курс.
-// Именно поэтому они в разных слоях.
+// Используется в списке курсов (CourseCard) и на странице курса.
+// На странице курса (CourseDetailPage) есть свой встроенный плеер —
+// там EnrollButton не используется.
 
 interface EnrollButtonProps {
   courseId: string;
@@ -14,6 +13,7 @@ interface EnrollButtonProps {
 
 export function EnrollButton({ courseId }: EnrollButtonProps) {
   const { enroll, getEnrollment } = useCourses();
+  const navigate = useNavigate();
   const [isPending, setIsPending] = useState(false);
 
   const enrollment = getEnrollment(courseId);
@@ -24,11 +24,15 @@ export function EnrollButton({ courseId }: EnrollButtonProps) {
     setIsPending(true);
     await enroll(courseId);
     setIsPending(false);
+    navigate(`/courses/${courseId}`);
   };
 
   if (status === 'completed') {
     return (
-      <button disabled style={{ ...btn, background: '#68d391', cursor: 'default' }}>
+      <button
+        onClick={() => navigate(`/courses/${courseId}`)}
+        style={{ ...btn, background: '#38a169', cursor: 'pointer' }}
+      >
         Курс завершён ✓
       </button>
     );
@@ -36,8 +40,11 @@ export function EnrollButton({ courseId }: EnrollButtonProps) {
 
   if (status === 'in_progress') {
     return (
-      <button disabled style={{ ...btn, background: '#63b3ed', cursor: 'default' }}>
-        Обучение идёт...
+      <button
+        onClick={() => navigate(`/courses/${courseId}`)}
+        style={{ ...btn, background: '#4299e1', cursor: 'pointer' }}
+      >
+        Продолжить курс →
       </button>
     );
   }

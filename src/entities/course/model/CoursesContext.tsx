@@ -20,6 +20,8 @@ interface CoursesContextValue {
   // Принимает всё из CreateCourseDto кроме authorId — его добавляет контекст сам
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>) => Promise<Course>;
   getEnrollment: (courseId: string) => Enrollment | undefined;
+  // Пометить элемент курса (урок/тест) как пройденный, обновляет progress и status
+  markItemComplete: (courseId: string, itemId: string) => Promise<void>;
 }
 
 const CoursesContext = createContext<CoursesContextValue | undefined>(undefined);
@@ -61,18 +63,24 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
   };
 
   const assignCourse = async (courseId: string, userId: string): Promise<void> => {
-    // Admin записывает конкретного пользователя на курс
     await courseApi.assignCourse(courseId, userId);
-    // В реальной системе enrollment появится у другого пользователя при следующем входе.
-    // В mock — ничего в локальном стейте не меняем (мы смотрим enrollments только своего пользователя).
+    // enrollment у другого пользователя — не обновляем локальный стейт текущего юзера
   };
 
   const getEnrollment = (courseId: string): Enrollment | undefined =>
     enrollments.find(e => e.courseId === courseId && e.userId === user.id);
 
+  const markItemComplete = async (courseId: string, itemId: string): Promise<void> => {
+    const updated = await courseApi.markItemComplete(courseId, user.id, itemId);
+    setEnrollments(prev => [
+      ...prev.filter(e => !(e.courseId === courseId && e.userId === user.id)),
+      updated,
+    ]);
+  };
+
   return (
     <CoursesContext.Provider
-      value={{ courses, enrollments, isLoading, enroll, assignCourse, createCourse, getEnrollment }}
+      value={{ courses, enrollments, isLoading, enroll, assignCourse, createCourse, getEnrollment, markItemComplete }}
     >
       {children}
     </CoursesContext.Provider>

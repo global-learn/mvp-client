@@ -78,17 +78,21 @@ export interface Enrollment {
   courseId: string;
   userId: string;
   status: EnrollmentStatus;
-  progress: number;           // 0-100
-  completedStepIds: string[]; // ID пройденных шагов (Step.id)
+  progress: number;        // 0-100
+  completedItems: string[]; // id пройденных LessonContent / TestContent
+}
+
+// ── Утилиты для курсового плеера ────────────────────────
+/** Все StepItem из всех модулей курса (плоский список) */
+export function getAllItems(course: Course): StepItem[] {
+  return (course.modules ?? []).flatMap(m => m.steps.flatMap(s => s.items));
+}
+
+/** Вычислить прогресс (0-100) по числу пройденных элементов */
+export function calcProgress(course: Course, completedItems: string[]): number {
+  const total = getAllItems(course).length;
+  if (total === 0) return 0;
+  return Math.round((completedItems.length / total) * 100);
 }
 
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;
-
-// Сотрудник для назначения курса
-export interface EmployeeForAssignment {
-  userId: string;
-  fullname: string | null;
-  email: string;
-  role: { id: string; name: string };
-  department: { id: string; name: string };
-}

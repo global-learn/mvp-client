@@ -1,8 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus, X, User, UserPlus } from 'lucide-react';
 import type { Company, CompanyClient } from '@entities/company/model/types';
 import type { ClientInvite, InviteStatus } from '@entities/invite/model/types';
 import { makeExpiresAt } from '@entities/invite/model/types';
+import { useUser } from '@entities/user/model/UserContext';
+import { canManageClients } from '@entities/user/model/types';
 import styles from './Clients.module.css';
 
 // Mock-данные — заменить на API когда появится бэкенд
@@ -67,6 +70,19 @@ function clientWord(n: number): string {
 }
 
 export function ClientsPage() {
+  const { user } = useUser();
+  const navigate  = useNavigate();
+
+  useEffect(() => {
+    if (!canManageClients(user)) navigate('/dashboard', { replace: true });
+  }, [user, navigate]);
+
+  if (!canManageClients(user)) return null;
+
+  return <ClientsContent />;
+}
+
+function ClientsContent() {
   const [companies, setCompanies] = useState<Company[]>(INITIAL_COMPANIES);
   const [allInvites, setAllInvites] = useState<ClientInvite[]>(INITIAL_INVITES);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -74,7 +90,6 @@ export function ClientsPage() {
 
   const [companyName, setCompanyName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
-  const [invitePassword, setInvitePassword] = useState('');
   const [inviteFullname, setInviteFullname] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -100,7 +115,6 @@ export function ClientsPage() {
     setModal(null);
     setCompanyName('');
     setInviteEmail('');
-    setInvitePassword('');
     setInviteFullname('');
   };
 
@@ -123,7 +137,7 @@ export function ClientsPage() {
     const invite: ClientInvite = {
       id: `cinv-${Date.now()}`, type: 'CLIENT',
       email: inviteEmail.trim(), fullname: inviteFullname.trim() || null,
-      password: invitePassword,
+      password: '',  // регистрация через ссылку на почте
       companyId: modal.companyId, companyName: modal.companyName,
       status: 'pending', createdAt: now, expiresAt: makeExpiresAt(now),
     };
@@ -267,14 +281,13 @@ export function ClientsPage() {
               </div>
               <button className={styles.closeBtn} onClick={closeModal}><X size={18} /></button>
             </div>
+            <p style={{ margin: '-0.5rem 0 1rem', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+              Клиент получит письмо со ссылкой для завершения регистрации
+            </p>
             <form onSubmit={e => { void handleInviteClient(e); }} className={styles.form}>
               <label className={styles.label}>
                 Email <span className={styles.req}>*</span>
                 <input className={styles.input} type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} placeholder="client@company.com" required autoFocus />
-              </label>
-              <label className={styles.label}>
-                Пароль (временный) <span className={styles.req}>*</span>
-                <input className={styles.input} type="text" value={invitePassword} onChange={e => setInvitePassword(e.target.value)} placeholder="Минимум 6 символов" required minLength={6} />
               </label>
               <label className={styles.label}>
                 Имя (необязательно)
@@ -283,7 +296,7 @@ export function ClientsPage() {
               <div className={styles.modalActions}>
                 <button type="button" className={styles.cancelBtn} onClick={closeModal}>Отмена</button>
                 <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Отправляем...' : 'Отправить приглашение'}
+                  {submitting ? 'Отправляем...' : '✉️ Отправить ссылку'}
                 </button>
               </div>
             </form>

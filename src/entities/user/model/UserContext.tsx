@@ -9,20 +9,18 @@ import {
 import type { User, UserAvatar } from './types';
 
 // ================================================================
-// AUTH CONTEXT — cookie-based авторизация (mock до подключения бэкенда)
+// AUTH CONTEXT — cookie-based авторизация (mock до бэкенда)
 // ================================================================
 //
-// Архитектура (когда появится бэкенд):
-//   login()        → POST /auth/login  → бэкенд ставит access + refresh cookies
-//   logout()       → POST /auth/logout → бэкенд очищает cookies
-//   updateAvatar() → PATCH /users/me/avatar { avatarId }
-//   При 401        → axios interceptor  → POST /auth/refresh → новый access token
-//
-// Два хука:
-//   useAuth() — для LoginPage и публичных компонентов. user может быть null.
-//   useUser() — только внутри защищённых маршрутов. user гарантированно не null.
+// Доступные тестовые аккаунты:
+//   admin@test.com    / admin  → Администратор (IT, Разработка)
+//   depthead@test.com / test   → Руководитель отдела (IT, Разработка)
+//   senior@test.com   / test   → Старший менеджер (IT, Разработка)
+//   user@test.com     / user   → Менеджер (Продажи)
+//   service@test.com  / test   → Менеджер, Отдел сервиса (доступ к клиентам)
 
 const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
+
   'admin@test.com': {
     password: 'admin',
     user: {
@@ -33,59 +31,88 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       avatar: { id: 'sys-blue', name: 'Синий', isSystem: true, bgColor: '#4299e1' },
       employee: {
         id: 'emp-admin',
-        department: { id: 'dept-1', name: 'IT отдел' },
-        role: { id: 'role-admin', name: 'admin' },
+        department: { id: 'dept-1', name: 'IT департамент' },
+        division:   { id: 'div-1', name: 'Отдел разработки', departmentId: 'dept-1' },
+        position:   { id: 'pos-1', name: 'Lead Developer' },
+        role:       { id: 'role-admin', name: 'admin' },
         birthDate: '1990-05-15',
         employmentDate: '2020-01-01',
       },
     },
   },
-  // DepartmentHead — управляет своим отделом (может назначать курсы всем в отделе, создавать курсы)
-  'head@test.com': {
-    password: 'head',
+
+  'depthead@test.com': {
+    password: 'test',
     user: {
-      id: 'user-head',
-      email: 'head@test.com',
+      id: 'user-depthead',
+      email: 'depthead@test.com',
       fullname: 'Дмитрий Козлов',
       type: 'EMPLOYEE',
-      avatar: { id: 'sys-green', name: 'Зелёный', isSystem: true, bgColor: '#48bb78' },
       employee: {
-        id: 'emp-head',
-        department: { id: 'dept-1', name: 'IT отдел' },
-        role: { id: 'role-depthead', name: 'departmentHead' },
-        birthDate: '1988-03-22',
-        employmentDate: '2019-06-01',
+        id: 'emp-5',
+        department: { id: 'dept-1', name: 'IT департамент' },
+        division:   { id: 'div-1', name: 'Отдел разработки', departmentId: 'dept-1' },
+        position:   { id: 'pos-2', name: 'Developer' },
+        role:       { id: 'role-depthead', name: 'dept_head' },
+        birthDate: '1993-09-12',
+        employmentDate: '2021-03-20',
       },
     },
   },
-  // SeniorManager — может назначать курсы только менеджерам своего отдела
+
   'senior@test.com': {
-    password: 'senior',
+    password: 'test',
     user: {
       id: 'user-senior',
       email: 'senior@test.com',
-      fullname: 'Наталья Орлова',
+      fullname: 'Анна Серова',
       type: 'EMPLOYEE',
-      avatar: { id: 'sys-purple', name: 'Фиолетовый', isSystem: true, bgColor: '#9f7aea' },
       employee: {
-        id: 'emp-senior',
-        department: { id: 'dept-2', name: 'Продажи' },
-        role: { id: 'role-senior', name: 'seniorManager' },
-        birthDate: '1992-07-10',
-        employmentDate: '2021-01-15',
+        id: 'emp-6',
+        department: { id: 'dept-1', name: 'IT департамент' },
+        division:   { id: 'div-1', name: 'Отдел разработки', departmentId: 'dept-1' },
+        position:   { id: 'pos-2', name: 'Developer' },
+        role:       { id: 'role-senior', name: 'senior_manager' },
+        birthDate: '1997-01-30',
+        employmentDate: '2023-02-10',
       },
     },
   },
+
   'user@test.com': {
     password: 'user',
     user: {
       id: 'user-emp',
       email: 'user@test.com',
       fullname: 'Мария Иванова',
-      type: 'CLIENT',
-      client: {
+      type: 'EMPLOYEE',
+      employee: {
         id: 'emp-2',
-        company: 'a'
+        department: { id: 'dept-2', name: 'Департамент продаж' },
+        division:   { id: 'div-3', name: 'Отдел продаж', departmentId: 'dept-2' },
+        position:   { id: 'pos-4', name: 'Менеджер по продажам' },
+        role:       { id: 'role-mgr', name: 'manager' },
+        birthDate: '1995-08-22',
+        employmentDate: '2022-06-01',
+      },
+    },
+  },
+
+  'service@test.com': {
+    password: 'test',
+    user: {
+      id: 'user-service',
+      email: 'service@test.com',
+      fullname: 'Виктор Кузнецов',
+      type: 'EMPLOYEE',
+      employee: {
+        id: 'emp-service',
+        department: { id: 'dept-2', name: 'Департамент продаж' },
+        division:   { id: 'div-4', name: 'Отдел сервиса', departmentId: 'dept-2', isService: true },
+        position:   { id: 'pos-5', name: 'Специалист сервиса' },
+        role:       { id: 'role-mgr2', name: 'manager' },
+        birthDate: '1992-11-08',
+        employmentDate: '2021-05-15',
       },
     },
   },
@@ -111,35 +138,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = sessionStorage.getItem(SESSION_KEY);
     if (stored) {
-      try {
-        setUser(JSON.parse(stored) as User);
-      } catch {
-        sessionStorage.removeItem(SESSION_KEY);
-      }
+      try { setUser(JSON.parse(stored) as User); }
+      catch { sessionStorage.removeItem(SESSION_KEY); }
     }
     setIsLoading(false);
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    // TODO: await api.post('/auth/login', { email, password });
-    //       const { data } = await api.get<User>('/auth/me');
     const credential = MOCK_CREDENTIALS[email.toLowerCase()];
     if (!credential || credential.password !== password) {
       throw new Error('Invalid credentials');
     }
-    await new Promise<void>(resolve => setTimeout(resolve, 300));
+    await new Promise<void>(r => setTimeout(r, 300));
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(credential.user));
     setUser(credential.user);
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
-    // TODO: await api.post('/auth/logout');
     sessionStorage.removeItem(SESSION_KEY);
     setUser(null);
   }, []);
 
   const updateAvatar = useCallback((avatar: UserAvatar | undefined) => {
-    // TODO: await api.patch('/users/me/avatar', { avatarId: avatar?.id });
     setUser(prev => {
       if (!prev) return null;
       const updated: User = { ...prev, avatar };
@@ -157,14 +177,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// useAuth — для LoginPage и ProtectedRoute (user может быть null)
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error('useAuth должен вызываться внутри <UserProvider>');
   return context;
 }
 
-// useUser — только внутри защищённых маршрутов, user гарантированно не null
 export function useUser() {
   const { user, ...rest } = useAuth();
   if (!user) throw new Error('useUser требует авторизованного пользователя');

@@ -10,6 +10,7 @@ import { ProfilePage } from '@pages/profile/ui/ProfilePage';
 import { ClientsPage } from '@pages/clients/ui/ClientsPage';
 import { CompanyPage } from '@pages/company/ui/CompanyPage';
 import { ControlPage } from '@pages/control/ui/ControlPage';
+import { ChatPage } from '@pages/chat/ui/ChatPage';
 import { LoginPage } from '@pages/login/ui/LoginPage';
 
 // Структура маршрутов:
@@ -44,6 +45,7 @@ export function AppRouter() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/company" element={<CompanyPage />} />
           <Route path="/control" element={<ControlPage />} />
+          <Route path="/chat"    element={<ChatPage />} />
         </Route>
       </Route>
     </Routes>

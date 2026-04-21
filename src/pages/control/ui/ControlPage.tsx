@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { canControl, isAdmin } from '@entities/user/model/types';
+import { canControl, isAdmin, getStatsScope } from '@entities/user/model/types';
 import type { AdminEnrollmentRecord, CourseSummary, PersonSummary } from '@entities/course/model/controlTypes';
 import { buildCourseSummaries, buildPersonSummaries } from '@entities/course/model/controlTypes';
 import { controlApi } from '@entities/course/api/controlApi';
@@ -55,11 +55,18 @@ export function ControlPage() {
 
   if (!canControl(user)) return null;
 
-  return <ControlContent adminMode={isAdmin(user)} />;
+  return <ControlContent adminMode={isAdmin(user)} scope={getStatsScope(user)} deptName={user.employee?.department.name} divisionId={user.employee?.division.id} />;
 }
 
 // ── Основной контент ──────────────────────────────────────
-function ControlContent({ adminMode }: { adminMode: boolean }) {
+function ControlContent({
+  adminMode, scope, deptName, divisionId,
+}: {
+  adminMode: boolean;
+  scope: 'all' | 'department' | 'assigned' | 'self';
+  deptName?: string;
+  divisionId?: string;
+}) {
   const [tab, setTab]         = useState<EmpTab>('employees');
   const [view, setView]       = useState<View>('byCourse');
   const [search, setSearch]   = useState('');
@@ -74,15 +81,27 @@ function ControlContent({ adminMode }: { adminMode: boolean }) {
   useEffect(() => {
     void (async () => {
       setLoading(true);
-      const [emp, cli] = await Promise.all([
+      const [allEmp, cli] = await Promise.all([
         controlApi.getEmployeeEnrollments(),
         adminMode ? controlApi.getClientEnrollments() : Promise.resolve([]),
       ]);
+      // Скоупинг по роли
+      const emp = scope === 'all'
+        ? allEmp
+        : scope === 'department'
+          ? allEmp.filter(r => r.department === deptName)
+          : scope === 'assigned'
+            // senior_manager: только managers в своём отделе (упрощённый mock)
+            ? allEmp.filter(r => {
+                const found = allEmp.find(e => e.userId === r.userId);
+                return found?.department === deptName;
+              })
+            : allEmp; // fallback
       setEmpRecords(emp);
       setClientRecords(cli);
       setLoading(false);
     })();
-  }, [adminMode]);
+  }, [adminMode, scope, deptName, divisionId]);
 
   // Сбрасываем фильтры при смене таба или вида
   useEffect(() => {

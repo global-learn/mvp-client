@@ -1,23 +1,22 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@entities/user/model/UserContext';
-import { canCreateCourses } from '@entities/user/model/types';
+import { canCreateCourse } from '@entities/user/model/types';
 import { CourseBuilder } from '@widgets/course-builder/ui/CourseBuilder';
 
-// CourseCreatePage защищает маршрут и рендерит CourseBuilder.
-// Доступна admin и departmentHead.
+// Доступ: admin | руководитель отдела | старший менеджер
 
 export function CourseCreatePage() {
   const { user } = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!canCreateCourses(user)) {
+    if (!canCreateCourse(user)) {
       navigate('/courses', { replace: true });
     }
   }, [user, navigate]);
 
-  if (!canCreateCourses(user)) return null;
+  if (!canCreateCourse(user)) return null;
 
   return <CourseBuilder />;
 }

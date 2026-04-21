@@ -1,34 +1,70 @@
 // Типы пользователей — соответствуют schema.prisma
-// UserType: EMPLOYEE (сотрудник компании) | CLIENT (пользователь клиентской компании)
 
 export type UserType = 'EMPLOYEE' | 'CLIENT';
 
+// ================================================================
+// Роли сотрудников (фиксированные)
+// ================================================================
+
+export type EmployeeRole =
+  | 'admin'           // Администратор — полный доступ
+  | 'dept_head'       // Руководитель отдела — курсы/статистика в рамках отдела
+  | 'senior_manager'  // Старший менеджер — курсы/статистика назначенных менеджеров
+  | 'manager';        // Менеджер — только прохождение курсов
+
+export const ROLE_LABELS: Record<EmployeeRole, string> = {
+  admin:          'Администратор',
+  dept_head:      'Руководитель отдела',
+  senior_manager: 'Старший менеджер',
+  manager:        'Менеджер',
+};
+
 export interface UserRole {
   id: string;
-  name: string; // динамические роли: 'admin', 'manager', 'developer', 'employee', etc.
+  name: EmployeeRole;
 }
+
+// ================================================================
+// Организационная структура
+// ================================================================
 
 export interface UserDepartment {
   id: string;
   name: string;
 }
 
-// Avatar — системные (isSystem: true, bgColor для CSS) или загруженные (url)
+export interface UserDivision {
+  id: string;
+  name: string;
+  departmentId: string;
+  isService?: boolean; // Отдел сервиса
+}
+
+export interface UserPosition {
+  id: string;
+  name: string;
+}
+
+// ================================================================
+// Профили пользователей
+// ================================================================
+
 export interface UserAvatar {
   id: string;
   name: string;
   isSystem: boolean;
-  bgColor?: string; // для системных аватаров (CSS background-color)
-  url?: string;     // для загруженных аватаров
+  bgColor?: string;
+  url?: string;
 }
 
-// Employee — дополнительные данные для UserType.EMPLOYEE
 export interface EmployeeProfile {
   id: string;
   department: UserDepartment;
-  role: UserRole;
-  birthDate: string;        // ISO date string
-  employmentDate: string;   // ISO date string
+  division:   UserDivision;
+  position:   UserPosition;
+  role:       UserRole;
+  birthDate:        string;
+  employmentDate:   string;
 }
 
 export interface User {
@@ -37,17 +73,17 @@ export interface User {
   fullname: string | null;
   type: UserType;
   avatar?: UserAvatar;
-  employee?: EmployeeProfile; // присутствует только когда type === 'EMPLOYEE'
+  employee?: EmployeeProfile; // только когда type === 'EMPLOYEE'
 }
 
-// ---- Вспомогательные функции ----
+// ================================================================
+// Вспомогательные функции
+// ================================================================
 
-/** Отображаемое имя: fullname если есть, иначе email */
 export function displayName(user: User): string {
   return user.fullname ?? user.email;
 }
 
-/** Инициалы для аватара-заглушки: "Алексей Петров" → "АП" */
 export function userInitials(user: User): string {
   const name = user.fullname;
   if (!name) return user.email[0].toUpperCase();
@@ -56,16 +92,73 @@ export function userInitials(user: User): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-/** Проверка роли admin: только EMPLOYEE с role.name === 'admin' */
-export function isAdmin(user: User): boolean {
-  return user.type === 'EMPLOYEE' && user.employee?.role.name === 'admin';
+// ── Роли ────────────────────────────────────────────────────────
+
+function role(user: User): EmployeeRole | undefined {
+  return user.employee?.role.name;
 }
 
-/** Может контролировать прохождение курсов: admin или manager */
+export function isAdmin(user: User): boolean {
+  return role(user) === 'admin';
+}
+
+export function isDeptHead(user: User): boolean {
+  return role(user) === 'dept_head';
+}
+
+export function isSeniorManager(user: User): boolean {
+  return role(user) === 'senior_manager';
+}
+
+export function isManager(user: User): boolean {
+  return role(user) === 'manager';
+}
+
+/** Отдел сервиса — может работать с клиентами */
+export function isServiceDivision(user: User): boolean {
+  return user.type === 'EMPLOYEE' && (user.employee?.division.isService ?? false);
+}
+
+// ── Права доступа ────────────────────────────────────────────────
+
+/** Создание курсов: admin, руководитель отдела, старший менеджер */
+export function canCreateCourse(user: User): boolean {
+  const r = role(user);
+  return r === 'admin' || r === 'dept_head' || r === 'senior_manager';
+}
+
+/** Назначение курсов другим пользователям */
+export function canAssignCourse(user: User): boolean {
+  return canCreateCourse(user);
+}
+
+/** Страница контроля (видит чью-то статистику) */
 export function canControl(user: User): boolean {
-  if (user.type !== 'EMPLOYEE') return false;
-  const role = user.employee?.role.name;
-  return role === 'admin' || role === 'manager';
+  return canCreateCourse(user);
+}
+
+/** Работа с клиентами: добавление компаний, регистрация, чат */
+export function canManageClients(user: User): boolean {
+  return isAdmin(user) || isServiceDivision(user);
+}
+
+// ── Масштаб статистики ───────────────────────────────────────────
+
+export type StatsScope = 'all' | 'department' | 'assigned' | 'self';
+
+/**
+ * Определяет, какую статистику может видеть пользователь:
+ *   all        — admin: видит всё
+ *   department — dept_head: только свой отдел
+ *   assigned   — senior_manager: только те, кому назначил
+ *   self       — manager/client: только своя
+ */
+export function getStatsScope(user: User): StatsScope {
+  const r = role(user);
+  if (r === 'admin')          return 'all';
+  if (r === 'dept_head')      return 'department';
+  if (r === 'senior_manager') return 'assigned';
+  return 'self';
 }
 
 export function canCreateCourses(user: User): boolean {

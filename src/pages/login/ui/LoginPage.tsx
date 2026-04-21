@@ -83,12 +83,12 @@ export function LoginPage() {
 
         {/* Подсказка для разработки — удали перед продакшном */}
         <div className={styles.hint}>
-          <p className={styles.hintItem}>
-            <span className={styles.hintRole}>Администратор:</span> admin@test.com / admin
-          </p>
-          <p className={styles.hintItem}>
-            <span className={styles.hintRole}>Сотрудник:</span> user@test.com / user
-          </p>
+          <p className={styles.hintItem}><span className={styles.hintRole}>Администратор:</span> admin@test.com / admin</p>
+          <p className={styles.hintItem}><span className={styles.hintRole}>Рук. департамента:</span> depthead@test.com / test</p>
+          <p className={styles.hintItem}><span className={styles.hintRole}>Рук. отдела:</span> divhead@test.com / test</p>
+          <p className={styles.hintItem}><span className={styles.hintRole}>Старший менеджер:</span> senior@test.com / test</p>
+          <p className={styles.hintItem}><span className={styles.hintRole}>Менеджер:</span> user@test.com / user</p>
+          <p className={styles.hintItem}><span className={styles.hintRole}>Сервис (клиенты):</span> service@test.com / test</p>
         </div>
       </div>
     </div>

@@ -7,16 +7,18 @@ export type UserType = 'EMPLOYEE' | 'CLIENT';
 // ================================================================
 
 export type EmployeeRole =
-  | 'admin'           // Администратор — полный доступ
-  | 'dept_head'       // Руководитель отдела — курсы/статистика в рамках отдела
-  | 'senior_manager'  // Старший менеджер — курсы/статистика назначенных менеджеров
-  | 'manager';        // Менеджер — только прохождение курсов
+  | 'admin'             // Администратор — полный доступ
+  | 'department_head'   // Руководитель департамента — курсы/статистика по всему департаменту
+  | 'division_head'     // Руководитель отдела — курсы/статистика по своему отделу
+  | 'senior_manager'    // Старший менеджер — курсы/статистика назначенных менеджеров
+  | 'manager';          // Менеджер — только прохождение курсов
 
 export const ROLE_LABELS: Record<EmployeeRole, string> = {
-  admin:          'Администратор',
-  dept_head:      'Руководитель отдела',
-  senior_manager: 'Старший менеджер',
-  manager:        'Менеджер',
+  admin:            'Администратор',
+  department_head:  'Руководитель департамента',
+  division_head:    'Руководитель отдела',
+  senior_manager:   'Старший менеджер',
+  manager:          'Менеджер',
 };
 
 export interface UserRole {
@@ -102,8 +104,12 @@ export function isAdmin(user: User): boolean {
   return role(user) === 'admin';
 }
 
-export function isDeptHead(user: User): boolean {
-  return role(user) === 'dept_head';
+export function isDepartmentHead(user: User): boolean {
+  return role(user) === 'department_head';
+}
+
+export function isDivisionHead(user: User): boolean {
+  return role(user) === 'division_head';
 }
 
 export function isSeniorManager(user: User): boolean {
@@ -121,10 +127,10 @@ export function isServiceDivision(user: User): boolean {
 
 // ── Права доступа ────────────────────────────────────────────────
 
-/** Создание курсов: admin, руководитель отдела, старший менеджер */
+/** Создание курсов: admin, рук. департамента, рук. отдела, старший менеджер */
 export function canCreateCourse(user: User): boolean {
   const r = role(user);
-  return r === 'admin' || r === 'dept_head' || r === 'senior_manager';
+  return r === 'admin' || r === 'department_head' || r === 'division_head' || r === 'senior_manager';
 }
 
 /** Назначение курсов другим пользователям */
@@ -144,19 +150,21 @@ export function canManageClients(user: User): boolean {
 
 // ── Масштаб статистики ───────────────────────────────────────────
 
-export type StatsScope = 'all' | 'department' | 'assigned' | 'self';
+export type StatsScope = 'all' | 'department' | 'division' | 'assigned' | 'self';
 
 /**
  * Определяет, какую статистику может видеть пользователь:
  *   all        — admin: видит всё
- *   department — dept_head: только свой отдел
+ *   department — department_head: только свой департамент
+ *   division   — division_head: только свой отдел
  *   assigned   — senior_manager: только те, кому назначил
  *   self       — manager/client: только своя
  */
 export function getStatsScope(user: User): StatsScope {
   const r = role(user);
-  if (r === 'admin')          return 'all';
-  if (r === 'dept_head')      return 'department';
-  if (r === 'senior_manager') return 'assigned';
+  if (r === 'admin')            return 'all';
+  if (r === 'department_head')  return 'department';
+  if (r === 'division_head')    return 'division';
+  if (r === 'senior_manager')   return 'assigned';
   return 'self';
 }

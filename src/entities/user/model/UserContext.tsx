@@ -9,14 +9,15 @@ import {
 import type { User, UserAvatar } from './types';
 
 // ================================================================
-// AUTH CONTEXT — cookie-based авторизация (mock до бэкенда)
+// AUTH CONTEXT — sessionStorage-based авторизация (mock до бэкенда)
 // ================================================================
 //
 // Доступные тестовые аккаунты:
-//   admin@test.com    / admin  → Администратор (IT, Разработка)
-//   depthead@test.com / test   → Руководитель отдела (IT, Разработка)
-//   senior@test.com   / test   → Старший менеджер (IT, Разработка)
-//   user@test.com     / user   → Менеджер (Продажи)
+//   admin@test.com    / admin  → Администратор (Деп. маркетинга, Отдел разработки)
+//   depthead@test.com / test   → Руководитель департамента (Деп. маркетинга)
+//   divhead@test.com  / test   → Руководитель отдела (Отдел разработки)
+//   senior@test.com   / test   → Старший менеджер (Отдел разработки)
+//   user@test.com     / user   → Менеджер (Деп. продаж, Отдел продаж)
 //   service@test.com  / test   → Менеджер, Отдел сервиса (доступ к клиентам)
 
 const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
@@ -31,9 +32,9 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       avatar: { id: 'sys-blue', name: 'Синий', isSystem: true, bgColor: '#4299e1' },
       employee: {
         id: 'emp-admin',
-        department: { id: 'dept-1', name: 'IT департамент' },
-        division:   { id: 'div-1', name: 'Отдел разработки', departmentId: 'dept-1' },
-        position:   { id: 'pos-1', name: 'Lead Developer' },
+        department: { id: 'dept-marketing', name: 'Департамент маркетинга' },
+        division:   { id: 'div-dev', name: 'Отдел разработки', departmentId: 'dept-marketing' },
+        position:   { id: 'pos-dev1', name: 'Lead Developer' },
         role:       { id: 'role-admin', name: 'admin' },
         birthDate: '1990-05-15',
         employmentDate: '2020-01-01',
@@ -50,12 +51,31 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       type: 'EMPLOYEE',
       employee: {
         id: 'emp-5',
-        department: { id: 'dept-1', name: 'IT департамент' },
-        division:   { id: 'div-1', name: 'Отдел разработки', departmentId: 'dept-1' },
-        position:   { id: 'pos-2', name: 'Developer' },
-        role:       { id: 'role-depthead', name: 'dept_head' },
+        department: { id: 'dept-marketing', name: 'Департамент маркетинга' },
+        division:   { id: 'div-dev', name: 'Отдел разработки', departmentId: 'dept-marketing' },
+        position:   { id: 'pos-dev1', name: 'Lead Developer' },
+        role:       { id: 'role-depthead', name: 'department_head' },
         birthDate: '1993-09-12',
         employmentDate: '2021-03-20',
+      },
+    },
+  },
+
+  'divhead@test.com': {
+    password: 'test',
+    user: {
+      id: 'user-divhead',
+      email: 'divhead@test.com',
+      fullname: 'Иван Петров',
+      type: 'EMPLOYEE',
+      employee: {
+        id: 'emp-divhead',
+        department: { id: 'dept-marketing', name: 'Департамент маркетинга' },
+        division:   { id: 'div-dev', name: 'Отдел разработки', departmentId: 'dept-marketing' },
+        position:   { id: 'pos-dev2', name: 'Разработчик' },
+        role:       { id: 'role-divhead', name: 'division_head' },
+        birthDate: '1994-03-22',
+        employmentDate: '2021-07-01',
       },
     },
   },
@@ -69,9 +89,9 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       type: 'EMPLOYEE',
       employee: {
         id: 'emp-6',
-        department: { id: 'dept-1', name: 'IT департамент' },
-        division:   { id: 'div-1', name: 'Отдел разработки', departmentId: 'dept-1' },
-        position:   { id: 'pos-2', name: 'Developer' },
+        department: { id: 'dept-marketing', name: 'Департамент маркетинга' },
+        division:   { id: 'div-dev', name: 'Отдел разработки', departmentId: 'dept-marketing' },
+        position:   { id: 'pos-dev2', name: 'Разработчик' },
         role:       { id: 'role-senior', name: 'senior_manager' },
         birthDate: '1997-01-30',
         employmentDate: '2023-02-10',
@@ -88,9 +108,9 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       type: 'EMPLOYEE',
       employee: {
         id: 'emp-2',
-        department: { id: 'dept-2', name: 'Департамент продаж' },
-        division:   { id: 'div-3', name: 'Отдел продаж', departmentId: 'dept-2' },
-        position:   { id: 'pos-4', name: 'Менеджер по продажам' },
+        department: { id: 'dept-sales', name: 'Департамент продаж' },
+        division:   { id: 'div-sales', name: 'Отдел продаж', departmentId: 'dept-sales' },
+        position:   { id: 'pos-s2', name: 'Менеджер по продажам' },
         role:       { id: 'role-mgr', name: 'manager' },
         birthDate: '1995-08-22',
         employmentDate: '2022-06-01',
@@ -107,9 +127,9 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       type: 'EMPLOYEE',
       employee: {
         id: 'emp-service',
-        department: { id: 'dept-2', name: 'Департамент продаж' },
-        division:   { id: 'div-4', name: 'Отдел сервиса', departmentId: 'dept-2', isService: true },
-        position:   { id: 'pos-5', name: 'Специалист сервиса' },
+        department: { id: 'dept-sales', name: 'Департамент продаж' },
+        division:   { id: 'div-service', name: 'Отдел сервиса', departmentId: 'dept-sales', isService: true },
+        position:   { id: 'pos-sv2', name: 'Специалист сервиса' },
         role:       { id: 'role-mgr2', name: 'manager' },
         birthDate: '1992-11-08',
         employmentDate: '2021-05-15',

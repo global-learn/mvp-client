@@ -55,17 +55,17 @@ export function ControlPage() {
 
   if (!canControl(user)) return null;
 
-  return <ControlContent adminMode={isAdmin(user)} scope={getStatsScope(user)} deptName={user.employee?.department.name} divisionId={user.employee?.division.id} />;
+  return <ControlContent adminMode={isAdmin(user)} scope={getStatsScope(user)} deptName={user.employee?.department.name} divisionName={user.employee?.division.name} />;
 }
 
 // ── Основной контент ──────────────────────────────────────
 function ControlContent({
-  adminMode, scope, deptName, divisionId,
+  adminMode, scope, deptName, divisionName,
 }: {
   adminMode: boolean;
-  scope: 'all' | 'department' | 'assigned' | 'self';
+  scope: 'all' | 'department' | 'division' | 'assigned' | 'self';
   deptName?: string;
-  divisionId?: string;
+  divisionName?: string;
 }) {
   const [tab, setTab]         = useState<EmpTab>('employees');
   const [view, setView]       = useState<View>('byCourse');
@@ -86,22 +86,21 @@ function ControlContent({
         adminMode ? controlApi.getClientEnrollments() : Promise.resolve([]),
       ]);
       // Скоупинг по роли
-      const emp = scope === 'all'
-        ? allEmp
-        : scope === 'department'
-          ? allEmp.filter(r => r.department === deptName)
-          : scope === 'assigned'
-            // senior_manager: только managers в своём отделе (упрощённый mock)
-            ? allEmp.filter(r => {
-                const found = allEmp.find(e => e.userId === r.userId);
-                return found?.department === deptName;
-              })
-            : allEmp; // fallback
+      let emp = allEmp;
+      if (scope === 'department') {
+        emp = allEmp.filter(r => r.department === deptName);
+      } else if (scope === 'division') {
+        emp = allEmp.filter(r => r.division === divisionName);
+      } else if (scope === 'assigned') {
+        // senior_manager: только сотрудники в своём отделе (упрощённый mock)
+        emp = allEmp.filter(r => r.division === divisionName);
+      }
+      // scope === 'all' → emp = allEmp (без изменений)
       setEmpRecords(emp);
       setClientRecords(cli);
       setLoading(false);
     })();
-  }, [adminMode, scope, deptName, divisionId]);
+  }, [adminMode, scope, deptName, divisionName]);
 
   // Сбрасываем фильтры при смене таба или вида
   useEffect(() => {

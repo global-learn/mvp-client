@@ -1,7 +1,11 @@
 // Типы для клиентских компаний и внутренней структуры компании
-// Соответствуют schema.prisma: Company, Client, Department, Employee
+// Соответствуют schema.prisma: Company, Client, Department, Division, Position, Employee
 
-// ---- Клиентские компании (страница /clients) ----
+import type { EmployeeRole } from '@entities/user/model/types';
+
+// ================================================================
+// Клиентские компании (страница /clients)
+// ================================================================
 
 export interface CompanyClient {
   id: string;
@@ -16,20 +20,43 @@ export interface Company {
   clients: CompanyClient[];
 }
 
-// ---- Внутренняя структура компании (страница /company) ----
+// ================================================================
+// Внутренняя структура: Департамент → Отдел → Должность
+// ================================================================
 
-export interface EmployeeListItem {
+export interface Position {
   id: string;
-  fullname: string | null;
-  email: string;
-  role: { id: string; name: string };
-  department: { id: string; name: string };
-  birthDate: string;
-  employmentDate: string;
+  name: string;
+}
+
+export interface Division {
+  id: string;
+  name: string;
+  departmentId: string;
+  /** Отдел сервиса — сотрудники могут работать с клиентами */
+  isService?: boolean;
+  positions: Position[];
+  employees: EmployeeListItem[];
 }
 
 export interface Department {
   id: string;
   name: string;
-  employees: EmployeeListItem[];
+  divisions: Division[];
+}
+
+// ================================================================
+// Сотрудник в контексте /company
+// ================================================================
+
+export interface EmployeeListItem {
+  id: string;
+  fullname: string | null;
+  email: string;
+  role: { id: string; name: EmployeeRole };
+  department: { id: string; name: string };
+  division:   { id: string; name: string; isService?: boolean };
+  position:   { id: string; name: string };
+  birthDate: string;
+  employmentDate: string;
 }

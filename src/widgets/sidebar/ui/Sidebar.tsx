@@ -1,10 +1,10 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Users, Building2,
-  UserCircle, Settings, LogOut, GraduationCap, BarChart2,
+  UserCircle, Settings, LogOut, GraduationCap, BarChart2, MessageSquare,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, canControl, displayName, type User } from '@entities/user/model/types';
+import { isAdmin, canControl, canCreateCourse, canManageClients, displayName, type User } from '@entities/user/model/types';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
 import styles from './Sidebar.module.css';
 
@@ -16,14 +16,15 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/dashboard',      label: 'Главная',      icon: Home,       visible: () => true },
-  { to: '/courses',        label: 'Курсы',         icon: BookOpen,   visible: () => true },
-  { to: '/courses/create', label: 'Создать курс',  icon: PlusCircle, visible: isAdmin },
-  { to: '/clients',        label: 'Клиенты',       icon: Users,      visible: u => u.type === 'EMPLOYEE' },
-  { to: '/company',        label: 'Компания',      icon: Building2,  visible: isAdmin },
-  { to: '/control',        label: 'Контроль',      icon: BarChart2,  visible: canControl },
-  { to: '/profile',        label: 'Профиль',       icon: UserCircle, visible: () => true },
-  { to: '/settings',       label: 'Настройки',     icon: Settings,   visible: () => true },
+  { to: '/dashboard',      label: 'Главная',       icon: Home,          visible: () => true },
+  { to: '/courses',        label: 'Курсы',          icon: BookOpen,      visible: () => true },
+  { to: '/courses/create', label: 'Создать курс',   icon: PlusCircle,    visible: canCreateCourse },
+  { to: '/clients',        label: 'Клиенты',        icon: Users,         visible: canManageClients },
+  { to: '/company',        label: 'Компания',       icon: Building2,     visible: canCreateCourse },
+  { to: '/control',        label: 'Контроль',       icon: BarChart2,     visible: canControl },
+  { to: '/chat',           label: 'Чат',            icon: MessageSquare, visible: u => u.type === 'EMPLOYEE' },
+  { to: '/profile',        label: 'Профиль',        icon: UserCircle,    visible: () => true },
+  { to: '/settings',       label: 'Настройки',      icon: Settings,      visible: () => true },
 ];
 
 // Более специфичный nav item всегда побеждает.

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { BookOpen, CheckCircle2, Clock, Edit2 } from 'lucide-react';
+import { BookOpen, CheckCircle2, Clock, Edit2, Award } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { displayName } from '@entities/user/model/types';
+import { displayName, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
 import { AvatarPicker } from '@widgets/avatar-picker/ui/AvatarPicker';
@@ -17,7 +17,7 @@ function formatDate(iso: string): string {
 
 export function ProfilePage() {
   const { user } = useUser();
-  const { enrollments } = useCourses();
+  const { enrollments, certificates } = useCourses();
   const [pickerOpen, setPickerOpen] = useState(false);
 
   const completed = enrollments.filter(e => e.status === 'completed').length;
@@ -25,7 +25,7 @@ export function ProfilePage() {
   const totalEnrolled = enrollments.length;
 
   const emp = user.employee;
-  const roleName = emp?.role.name ?? user.type.toLowerCase();
+  const roleLabel = emp ? (ROLE_LABELS[emp.role.name as EmployeeRole] ?? emp.role.name) : user.type.toLowerCase();
 
   return (
     <div className={styles.page}>
@@ -71,6 +71,11 @@ export function ProfilePage() {
             <span className={styles.statValue}>{totalEnrolled}</span>
             <span className={styles.statLabel}>Всего записей</span>
           </div>
+          <div className={styles.statItem}>
+            <Award size={20} style={{ color: '#9f7aea' }} />
+            <span className={styles.statValue}>{certificates.length}</span>
+            <span className={styles.statLabel}>Сертификатов</span>
+          </div>
         </div>
       </div>
 
@@ -93,11 +98,17 @@ export function ProfilePage() {
             <>
               <dt className={styles.infoLabel}>Роль</dt>
               <dd className={styles.infoValue}>
-                <span className={styles.roleBadge}>{emp.role.name}</span>
+                <span className={styles.roleBadge}>{roleLabel}</span>
               </dd>
 
-              <dt className={styles.infoLabel}>Отдел</dt>
+              <dt className={styles.infoLabel}>Департамент</dt>
               <dd className={styles.infoValue}>{emp.department.name}</dd>
+
+              <dt className={styles.infoLabel}>Отдел</dt>
+              <dd className={styles.infoValue}>{emp.division.name}</dd>
+
+              <dt className={styles.infoLabel}>Должность</dt>
+              <dd className={styles.infoValue}>{emp.position.name}</dd>
 
               <dt className={styles.infoLabel}>Дата рождения</dt>
               <dd className={styles.infoValue}>{formatDate(emp.birthDate)}</dd>
@@ -107,6 +118,34 @@ export function ProfilePage() {
             </>
           )}
         </dl>
+      </div>
+
+      {/* Сертификаты */}
+      <div className={styles.card}>
+        <h3 className={styles.sectionTitle}>Сертификаты</h3>
+        {certificates.length === 0 ? (
+          <p className={styles.noCerts}>
+            Сертификаты появятся после 100% прохождения курсов
+          </p>
+        ) : (
+          <div className={styles.certsGrid}>
+            {certificates.map(cert => (
+              <div key={cert.id} className={styles.certCard}>
+                <div className={styles.certIcon}>
+                  <Award size={18} />
+                </div>
+                <div className={styles.certInfo}>
+                  <div className={styles.certTitle}>{cert.courseTitle}</div>
+                  <div className={styles.certDate}>
+                    Выдан {new Date(cert.issuedAt).toLocaleDateString('ru-RU', {
+                      day: 'numeric', month: 'long', year: 'numeric',
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Модалка выбора аватара */}

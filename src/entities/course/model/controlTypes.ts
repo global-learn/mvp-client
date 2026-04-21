@@ -12,6 +12,7 @@ export interface AdminEnrollmentRecord {
   userEmail: string;
   userType: 'EMPLOYEE' | 'CLIENT';
   department?: string;     // только EMPLOYEE
+  division?: string;       // только EMPLOYEE — название отдела
   companyName?: string;    // только CLIENT
   courseId: string;
   courseTitle: string;
@@ -41,6 +42,7 @@ export interface PersonSummary {
   userEmail: string;
   userType: 'EMPLOYEE' | 'CLIENT';
   department?: string;
+  division?: string;
   companyName?: string;
   completed: number;
   inProgress: number;
@@ -92,6 +94,7 @@ export function buildPersonSummaries(records: AdminEnrollmentRecord[]): PersonSu
       userEmail: recs[0].userEmail,
       userType: recs[0].userType,
       department: recs[0].department,
+      division: recs[0].division,
       companyName: recs[0].companyName,
       completed, inProgress, notStarted,
       totalCourses: recs.length,

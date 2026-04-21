@@ -1,18 +1,20 @@
-import { useRef, useState } from 'react';
-import { Search, MessageSquare, Send } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Search, MessageSquare, Send, ChevronLeft } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { canManageClients, displayName } from '@entities/user/model/types';
 import { ALL_EMPLOYEES } from '@pages/company/ui/CompanyPage';
 import styles from './Chat.module.css';
 
-// ── Типы ─────────────────────────────────────────────────
+// ── Типы ─────────────────────────────────────────────────────────
 
 interface ChatContact {
   id: string;
   name: string;
-  sub: string;       // должность / компания
+  sub: string;
   type: 'employee' | 'client';
-  color: string;     // bg-color для аватара
+  initials: string;
+  color: string;
+  lastMessage?: string;
   unread?: number;
 }
 
@@ -23,24 +25,29 @@ interface Message {
   time: string;
 }
 
-// ── Палитра цветов для аватаров ───────────────────────────
+// ── Палитра цветов для аватаров ───────────────────────────────────
 const COLORS = [
   '#4299e1','#48bb78','#ed8936','#9f7aea','#f56565',
-  '#38b2ac','#e53e3e','#667eea','#e91e63','#00bcd4',
+  '#38b2ac','#667eea','#e91e63','#00bcd4','#ff9800',
 ];
 function avatarColor(id: string): string {
   let hash = 0;
   for (const c of id) hash = (hash * 31 + c.charCodeAt(0)) & 0xffffffff;
   return COLORS[Math.abs(hash) % COLORS.length];
 }
+function getInitials(name: string): string {
+  const parts = name.trim().split(' ');
+  if (parts.length === 1) return parts[0][0].toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
-// ── Mock-данные ───────────────────────────────────────────
+// ── Mock-данные ───────────────────────────────────────────────────
 const CLIENT_CONTACTS: ChatContact[] = [
-  { id: 'cl-1', name: 'Иван Соколов',        sub: 'ТехноСтрой',  type: 'client', color: avatarColor('cl-1'), unread: 2 },
-  { id: 'cl-2', name: 'Анна Фёдорова',       sub: 'ТехноСтрой',  type: 'client', color: avatarColor('cl-2') },
-  { id: 'cl-4', name: 'Марина Белова',        sub: 'МедиаГрупп',  type: 'client', color: avatarColor('cl-4') },
-  { id: 'cl-5', name: 'Александр Новиков',    sub: 'АгроПрайм',   type: 'client', color: avatarColor('cl-5') },
-  { id: 'cl-6', name: 'Елена Попова',         sub: 'АгроПрайм',   type: 'client', color: avatarColor('cl-6') },
+  { id: 'cl-1', name: 'Иван Соколов',        sub: 'ТехноСтрой',  type: 'client', color: avatarColor('cl-1'), initials: 'ИС', lastMessage: 'Когда будет следующий модуль?', unread: 2 },
+  { id: 'cl-2', name: 'Анна Фёдорова',       sub: 'ТехноСтрой',  type: 'client', color: avatarColor('cl-2'), initials: 'АФ', lastMessage: 'Спасибо за помощь!' },
+  { id: 'cl-4', name: 'Марина Белова',        sub: 'МедиаГрупп',  type: 'client', color: avatarColor('cl-4'), initials: 'МБ' },
+  { id: 'cl-5', name: 'Александр Новиков',    sub: 'АгроПрайм',   type: 'client', color: avatarColor('cl-5'), initials: 'АН' },
+  { id: 'cl-6', name: 'Елена Попова',         sub: 'АгроПрайм',   type: 'client', color: avatarColor('cl-6'), initials: 'ЕП' },
 ];
 
 const INITIAL_MESSAGES: Record<string, Message[]> = {
@@ -52,20 +59,17 @@ const INITIAL_MESSAGES: Record<string, Message[]> = {
   'cl-1': [
     { id: 'c1', senderId: 'cl-1',   text: 'Добрый день! У меня вопрос по курсу', time: 'Вчера' },
     { id: 'c2', senderId: 'me',     text: 'Здравствуйте, слушаю вас!',            time: 'Вчера' },
-    { id: 'c3', senderId: 'cl-1',   text: 'Когда будет следующий модуль?',        time: 'Вчера' },
-    { id: 'c4', senderId: 'cl-1',   text: 'И ещё — тест не засчитался, помогите', time: '09:15' },
+    { id: 'c3', senderId: 'cl-1',   text: 'Когда будет следующий модуль?',        time: '09:15' },
+    { id: 'c4', senderId: 'cl-1',   text: 'И ещё — тест не засчитался, помогите', time: '09:16' },
   ],
 };
 
-// ── Компонент ─────────────────────────────────────────────
-
+// ── Компонент ─────────────────────────────────────────────────────
 export function ChatPage() {
   const { user } = useUser();
-  const myName   = displayName(user);
-  const myId     = user.id;
+  const myName      = displayName(user);
   const showClients = canManageClients(user);
 
-  // Контакты-сотрудники (все кроме себя)
   const empContacts: ChatContact[] = ALL_EMPLOYEES
     .filter(e => e.id !== user.employee?.id)
     .map(e => ({
@@ -73,6 +77,7 @@ export function ChatPage() {
       name: e.fullname ?? e.email,
       sub: e.position.name,
       type: 'employee' as const,
+      initials: getInitials(e.fullname ?? e.email),
       color: avatarColor(e.id),
     }));
 
@@ -81,6 +86,7 @@ export function ChatPage() {
   const [messages, setMessages]     = useState<Record<string, Message[]>>(INITIAL_MESSAGES);
   const [draft, setDraft]           = useState('');
   const [unread, setUnread]         = useState<Record<string, number>>({ 'cl-1': 2 });
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const allContacts: ChatContact[] = [
@@ -101,10 +107,15 @@ export function ChatPage() {
   const selectContact = (id: string) => {
     setActiveId(id);
     setUnread(prev => ({ ...prev, [id]: 0 }));
+    setMobileShowChat(true);
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 50);
   };
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [thread.length]);
 
   const sendMessage = () => {
     if (!draft.trim() || !activeId) return;
@@ -116,9 +127,6 @@ export function ChatPage() {
     };
     setMessages(prev => ({ ...prev, [activeId]: [...(prev[activeId] ?? []), msg] }));
     setDraft('');
-    setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, 50);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -128,14 +136,21 @@ export function ChatPage() {
     }
   };
 
+  const totalUnread = Object.values(unread).reduce((a, b) => a + b, 0);
+
   return (
     <div className={styles.page}>
-      {/* ── Контакты ── */}
-      <aside className={styles.contacts}>
-        <div className={styles.contactsHeader}>
-          <h2 className={styles.contactsTitle}>Чат</h2>
+      {/* ── Sidebar контактов ── */}
+      <aside className={`${styles.sidebar} ${mobileShowChat ? styles.sidebarHidden : ''}`}>
+        {/* Шапка */}
+        <div className={styles.sidebarHeader}>
+          <div className={styles.sidebarTitle}>
+            <MessageSquare size={18} />
+            <span>Чат</span>
+            {totalUnread > 0 && <span className={styles.totalUnreadBadge}>{totalUnread}</span>}
+          </div>
           <div className={styles.searchBox}>
-            <Search size={14} style={{ color: 'var(--muted-foreground)', flexShrink: 0 }} />
+            <Search size={13} />
             <input
               placeholder="Поиск..."
               value={search}
@@ -144,6 +159,7 @@ export function ChatPage() {
           </div>
         </div>
 
+        {/* Список контактов */}
         <div className={styles.contactsList}>
           {/* Сотрудники */}
           {empFiltered.length > 0 && (
@@ -160,7 +176,7 @@ export function ChatPage() {
             </>
           )}
 
-          {/* Клиенты (только admin/service) */}
+          {/* Клиенты */}
           {showClients && clientFiltered.length > 0 && (
             <>
               <div className={styles.groupLabel}>Клиенты</div>
@@ -174,41 +190,60 @@ export function ChatPage() {
               ))}
             </>
           )}
+
+          {empFiltered.length === 0 && clientFiltered.length === 0 && (
+            <div className={styles.emptySearch}>Ничего не найдено</div>
+          )}
         </div>
       </aside>
 
-      {/* ── Диалог ── */}
-      <div className={styles.chatArea}>
+      {/* ── Область переписки ── */}
+      <div className={`${styles.chatArea} ${!mobileShowChat ? styles.chatHidden : ''}`}>
         {activeContact ? (
           <>
+            {/* Заголовок чата */}
             <div className={styles.chatHeader}>
-              <div
-                className={styles.msgAvatar}
-                style={{ background: activeContact.color, width: 36, height: 36 }}
-              >
-                {activeContact.name[0]}
+              <button className={styles.backBtn} onClick={() => setMobileShowChat(false)}>
+                <ChevronLeft size={20} />
+              </button>
+              <div className={styles.chatHeaderAvatar} style={{ background: activeContact.color }}>
+                {activeContact.initials}
               </div>
-              <div>
+              <div className={styles.chatHeaderInfo}>
                 <div className={styles.chatHeaderName}>{activeContact.name}</div>
                 <div className={styles.chatHeaderSub}>{activeContact.sub}</div>
               </div>
             </div>
 
+            {/* Сообщения */}
             <div className={styles.messages}>
-              {thread.map(msg => {
+              {thread.length === 0 && (
+                <div className={styles.emptyThread}>
+                  Начните переписку с {activeContact.name}
+                </div>
+              )}
+              {thread.map((msg, idx) => {
                 const isOwn = msg.senderId === 'me';
-                const initials = isOwn
-                  ? myName[0]
-                  : activeContact.name[0];
-                const color = isOwn ? '#4299e1' : activeContact.color;
+                const prevMsg = idx > 0 ? thread[idx - 1] : null;
+                const showSender = !prevMsg || prevMsg.senderId !== msg.senderId;
                 return (
-                  <div key={msg.id} className={`${styles.msgRow} ${isOwn ? styles.own : ''}`}>
-                    <div className={styles.msgAvatar} style={{ background: color }}>
-                      {initials}
-                    </div>
-                    <div>
-                      <div className={styles.bubble}>{msg.text}</div>
-                      <div className={styles.msgTime}>{msg.time}</div>
+                  <div key={msg.id} className={`${styles.msgGroup} ${isOwn ? styles.ownGroup : ''}`}>
+                    {!isOwn && showSender && (
+                      <div className={styles.msgAvatarWrap} style={{ background: activeContact.color }}>
+                        {activeContact.initials}
+                      </div>
+                    )}
+                    {isOwn && showSender && (
+                      <div className={styles.msgAvatarWrap} style={{ background: '#4299e1' }}>
+                        {getInitials(myName)}
+                      </div>
+                    )}
+                    {!showSender && <div className={styles.msgAvatarSpacer} />}
+                    <div className={styles.msgBubbleWrap}>
+                      <div className={`${styles.bubble} ${isOwn ? styles.bubbleOwn : styles.bubbleOther}`}>
+                        {msg.text}
+                      </div>
+                      <div className={`${styles.msgTime} ${isOwn ? styles.msgTimeOwn : ''}`}>{msg.time}</div>
                     </div>
                   </div>
                 );
@@ -216,11 +251,12 @@ export function ChatPage() {
               <div ref={messagesEndRef} />
             </div>
 
+            {/* Поле ввода */}
             <div className={styles.inputRow}>
               <textarea
                 className={styles.textInput}
                 rows={1}
-                placeholder="Написать сообщение... (Enter — отправить)"
+                placeholder="Написать сообщение..."
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={handleKeyDown}
@@ -229,6 +265,7 @@ export function ChatPage() {
                 className={styles.sendBtn}
                 onClick={sendMessage}
                 disabled={!draft.trim()}
+                title="Отправить (Enter)"
               >
                 <Send size={16} />
               </button>
@@ -236,8 +273,11 @@ export function ChatPage() {
           </>
         ) : (
           <div className={styles.noChat}>
-            <MessageSquare size={48} className={styles.noChatIcon} />
-            <p>Выберите контакт, чтобы начать общение</p>
+            <div className={styles.noChatIcon}>
+              <MessageSquare size={40} />
+            </div>
+            <p className={styles.noChatTitle}>Выберите чат</p>
+            <p className={styles.noChatSub}>Выберите контакт из списка, чтобы начать общение</p>
           </div>
         )}
       </div>
@@ -245,7 +285,7 @@ export function ChatPage() {
   );
 }
 
-// ── Строка контакта ───────────────────────────────────────
+// ── Строка контакта ───────────────────────────────────────────────
 function ContactRow({
   contact, active, unread, onClick,
 }: {
@@ -256,17 +296,24 @@ function ContactRow({
 }) {
   return (
     <button
-      className={`${styles.contactBtn} ${active ? styles.active : ''}`}
+      className={`${styles.contactBtn} ${active ? styles.contactBtnActive : ''}`}
       onClick={onClick}
     >
       <div className={styles.contactAvatar} style={{ background: contact.color }}>
-        {contact.name[0]}
+        {contact.initials}
+        {unread > 0 && <span className={styles.unreadDot} />}
       </div>
-      <div className={styles.contactInfo}>
-        <span className={styles.contactName}>{contact.name}</span>
-        <span className={styles.contactSub}>{contact.sub}</span>
+      <div className={styles.contactBody}>
+        <div className={styles.contactTop}>
+          <span className={styles.contactName}>{contact.name}</span>
+          {unread > 0 && <span className={styles.unreadBadge}>{unread}</span>}
+        </div>
+        <div className={styles.contactBottom}>
+          <span className={styles.contactSub}>
+            {contact.lastMessage ?? contact.sub}
+          </span>
+        </div>
       </div>
-      {unread > 0 && <span className={styles.unreadBadge}>{unread}</span>}
     </button>
   );
 }

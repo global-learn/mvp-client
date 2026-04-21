@@ -144,3 +144,64 @@
   padding: 0.125rem 0.625rem;
   border-radius: 999px;
 }
+
+/* ── Сертификаты ─────────────────────────────────────────── */
+.certsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.875rem;
+}
+
+.certCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.125rem;
+  background: var(--background);
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
+  transition: border-color 0.15s;
+}
+
+.certCard:hover {
+  border-color: var(--primary);
+}
+
+.certIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.certInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.certTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 0.25rem;
+}
+
+.certDate {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.noCerts {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 1rem 0;
+}

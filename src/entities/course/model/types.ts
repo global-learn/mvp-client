@@ -96,3 +96,13 @@ export function calcProgress(course: Course, completedItems: string[]): number {
 }
 
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;
+
+// ── Сертификат о прохождении курса ──────────────────────────────
+export interface Certificate {
+  id: string;
+  userId: string;
+  courseId: string;
+  courseTitle: string;
+  userName: string;
+  issuedAt: string; // ISO date string
+}

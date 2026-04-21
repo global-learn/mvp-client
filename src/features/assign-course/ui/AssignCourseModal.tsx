@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { X, Check } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, isDeptHead, ROLE_LABELS } from '@entities/user/model/types';
+import { isAdmin, isDepartmentHead, isDivisionHead, ROLE_LABELS } from '@entities/user/model/types';
 import { ALL_EMPLOYEES, MOCK_ORG } from '@pages/company/ui/CompanyPage';
 import styles from './AssignCourseModal.module.css';
 
@@ -21,15 +21,18 @@ export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCour
   const [done, setDone] = useState(false);
 
   // Скоупинг списка по роли текущего пользователя:
-  //   admin      → все сотрудники
-  //   dept_head  → только свой департамент
-  //   senior_mgr → только менеджеры в своём отделе
+  //   admin           → все сотрудники
+  //   department_head → только свой департамент
+  //   division_head   → только свой отдел
+  //   senior_manager  → менеджеры в своём отделе
   const scopedEmployees = useMemo(() => {
     let list = ALL_EMPLOYEES;
     if (isAdmin(user)) {
       // всё
-    } else if (isDeptHead(user)) {
+    } else if (isDepartmentHead(user)) {
       list = list.filter(e => e.department.id === user.employee?.department.id);
+    } else if (isDivisionHead(user)) {
+      list = list.filter(e => e.division.id === user.employee?.division.id);
     } else {
       // senior_manager: только managers своего отдела
       list = list.filter(e =>
@@ -41,7 +44,7 @@ export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCour
 
   const departments = useMemo(() => {
     if (isAdmin(user)) return MOCK_ORG.map(d => ({ id: d.id, name: d.name }));
-    if (isDeptHead(user)) {
+    if (isDepartmentHead(user)) {
       const d = MOCK_ORG.find(d => d.id === user.employee?.department.id);
       return d ? [{ id: d.id, name: d.name }] : [];
     }

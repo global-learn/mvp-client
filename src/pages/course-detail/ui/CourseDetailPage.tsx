@@ -7,6 +7,7 @@ import { isAdmin } from '@entities/user/model/types';
 import type { Course, StepItem, LessonContent, TestContent } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
+import { CompletionModal } from './CompletionModal';
 import styles from './CourseDetail.module.css';
 
 // ─────────────────────────────────────────────────────────
@@ -199,7 +200,7 @@ function TestPlayer({
 // ─────────────────────────────────────────────────────────
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { courses, getEnrollment, enroll, markItemComplete, isLoading } = useCourses();
+  const { courses, getEnrollment, enroll, markItemComplete, certificates, isLoading } = useCourses();
   const { user } = useUser();
 
   const [assignOpen, setAssignOpen] = useState(false);
@@ -207,6 +208,7 @@ export function CourseDetailPage() {
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [enrollPending, setEnrollPending] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['m1-1', 'm2-1', 'm3-1', 'm4-1']));
+  const [completionOpen, setCompletionOpen] = useState(false);
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
 
@@ -249,8 +251,15 @@ export function CourseDetailPage() {
 
   // ── Завершение элемента ───────────────────────────────────
   const handleItemComplete = async (itemId: string) => {
-    await markItemComplete(course.id, itemId);
-    // Автоматически переходим к следующему непройденному
+    const updated = await markItemComplete(course.id, itemId);
+
+    // Курс только что завершён — показываем экран поздравления
+    if (updated.status === 'completed') {
+      setCompletionOpen(true);
+      return;
+    }
+
+    // Иначе переходим к следующему непройденному
     const idx = allItems.findIndex(i => i.id === itemId);
     const next = allItems.slice(idx + 1).find(i => !completedSet.has(i.id) && i.id !== itemId);
     if (next) setSelectedItemId(next.id);
@@ -410,6 +419,14 @@ export function CourseDetailPage() {
             )}
           </div>
         </div>
+      )}
+
+      {completionOpen && (
+        <CompletionModal
+          courseTitle={course.title}
+          certificate={certificates.find(c => c.courseId === course.id)}
+          onClose={() => setCompletionOpen(false)}
+        />
       )}
 
       {assignOpen && (

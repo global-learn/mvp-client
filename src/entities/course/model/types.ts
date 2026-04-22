@@ -48,7 +48,7 @@ export interface Module {
 // Типы для API (список курсов, записи)
 // ================================================================
 
-export type CourseStatus = 'draft' | 'published' | 'archived';
+export type CourseStatus = 'draft' | 'pending' | 'published' | 'archived';
 
 export type EnrollmentStatus = 'not_enrolled' | 'in_progress' | 'completed';
 

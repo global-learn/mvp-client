@@ -570,9 +570,10 @@ let mockEnrollments: Enrollment[] = [];
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 export const courseApi = {
+  // Возвращаем все курсы кроме archived — фильтрация по роли происходит в контексте
   async getCourses(): Promise<Course[]> {
     await delay(300);
-    return mockCourses.filter(c => c.status === 'published');
+    return mockCourses.filter(c => c.status !== 'archived');
   },
 
   async getCourseById(id: string): Promise<Course | undefined> {
@@ -613,6 +614,24 @@ export const courseApi = {
   async assignCourse(courseId: string, userId: string): Promise<Enrollment> {
     await delay(200);
     return this.enroll(courseId, userId);
+  },
+
+  async approveCourse(courseId: string): Promise<Course> {
+    await delay(200);
+    const idx = mockCourses.findIndex(c => c.id === courseId);
+    if (idx === -1) throw new Error('Course not found');
+    const updated = { ...mockCourses[idx], status: 'published' as const };
+    mockCourses = [...mockCourses.slice(0, idx), updated, ...mockCourses.slice(idx + 1)];
+    return updated;
+  },
+
+  async rejectCourse(courseId: string): Promise<Course> {
+    await delay(200);
+    const idx = mockCourses.findIndex(c => c.id === courseId);
+    if (idx === -1) throw new Error('Course not found');
+    const updated = { ...mockCourses[idx], status: 'draft' as const };
+    mockCourses = [...mockCourses.slice(0, idx), updated, ...mockCourses.slice(idx + 1)];
+    return updated;
   },
 
   /** Пометить элемент курса (урок или тест) как пройденный и пересчитать прогресс */

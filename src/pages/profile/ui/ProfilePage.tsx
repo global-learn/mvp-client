@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { BookOpen, CheckCircle2, Clock, Edit2, Award } from 'lucide-react';
+import { BookOpen, CheckCircle2, Clock, Edit2, Award, ExternalLink } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
+import type { Certificate } from '@entities/course/model/types';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
 import { AvatarPicker } from '@widgets/avatar-picker/ui/AvatarPicker';
+import { CertificateModal } from '@features/certificate/ui/CertificateModal';
 import styles from './Profile.module.css';
 
 function formatDate(iso: string): string {
@@ -19,6 +21,7 @@ export function ProfilePage() {
   const { user } = useUser();
   const { enrollments, certificates } = useCourses();
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [openCert, setOpenCert] = useState<Certificate | null>(null);
 
   const completed = enrollments.filter(e => e.status === 'completed').length;
   const inProgress = enrollments.filter(e => e.status === 'in_progress').length;
@@ -130,7 +133,12 @@ export function ProfilePage() {
         ) : (
           <div className={styles.certsGrid}>
             {certificates.map(cert => (
-              <div key={cert.id} className={styles.certCard}>
+              <button
+                key={cert.id}
+                className={styles.certCard}
+                onClick={() => setOpenCert(cert)}
+                title="Открыть сертификат"
+              >
                 <div className={styles.certIcon}>
                   <Award size={18} />
                 </div>
@@ -142,7 +150,8 @@ export function ProfilePage() {
                     })}
                   </div>
                 </div>
-              </div>
+                <ExternalLink size={14} className={styles.certOpenIcon} />
+              </button>
             ))}
           </div>
         )}
@@ -150,6 +159,9 @@ export function ProfilePage() {
 
       {/* Модалка выбора аватара */}
       {pickerOpen && <AvatarPicker onClose={() => setPickerOpen(false)} />}
+
+      {/* Просмотр сертификата */}
+      {openCert && <CertificateModal certificate={openCert} onClose={() => setOpenCert(null)} />}
     </div>
   );
 }

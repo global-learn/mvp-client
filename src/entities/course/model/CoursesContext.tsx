@@ -9,7 +9,7 @@ import {
 import type { Course, Enrollment, Certificate, CreateCourseDto } from './types';
 import { courseApi } from '../api/courseApi';
 import { useUser } from '@entities/user/model/UserContext';
-import { displayName } from '@entities/user/model/types';
+import { displayName, isAdmin } from '@entities/user/model/types';
 
 interface CoursesContextValue {
   courses: Course[];
@@ -17,13 +17,13 @@ interface CoursesContextValue {
   certificates: Certificate[];
   isLoading: boolean;
   enroll: (courseId: string) => Promise<void>;
-  // Назначение курса другому пользователю
   assignCourse: (courseId: string, userId: string) => Promise<void>;
-  // Принимает всё из CreateCourseDto кроме authorId — его добавляет контекст сам
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>) => Promise<Course>;
+  approveCourse: (courseId: string) => Promise<void>;
+  rejectCourse: (courseId: string) => Promise<void>;
   getEnrollment: (courseId: string) => Enrollment | undefined;
-  // Пометить элемент курса (урок/тест) как пройденный, обновляет progress и status
-  markItemComplete: (courseId: string, itemId: string) => Promise<void>;
+  // Возвращает обновлённый Enrollment — компонент проверяет status === 'completed'
+  markItemComplete: (courseId: string, itemId: string) => Promise<Enrollment>;
 }
 
 const CoursesContext = createContext<CoursesContextValue | undefined>(undefined);
@@ -42,10 +42,20 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       courseApi.getCourses(),
       courseApi.getEnrollments(user.id),
     ]);
-    setCourses(coursesData);
+
+    // Фильтрация по роли:
+    //   admin видит все (published + pending)
+    //   остальные видят только published + свои pending/draft
+    const filtered = isAdmin(user)
+      ? coursesData
+      : coursesData.filter(
+          c => c.status === 'published' || c.authorId === user.id,
+        );
+
+    setCourses(filtered);
     setEnrollments(enrollmentsData);
     setIsLoading(false);
-  }, [user.id]);
+  }, [user]);
 
   useEffect(() => {
     void loadData();
@@ -67,13 +77,27 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
   const assignCourse = async (courseId: string, userId: string): Promise<void> => {
     await courseApi.assignCourse(courseId, userId);
-    // enrollment у другого пользователя — не обновляем локальный стейт текущего юзера
+  };
+
+  const approveCourse = async (courseId: string): Promise<void> => {
+    const updated = await courseApi.approveCourse(courseId);
+    setCourses(prev => prev.map(c => (c.id === courseId ? updated : c)));
+  };
+
+  const rejectCourse = async (courseId: string): Promise<void> => {
+    const updated = await courseApi.rejectCourse(courseId);
+    // После отклонения убираем из списка (если текущий пользователь — admin и не автор)
+    if (!isAdmin(user) || updated.authorId !== user.id) {
+      setCourses(prev => prev.filter(c => c.id !== courseId));
+    } else {
+      setCourses(prev => prev.map(c => (c.id === courseId ? updated : c)));
+    }
   };
 
   const getEnrollment = (courseId: string): Enrollment | undefined =>
     enrollments.find(e => e.courseId === courseId && e.userId === user.id);
 
-  const markItemComplete = async (courseId: string, itemId: string): Promise<void> => {
+  const markItemComplete = async (courseId: string, itemId: string): Promise<Enrollment> => {
     const prevEnrollment = getEnrollment(courseId);
     const updated = await courseApi.markItemComplete(courseId, user.id, itemId);
 
@@ -100,11 +124,25 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         ]);
       }
     }
+
+    return updated;
   };
 
   return (
     <CoursesContext.Provider
-      value={{ courses, enrollments, certificates, isLoading, enroll, assignCourse, createCourse, getEnrollment, markItemComplete }}
+      value={{
+        courses,
+        enrollments,
+        certificates,
+        isLoading,
+        enroll,
+        assignCourse,
+        createCourse,
+        approveCourse,
+        rejectCourse,
+        getEnrollment,
+        markItemComplete,
+      }}
     >
       {children}
     </CoursesContext.Provider>

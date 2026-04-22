@@ -24,7 +24,6 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/control',        label: 'Контроль',       icon: BarChart2,     visible: canControl },
   { to: '/chat',           label: 'Чат',            icon: MessageSquare, visible: u => u.type === 'EMPLOYEE' },
   { to: '/profile',        label: 'Профиль',        icon: UserCircle,    visible: () => true },
-  { to: '/settings',       label: 'Настройки',      icon: Settings,      visible: () => true },
 ];
 
 // Более специфичный nav item всегда побеждает.

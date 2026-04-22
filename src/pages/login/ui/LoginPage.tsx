@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { useAuth } from '@entities/user/model/UserContext';
 import styles from './Login.module.css';
@@ -80,6 +80,13 @@ export function LoginPage() {
             {submitting ? 'Вход...' : 'Войти'}
           </button>
         </form>
+
+        <p className={styles.registerHint}>
+          Нет аккаунта?{' '}
+          <Link to="/register" className={styles.registerLink}>
+            Зарегистрироваться
+          </Link>
+        </p>
 
         {/* Подсказка для разработки — удали перед продакшном */}
         <div className={styles.hint}>

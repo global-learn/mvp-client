@@ -11,6 +11,8 @@ import type {
 } from '@entities/course/model/types';
 import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
+import { useUser } from '@entities/user/model/UserContext';
+import { isAdmin } from '@entities/user/model/types';
 import styles from './CourseBuilder.module.css';
 
 // Изменения относительно оригинала (Next.js → React):
@@ -31,7 +33,9 @@ type BuilderCourse = {
 
 export function CourseBuilder() {
   const { createCourse } = useCourses();
+  const { user } = useUser();
   const navigate = useNavigate();
+  const userIsAdmin = isAdmin(user);
 
   const [course, setCourse] = useState<BuilderCourse>({
     title: '',
@@ -62,7 +66,8 @@ export function CourseBuilder() {
         courseType: course.courseType,
         lessonsCount,
         modules: course.modules,
-        status: 'published',
+        // Только admin публикует сразу; все остальные отправляют на модерацию
+        status: userIsAdmin ? 'published' : 'pending',
       });
       navigate('/courses');
     } finally {
@@ -418,7 +423,11 @@ export function CourseBuilder() {
       <header className={styles.header}>
         <h1 className={styles.title}>Создание курса</h1>
         <button className={styles.saveBtn} onClick={() => void handleSave()} disabled={isSaving || !course.title.trim()}>
-          {isSaving ? 'Сохраняем...' : 'Сохранить курс'}
+          {isSaving
+            ? 'Сохраняем...'
+            : userIsAdmin
+              ? 'Опубликовать курс'
+              : 'Отправить на проверку'}
         </button>
       </header>
 

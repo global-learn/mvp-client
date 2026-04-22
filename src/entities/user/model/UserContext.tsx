@@ -138,7 +138,19 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
   },
 };
 
-const SESSION_KEY = 'gl_auth_user';
+const SESSION_KEY        = 'gl_auth_user';
+const PENDING_REG_KEY    = 'gl_pending_reg';
+const REGISTERED_KEY     = 'gl_registered_users';
+
+// Вспомогательные функции для работы с хранилищем pending/registered пользователей
+function getPendingRegs(): Record<string, { fullname: string; email: string; password: string }> {
+  try { return JSON.parse(sessionStorage.getItem(PENDING_REG_KEY) ?? '{}') as Record<string, { fullname: string; email: string; password: string }>; }
+  catch { return {}; }
+}
+function getRegisteredUsers(): Record<string, { fullname: string; password: string }> {
+  try { return JSON.parse(sessionStorage.getItem(REGISTERED_KEY) ?? '{}') as Record<string, { fullname: string; password: string }>; }
+  catch { return {}; }
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -147,6 +159,10 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateAvatar: (avatar: UserAvatar | undefined) => void;
+  /** Регистрация: создаёт pending-запись и возвращает токен для письма */
+  register: (fullname: string, email: string, password: string) => Promise<string>;
+  /** Подтверждение email по токену. Возвращает true при успехе */
+  verifyEmail: (token: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -165,13 +181,64 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<void> => {
-    const credential = MOCK_CREDENTIALS[email.toLowerCase()];
-    if (!credential || credential.password !== password) {
+    const normalized = email.toLowerCase();
+    let mockCred = MOCK_CREDENTIALS[normalized];
+
+    // Также проверяем пользователей, прошедших верификацию email
+    if (!mockCred) {
+      const registered = getRegisteredUsers();
+      const reg = registered[normalized];
+      if (reg && reg.password === password) {
+        const syntheticUser: User = {
+          id: `user-${normalized.replace(/[@.]/g, '-')}`,
+          email: normalized,
+          fullname: reg.fullname,
+          type: 'EMPLOYEE',
+        };
+        await new Promise<void>(r => setTimeout(r, 300));
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify(syntheticUser));
+        setUser(syntheticUser);
+        return;
+      }
+    }
+
+    if (!mockCred || mockCred.password !== password) {
       throw new Error('Invalid credentials');
     }
     await new Promise<void>(r => setTimeout(r, 300));
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(credential.user));
-    setUser(credential.user);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(mockCred.user));
+    setUser(mockCred.user);
+  }, []);
+
+  const register = useCallback(async (fullname: string, email: string, password: string): Promise<string> => {
+    await new Promise<void>(r => setTimeout(r, 400));
+    const normalized = email.toLowerCase();
+
+    if (MOCK_CREDENTIALS[normalized]) throw new Error('Email уже используется');
+    const registered = getRegisteredUsers();
+    if (registered[normalized]) throw new Error('Email уже используется');
+
+    const token = `reg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const pending = getPendingRegs();
+    pending[token] = { fullname, email: normalized, password };
+    sessionStorage.setItem(PENDING_REG_KEY, JSON.stringify(pending));
+    return token;
+  }, []);
+
+  const verifyEmail = useCallback((token: string): boolean => {
+    const pending = getPendingRegs();
+    const reg = pending[token];
+    if (!reg) return false;
+
+    // Переносим в подтверждённые
+    const registered = getRegisteredUsers();
+    registered[reg.email] = { fullname: reg.fullname, password: reg.password };
+    sessionStorage.setItem(REGISTERED_KEY, JSON.stringify(registered));
+
+    // Удаляем из pending
+    delete pending[token];
+    sessionStorage.setItem(PENDING_REG_KEY, JSON.stringify(pending));
+    return true;
   }, []);
 
   const logout = useCallback(async (): Promise<void> => {
@@ -190,7 +257,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar }}
+      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar, register, verifyEmail }}
     >
       {children}
     </AuthContext.Provider>

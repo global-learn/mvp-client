@@ -110,6 +110,20 @@
   text-align: center;
 }
 
+.registerHint {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 1rem 0 0;
+}
+
+.registerLink {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.registerLink:hover { text-decoration: underline; }
+
 .hint {
   margin-top: 1.5rem;
   padding-top: 1.25rem;

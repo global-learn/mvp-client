@@ -161,11 +161,26 @@
   display: flex;
   gap: 0.875rem;
   align-items: flex-start;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
 }
 
 .certCard:hover {
   border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.certOpenIcon {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  margin-top: 0.125rem;
+  transition: color 0.15s;
+}
+.certCard:hover .certOpenIcon {
+  color: var(--primary);
 }
 
 .certIcon {

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>GlobalLearn — Диаграмма деятельности</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #e8eaed; padding: 24px; font-family: system-ui, -apple-system, sans-serif; }
+  .page { background: white; border-radius: 10px; box-shadow: 0 4px 24px rgba(0,0,0,.14); padding: 24px; display: inline-block; }
+  h1 { font-size: 17px; font-weight: 700; color: #111; margin-bottom: 18px; letter-spacing: -.3px; }
+</style>
+</head>
+<body>
+<div class="page">
+<h1>GlobalLearn — Диаграмма деятельности с ролями</h1>
+<svg width="1330" height="900" viewBox="0 0 1330 900" xmlns="http://www.w3.org/2000/svg">
+
+<!-- ══════════════════════════════════════════════════
+     DEFS: маркеры стрелок
+════════════════════════════════════════════════════ -->
+<defs>
+  <marker id="arr"     markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0, 9 3.5, 0 7" fill="#444"/>
+  </marker>
+  <marker id="arr-blue" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0, 9 3.5, 0 7" fill="#1565c0"/>
+  </marker>
+  <marker id="arr-red" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0, 9 3.5, 0 7" fill="#b71c1c"/>
+  </marker>
+  <marker id="arr-orange" markerWidth="9" markerHeight="7" refX="8" refY="3.5" orient="auto">
+    <polygon points="0 0, 9 3.5, 0 7" fill="#e65100"/>
+  </marker>
+</defs>
+
+<!-- ══════════════════════════════════════════════════
+     ФОН ПОЛОС (swimlane backgrounds)
+════════════════════════════════════════════════════ -->
+<rect x="0"    y="0" width="200"  height="900" fill="#e8f5e9"/>   <!-- Клиент -->
+<rect x="200"  y="0" width="210"  height="900" fill="#e3f2fd"/>   <!-- Менеджер -->
+<rect x="410"  y="0" width="200"  height="900" fill="#fff3e0"/>   <!-- Ст. менеджер -->
+<rect x="610"  y="0" width="200"  height="900" fill="#f3e5f5"/>   <!-- Рук. отдела -->
+<rect x="810"  y="0" width="200"  height="900" fill="#e8eaf6"/>   <!-- Рук. деп. -->
+<rect x="1010" y="0" width="320"  height="900" fill="#fce4ec"/>   <!-- Администратор -->
+
+<!-- ══════════════════════════════════════════════════
+     ЗАГОЛОВКИ ПОЛОС
+════════════════════════════════════════════════════ -->
+<!-- Клиент -->
+<rect x="0" y="0" width="200" height="66" fill="#2e7d32"/>
+<text x="100" y="36" text-anchor="middle" fill="white" font-size="14" font-weight="700">Клиент</text>
+<text x="100" y="55" text-anchor="middle" fill="#c8e6c9" font-size="11">CLIENT</text>
+
+<!-- Менеджер -->
+<rect x="200" y="0" width="210" height="66" fill="#1565c0"/>
+<text x="305" y="36" text-anchor="middle" fill="white" font-size="14" font-weight="700">Менеджер</text>
+<text x="305" y="55" text-anchor="middle" fill="#bbdefb" font-size="11">manager</text>
+
+<!-- Старший менеджер -->
+<rect x="410" y="0" width="200" height="66" fill="#bf360c"/>
+<text x="510" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="700">Старший</text>
+<text x="510" y="47" text-anchor="middle" fill="white" font-size="13" font-weight="700">менеджер</text>
+<text x="510" y="61" text-anchor="middle" fill="#ffccbc" font-size="10">senior_manager</text>
+
+<!-- Руководитель отдела -->
+<rect x="610" y="0" width="200" height="66" fill="#6a1b9a"/>
+<text x="710" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="700">Руководитель</text>
+<text x="710" y="47" text-anchor="middle" fill="white" font-size="13" font-weight="700">отдела</text>
+<text x="710" y="61" text-anchor="middle" fill="#e1bee7" font-size="10">division_head</text>
+
+<!-- Руководитель департамента -->
+<rect x="810" y="0" width="200" height="66" fill="#283593"/>
+<text x="910" y="30" text-anchor="middle" fill="white" font-size="13" font-weight="700">Руководитель</text>
+<text x="910" y="47" text-anchor="middle" fill="white" font-size="13" font-weight="700">департамента</text>
+<text x="910" y="61" text-anchor="middle" fill="#c5cae9" font-size="10">department_head</text>
+
+<!-- Администратор -->
+<rect x="1010" y="0" width="320" height="66" fill="#b71c1c"/>
+<text x="1170" y="36" text-anchor="middle" fill="white" font-size="14" font-weight="700">Администратор</text>
+<text x="1170" y="55" text-anchor="middle" fill="#ffcdd2" font-size="11">admin</text>
+
+<!-- Разделители полос -->
+<line x1="200"  y1="0" x2="200"  y2="900" stroke="#ccc" stroke-width="1"/>
+<line x1="410"  y1="0" x2="410"  y2="900" stroke="#ccc" stroke-width="1"/>
+<line x1="610"  y1="0" x2="610"  y2="900" stroke="#ccc" stroke-width="1"/>
+<line x1="810"  y1="0" x2="810"  y2="900" stroke="#ccc" stroke-width="1"/>
+<line x1="1010" y1="0" x2="1010" y2="900" stroke="#ccc" stroke-width="1"/>
+<!-- Внешняя рамка -->
+<rect x="0" y="0" width="1330" height="900" fill="none" stroke="#888" stroke-width="2"/>
+
+<!-- ══════════════════════════════════════════════════
+     START NODE  (cy=88)
+════════════════════════════════════════════════════ -->
+<circle cx="665" cy="86" r="11" fill="#111"/>
+<line x1="665" y1="97" x2="665" y2="110" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════════════════════════════════
+     АВТОРИЗАЦИЯ  (все роли) — y=112-148
+════════════════════════════════════════════════════ -->
+<rect x="18" y="112" width="1294" height="36" rx="18" fill="white" stroke="#555" stroke-width="1.5"/>
+<text x="665" y="134" text-anchor="middle" fill="#111" font-size="13" font-weight="500">Авторизация в системе</text>
+
+<line x1="665" y1="148" x2="665" y2="162" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════════════════════════════════
+     ПРОСМОТР КУРСОВ  (все роли) — y=164-200
+════════════════════════════════════════════════════ -->
+<rect x="18" y="164" width="1294" height="36" rx="18" fill="white" stroke="#555" stroke-width="1.5"/>
+<text x="665" y="186" text-anchor="middle" fill="#111" font-size="13" font-weight="500">Просмотр каталога курсов и Главная страница</text>
+
+<line x1="665" y1="200" x2="665" y2="210" stroke="#444" stroke-width="1.5"/>
+
+<!-- ══════════════════════════════════════════════════
+     FORK BAR  — y=210-218
+════════════════════════════════════════════════════ -->
+<rect x="18" y="210" width="1294" height="8" rx="4" fill="#111"/>
+
+<!-- Fork левый → (Клиент + Менеджер, center=205) -->
+<line x1="205" y1="218" x2="205" y2="232" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+<!-- Fork правый → (управленцы, center=860) -->
+<line x1="860" y1="218" x2="860" y2="232" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════════════════════════════════
+     ЛЕВАЯ ВЕТКА: Клиент (L0) + Менеджер (L1)
+     x range: 18-402, center x=210
+════════════════════════════════════════════════════ -->
+
+<!-- Запись на курс  y=234-270 -->
+<rect x="18" y="234" width="384" height="36" rx="10" fill="white" stroke="#1565c0" stroke-width="1.5"/>
+<text x="210" y="256" text-anchor="middle" fill="#0d47a1" font-size="12.5">Запись на курс</text>
+
+<line x1="210" y1="270" x2="210" y2="284" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Изучение урока  y=286-322 -->
+<rect x="18" y="286" width="384" height="36" rx="10" fill="white" stroke="#1565c0" stroke-width="1.5"/>
+<text x="210" y="308" text-anchor="middle" fill="#0d47a1" font-size="12.5">Изучение урока (markdown)</text>
+
+<line x1="210" y1="322" x2="210" y2="336" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Прохождение теста  y=338-374 -->
+<rect x="18" y="338" width="384" height="36" rx="10" fill="white" stroke="#1565c0" stroke-width="1.5"/>
+<text x="210" y="360" text-anchor="middle" fill="#0d47a1" font-size="12.5">Прохождение теста</text>
+
+<line x1="210" y1="374" x2="210" y2="388" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Decision: прогресс 100%?  центр y=412 -->
+<polygon points="210,390 290,415 210,440 130,415" fill="#fff8e1" stroke="#e65100" stroke-width="1.5"/>
+<text x="210" y="411" text-anchor="middle" fill="#bf360c" font-size="11" font-weight="700">Прогресс</text>
+<text x="210" y="427" text-anchor="middle" fill="#bf360c" font-size="11" font-weight="700">= 100%?</text>
+
+<!-- Нет → повтор урока (стрелка влево и вверх) -->
+<path d="M130,415 L12,415 L12,304 L18,304"
+      stroke="#e65100" stroke-width="1.5" fill="none" marker-end="url(#arr-orange)"/>
+<text x="26" y="405" fill="#e65100" font-size="10" transform="rotate(-90 26 400)">Нет → повтор</text>
+
+<!-- Да → сертификат -->
+<line x1="210" y1="440" x2="210" y2="454" stroke="#2e7d32" stroke-width="1.5" marker-end="url(#arr)"/>
+<text x="228" y="452" fill="#2e7d32" font-size="11">Да</text>
+
+<!-- Сертификат  y=456-492 -->
+<rect x="18" y="456" width="384" height="36" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-width="2"/>
+<text x="210" y="478" text-anchor="middle" fill="#1b5e20" font-size="13" font-weight="600">🏆 Получение сертификата</text>
+
+<line x1="210" y1="492" x2="210" y2="510" stroke="#444" stroke-width="1.5"/>
+
+<!-- ══════════════════════════════════════════════════
+     ПРАВАЯ ВЕТКА: Ст. Мен (L2) + Рук.Отд (L3) +
+                  Рук.Деп (L4) + Адм (L5)
+     x range: 420-1312, center x=866
+════════════════════════════════════════════════════ -->
+
+<!-- Создание курса  y=234-270 -->
+<rect x="420" y="234" width="892" height="36" rx="10" fill="white" stroke="#bf360c" stroke-width="1.5"/>
+<text x="866" y="256" text-anchor="middle" fill="#bf360c" font-size="12.5">Создание курса (черновик → публикация)</text>
+
+<line x1="866" y1="270" x2="866" y2="284" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Назначение курса  y=286-322 -->
+<rect x="420" y="286" width="892" height="36" rx="10" fill="white" stroke="#bf360c" stroke-width="1.5"/>
+<text x="866" y="308" text-anchor="middle" fill="#bf360c" font-size="12.5">Назначение курса сотрудникам / клиентам</text>
+
+<!-- Пунктирная стрелка: назначение → Менеджер получает курс -->
+<path d="M420,304 L408,304 L408,260 L402,260"
+      stroke="#1565c0" stroke-width="1.5" stroke-dasharray="5,3" fill="none" marker-end="url(#arr-blue)"/>
+
+<line x1="866" y1="322" x2="866" y2="336" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Контроль обучения  y=338-394  (чуть высокое, чтобы показать скоупы) -->
+<rect x="420" y="338" width="892" height="56" rx="10" fill="white" stroke="#6a1b9a" stroke-width="1.5"/>
+<text x="866" y="358" text-anchor="middle" fill="#4a148c" font-size="13" font-weight="600">Контроль прохождения курсов</text>
+<!-- Scope labels per lane -->
+<text x="510" y="384" text-anchor="middle" fill="#888" font-size="10.5">назначенные</text>
+<text x="710" y="384" text-anchor="middle" fill="#888" font-size="10.5">свой отдел</text>
+<text x="910" y="384" text-anchor="middle" fill="#888" font-size="10.5">свой деп.</text>
+<text x="1166" y="384" text-anchor="middle" fill="#888" font-size="10.5">все данные</text>
+<!-- Vertical dividers inside box -->
+<line x1="610" y1="338" x2="610" y2="394" stroke="#ddd" stroke-width="1"/>
+<line x1="810" y1="338" x2="810" y2="394" stroke="#ddd" stroke-width="1"/>
+<line x1="1010" y1="338" x2="1010" y2="394" stroke="#ddd" stroke-width="1"/>
+
+<line x1="866" y1="394" x2="866" y2="408" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Управление сотрудниками  y=410-446 -->
+<rect x="420" y="410" width="892" height="36" rx="10" fill="white" stroke="#283593" stroke-width="1.5"/>
+<text x="866" y="432" text-anchor="middle" fill="#1a237e" font-size="12.5">Управление сотрудниками / инвайты (в рамках скоупа)</text>
+
+<!-- Стрелки от управления вниз для L2-L4 -->
+<line x1="510" y1="446" x2="510" y2="510" stroke="#444" stroke-width="1.5"/>
+<line x1="710" y1="446" x2="710" y2="510" stroke="#444" stroke-width="1.5"/>
+<line x1="910" y1="446" x2="910" y2="510" stroke="#444" stroke-width="1.5"/>
+
+<line x1="1166" y1="446" x2="1166" y2="456" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- Работа с клиентами (только Администратор)  y=458-494 -->
+<rect x="1016" y="458" width="308" height="36" rx="10" fill="#fce4ec" stroke="#b71c1c" stroke-width="2"/>
+<text x="1170" y="480" text-anchor="middle" fill="#b71c1c" font-size="12.5" font-weight="600">Работа с клиентами</text>
+
+<line x1="1166" y1="494" x2="1166" y2="510" stroke="#444" stroke-width="1.5"/>
+
+<!-- Отдел сервиса note (Менеджер, L1) -->
+<rect x="210" y="460" width="192" height="40" rx="8" fill="white" stroke="#b71c1c" stroke-width="1.5" stroke-dasharray="5,3"/>
+<text x="306" y="477" text-anchor="middle" fill="#b71c1c" font-size="11" font-weight="600">Отдел сервиса:</text>
+<text x="306" y="492" text-anchor="middle" fill="#b71c1c" font-size="11">чат с клиентами</text>
+<line x1="306" y1="500" x2="306" y2="510" stroke="#b71c1c" stroke-width="1" stroke-dasharray="4,2"/>
+
+<!-- ══════════════════════════════════════════════════
+     JOIN BAR #1  — y=510-518
+════════════════════════════════════════════════════ -->
+<rect x="18" y="510" width="1294" height="8" rx="4" fill="#111"/>
+<line x1="665" y1="518" x2="665" y2="530" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════════════════════════════════
+     ЧАТ (все сотрудники, L1-L5)  y=532-568
+════════════════════════════════════════════════════ -->
+<rect x="207" y="532" width="1105" height="36" rx="18" fill="white" stroke="#555" stroke-width="1.5"/>
+<text x="760" y="554" text-anchor="middle" fill="#111" font-size="13" font-weight="500">Общение в чате (сотрудники ↔ сотрудники)</text>
+
+<line x1="760" y1="568" x2="760" y2="580" stroke="#444" stroke-width="1.5"/>
+
+<!-- ══════════════════════════════════════════════════
+     JOIN BAR #2  — y=580-588
+════════════════════════════════════════════════════ -->
+<rect x="18" y="580" width="1294" height="8" rx="4" fill="#111"/>
+<line x1="665" y1="588" x2="665" y2="602" stroke="#444" stroke-width="1.5" marker-end="url(#arr)"/>
+
+<!-- ══════════════════════════════════════════════════
+     END NODE  (cy=618)
+════════════════════════════════════════════════════ -->
+<circle cx="665" cy="618" r="12" fill="#111"/>
+<circle cx="665" cy="618" r="19" fill="none" stroke="#111" stroke-width="2.5"/>
+
+<!-- ══════════════════════════════════════════════════
+     ЛЕГЕНДА  — y=650-895
+════════════════════════════════════════════════════ -->
+<rect x="10" y="648" width="1310" height="244" rx="8" fill="#f8f9fa" stroke="#ddd" stroke-width="1"/>
+<text x="26" y="672" fill="#111" font-size="13" font-weight="700">Легенда — права доступа по ролям</text>
+
+<!-- Row 1 -->
+<rect x="26"  y="682" width="13" height="13" rx="2" fill="#2e7d32"/>
+<text x="46"  y="693" fill="#222" font-size="12">Клиент — самостоятельная запись на курсы, прохождение уроков и тестов, получение сертификата</text>
+
+<rect x="26"  y="702" width="13" height="13" rx="2" fill="#1565c0"/>
+<text x="46"  y="713" fill="#222" font-size="12">Менеджер — прохождение курсов (назначенных или самозапись); Отдел сервиса: дополнительно чат с клиентами</text>
+
+<rect x="26"  y="722" width="13" height="13" rx="2" fill="#bf360c"/>
+<text x="46"  y="733" fill="#222" font-size="12">Старший менеджер — создание/назначение курсов, контроль прогресса назначенных сотрудников</text>
+
+<rect x="26"  y="742" width="13" height="13" rx="2" fill="#6a1b9a"/>
+<text x="46"  y="753" fill="#222" font-size="12">Руководитель отдела — то же, что ст. менеджер, но область = весь отдел (division)</text>
+
+<rect x="26"  y="762" width="13" height="13" rx="2" fill="#283593"/>
+<text x="46"  y="773" fill="#222" font-size="12">Руководитель департамента — то же, что рук. отдела, но область = весь департамент</text>
+
+<rect x="26"  y="782" width="13" height="13" rx="2" fill="#b71c1c"/>
+<text x="46"  y="793" fill="#222" font-size="12">Администратор — полный доступ: все функции + работа с клиентами (глобальный скоуп)</text>
+
+<!-- Divider -->
+<line x1="26" y1="802" x2="1294" y2="802" stroke="#ddd" stroke-width="1"/>
+
+<!-- Symbols -->
+<!-- Start node -->
+<circle cx="35" cy="820" r="8" fill="#111"/>
+<text x="50" y="824" fill="#555" font-size="11">Начальное состояние</text>
+
+<!-- End node -->
+<circle cx="155" cy="820" r="8" fill="#111"/>
+<circle cx="155" cy="820" r="13" fill="none" stroke="#111" stroke-width="2"/>
+<text x="174" y="824" fill="#555" font-size="11">Конечное состояние</text>
+
+<!-- Activity rect -->
+<rect x="286" y="813" width="50" height="16" rx="4" fill="white" stroke="#555" stroke-width="1.5"/>
+<text x="350" y="824" fill="#555" font-size="11">Активность</text>
+
+<!-- Decision -->
+<polygon points="448,820 462,812 476,820 462,828" fill="#fff8e1" stroke="#e65100" stroke-width="1.5"/>
+<text x="484" y="824" fill="#555" font-size="11">Решение (ветвление)</text>
+
+<!-- Fork/Join bar -->
+<rect x="585" y="815" width="40" height="7" rx="2" fill="#111"/>
+<text x="630" y="824" fill="#555" font-size="11">Fork / Join</text>
+
+<!-- Dashed arrow -->
+<line x1="726" y1="820" x2="760" y2="820" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#arr-blue)"/>
+<text x="768" y="824" fill="#555" font-size="11">Назначение курса (кросс-роль)</text>
+
+<!-- Loop arrow -->
+<path d="M990,820 L980,820 L980,810 L990,810" stroke="#e65100" stroke-width="1.5" fill="none" marker-end="url(#arr-orange)"/>
+<text x="998" y="824" fill="#555" font-size="11">Повтор при незачёте теста</text>
+
+<!-- Row 2: scope note -->
+<text x="26" y="852" fill="#666" font-size="11.5" font-style="italic">
+  Скоуп контроля (вертикальные деления в блоке «Контроль»):
+  ст. менеджер = назначенные им · рук. отдела = division · рук. деп. = department · администратор = all
+</text>
+
+<!-- Certificate note -->
+<text x="26" y="872" fill="#1b5e20" font-size="11.5" font-weight="600">
+  🏆 Сертификат выдаётся автоматически при достижении 100% прогресса по курсу (любая роль)
+</text>
+
+</svg>
+</div>
+</body>
+</html>

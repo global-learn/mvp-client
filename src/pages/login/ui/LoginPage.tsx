@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { useAuth } from '@entities/user/model/UserContext';
 import styles from './Login.module.css';
@@ -12,7 +12,6 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // Если уже авторизован — редиректим на дашборд
   if (!isLoading && isAuthenticated) {
     navigate('/dashboard', { replace: true });
     return null;
@@ -37,9 +36,12 @@ export function LoginPage() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
+
         <div className={styles.logo}>
-          <GraduationCap size={28} />
-          <span>GlobalLearn</span>
+          <div className={styles.logoIcon}>
+            <GraduationCap size={20} strokeWidth={2.5} />
+          </div>
+          <span className={styles.logoText}>GlobalLearn</span>
         </div>
 
         <h1 className={styles.title}>Вход в систему</h1>
@@ -56,7 +58,7 @@ export function LoginPage() {
               className={styles.input}
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="admin@test.com"
+              placeholder="email@company.com"
               required
               autoComplete="email"
             />
@@ -77,19 +79,13 @@ export function LoginPage() {
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={submitting}>
-            {submitting ? 'Вход...' : 'Войти'}
+            {submitting ? 'Входим...' : 'Войти'}
           </button>
         </form>
 
-        <p className={styles.registerHint}>
-          Нет аккаунта?{' '}
-          <Link to="/register" className={styles.registerLink}>
-            Зарегистрироваться
-          </Link>
-        </p>
-
-        {/* Подсказка для разработки — удали перед продакшном */}
+        {/* Подсказка для разработки — удалить перед продакшном */}
         <div className={styles.hint}>
+          <span className={styles.hintTitle}>Демо-аккаунты</span>
           <p className={styles.hintItem}><span className={styles.hintRole}>Администратор:</span> admin@test.com / admin</p>
           <p className={styles.hintItem}><span className={styles.hintRole}>Рук. департамента:</span> depthead@test.com / test</p>
           <p className={styles.hintItem}><span className={styles.hintRole}>Рук. отдела:</span> divhead@test.com / test</p>

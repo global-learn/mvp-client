@@ -1,72 +1,96 @@
 /* ================================================================
-   Design Tokens — CSS переменные для всего приложения.
-   Меняешь здесь — меняется везде. Так работает design system.
+   Design Tokens — единый источник правды для всего дизайна.
    ================================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700;800&display=swap');
 
 :root {
-  /* Базовые цвета */
-  --white: #fff;
+  /* ---- Base Colors ---- */
+  --background:   #f1f5f9;
+  --foreground:   #0f172a;
+  --card:         #ffffff;
 
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  /* ---- Primary — Indigo ---- */
+  --primary:              #4f46e5;
+  --primary-hover:        #4338ca;
+  --primary-light:        #eef2ff;
+  --primary-foreground:   #ffffff;
 
-  --card: #ffffff;
-
-  /* Primary — основной цвет бренда */
-  --primary: oklch(0.55 0.18 250);
-  --primary-foreground: #ffffff;
-
-  /* Secondary — нейтральный фон для второстепенных элементов */
-  --secondary: #f1f5f9;
+  /* ---- Secondary ---- */
+  --secondary:            #f8fafc;
   --secondary-foreground: #334155;
 
-  /* Muted — приглушённый текст и фоны */
-  --muted: #f1f5f9;
+  /* ---- Muted ---- */
+  --muted:            #f1f5f9;
   --muted-foreground: #64748b;
 
-  /* Accent — акцентный цвет */
-  --accent: oklch(0.65 0.18 250);
+  /* ---- Accent ---- */
+  --accent:           #818cf8;
+  --accent-light:     #e0e7ff;
 
-  /* Destructive — цвет для опасных действий (удаление) */
-  --destructive: oklch(0.58 0.22 25);
+  /* ---- Status Colors ---- */
+  --destructive:        #ef4444;
+  --destructive-light:  #fef2f2;
+  --success:            #10b981;
+  --success-light:      #ecfdf5;
+  --warning:            #f59e0b;
+  --warning-light:      #fffbeb;
+  --info:               #3b82f6;
+  --info-light:         #eff6ff;
 
-  /* UI элементы */
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: oklch(0.55 0.18 250);
+  /* ---- UI Elements ---- */
+  --border:       #e2e8f0;
+  --input-bg:     #ffffff;
+  --ring:         rgba(79, 70, 229, 0.35);
 
-  /* Скругление углов */
-  --radius: 8px;
+  /* ---- Radius ---- */
+  --radius:     6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  20px;
+  --radius-full: 9999px;
 
-  /* Sidebar — отдельная палитра для боковой панели */
-  --sidebar-foreground: black;
-  --sidebar-foreground-active: #fff;
-  --sidebar-primary: #147cff;
-  --sidebar-primary-foreground: #1e293b;
-  --sidebar-accent: rgba(255, 255, 255, 0.06);
-  --sidebar-border: rgba(77, 77, 77, 0.1);
+  /* ---- Shadows ---- */
+  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --shadow:    0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+  --shadow-md: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1),  0 8px 10px -6px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 25px 50px -12px rgb(0 0 0 / 0.18);
+  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+
+  /* ---- Sidebar ---- */
+  --sidebar:                 #0f172a;
+  --sidebar-deep:            #080f1e;
+  --sidebar-foreground:      #8b97aa;
+  --sidebar-foreground-hi:   #e2e8f0;
+  --sidebar-primary:         #818cf8;
+  --sidebar-primary-bg:      rgba(129, 140, 248, 0.1);
+  --sidebar-primary-border:  #818cf8;
+  --sidebar-accent:          rgba(255, 255, 255, 0.05);
+  --sidebar-border:          rgba(255, 255, 255, 0.07);
+  --sidebar-section:         #3d4f63;
 }
 
-/* ---- Базовый сброс ---- */
+/* ================================================================
+   Reset & Base
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 #root {
-  /* Убираем ограничения из старой Vite-темы */
   width: 100%;
   max-width: none;
   margin: 0;
@@ -75,15 +99,31 @@ body {
   min-height: 100vh;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, h5, h6 {
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
-p {
-  margin: 0;
-}
+p { margin: 0; }
 
-input, textarea, button, select {
-  font-family: inherit;
+a { color: inherit; }
+
+input, textarea, button, select { font-family: inherit; }
+
+/* ================================================================
+   Custom Scrollbar
+   ================================================================ */
+::-webkit-scrollbar         { width: 6px; height: 6px; }
+::-webkit-scrollbar-track   { background: transparent; }
+::-webkit-scrollbar-thumb   { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
+
+/* ================================================================
+   Focus Ring
+   ================================================================ */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius);
 }

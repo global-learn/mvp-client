@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, UserPlus, X, Users } from 'lucide-react';
+import { Search, UserPlus, X, Users, PlusCircle, Building2 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canCreateCourse, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import type { Department, EmployeeListItem } from '@entities/company/model/types';
@@ -10,10 +10,10 @@ import { DepartmentList } from '@widgets/department-list/ui/DepartmentList';
 import styles from './Company.module.css';
 
 // ================================================================
-// Mock-данные: Департамент → Отдел → Должность → Сотрудники
+// Mock-данные (начальные) — Департамент → Отдел → Должность → Сотрудники
 // ================================================================
 
-export const MOCK_ORG: Department[] = [
+const INITIAL_ORG: Department[] = [
   // ── Департамент продаж ──────────────────────────────────────────
   {
     id: 'dept-sales', name: 'Департамент продаж',
@@ -38,7 +38,7 @@ export const MOCK_ORG: Department[] = [
           { id: 'pos-sp2', name: 'Специалист по обеспечению' },
         ],
         employees: [
-          { id: 'emp-9',   fullname: 'Ольга Рыбакова',  email: 'olga.r@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole },      department: { id: 'dept-sales', name: 'Департамент продаж' }, division: { id: 'div-supply', name: 'Отдел обеспечения продаж' }, position: { id: 'pos-sp2', name: 'Специалист по обеспечению' }, birthDate: '1993-07-14', employmentDate: '2020-11-01' },
+          { id: 'emp-9', fullname: 'Ольга Рыбакова', email: 'olga.r@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-sales', name: 'Департамент продаж' }, division: { id: 'div-supply', name: 'Отдел обеспечения продаж' }, position: { id: 'pos-sp2', name: 'Специалист по обеспечению' }, birthDate: '1993-07-14', employmentDate: '2020-11-01' },
         ],
       },
       {
@@ -65,7 +65,7 @@ export const MOCK_ORG: Department[] = [
           { id: 'pos-m2', name: 'Менеджер мониторинга' },
         ],
         employees: [
-          { id: 'emp-10', fullname: 'Павел Зайцев',    email: 'pavel@corp.ru',  role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, division: { id: 'div-meat', name: 'Отдел мясной промышленности' }, position: { id: 'pos-m2', name: 'Менеджер мониторинга' }, birthDate: '1991-02-28', employmentDate: '2021-01-15' },
+          { id: 'emp-10', fullname: 'Павел Зайцев', email: 'pavel@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, division: { id: 'div-meat', name: 'Отдел мясной промышленности' }, position: { id: 'pos-m2', name: 'Менеджер мониторинга' }, birthDate: '1991-02-28', employmentDate: '2021-01-15' },
         ],
       },
       {
@@ -78,22 +78,8 @@ export const MOCK_ORG: Department[] = [
           { id: 'emp-11', fullname: 'Екатерина Морозова', email: 'kate@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, division: { id: 'div-retail', name: 'Отдел сетевого ретейла' }, position: { id: 'pos-r2', name: 'Менеджер мониторинга' }, birthDate: '1996-06-11', employmentDate: '2022-04-01' },
         ],
       },
-      {
-        id: 'div-poultry', name: 'Отдел птицеводческой промышленности', departmentId: 'dept-monitoring',
-        positions: [
-          { id: 'pos-p1', name: 'Руководитель отдела' },
-          { id: 'pos-p2', name: 'Менеджер мониторинга' },
-        ],
-        employees: [],
-      },
-      {
-        id: 'div-dairy', name: 'Отдел молокоперерабатывающей промышленности', departmentId: 'dept-monitoring',
-        positions: [
-          { id: 'pos-d1', name: 'Руководитель отдела' },
-          { id: 'pos-d2', name: 'Менеджер мониторинга' },
-        ],
-        employees: [],
-      },
+      { id: 'div-poultry', name: 'Отдел птицеводческой промышленности', departmentId: 'dept-monitoring', positions: [{ id: 'pos-p1', name: 'Руководитель отдела' }, { id: 'pos-p2', name: 'Менеджер мониторинга' }], employees: [] },
+      { id: 'div-dairy', name: 'Отдел молокоперерабатывающей промышленности', departmentId: 'dept-monitoring', positions: [{ id: 'pos-d1', name: 'Руководитель отдела' }, { id: 'pos-d2', name: 'Менеджер мониторинга' }], employees: [] },
     ],
   },
 
@@ -101,31 +87,11 @@ export const MOCK_ORG: Department[] = [
   {
     id: 'dept-marketing', name: 'Департамент маркетинга',
     divisions: [
-      {
-        id: 'div-it', name: 'ИТ-отдел', departmentId: 'dept-marketing',
-        positions: [
-          { id: 'pos-it1', name: 'Руководитель ИТ-отдела' },
-          { id: 'pos-it2', name: 'IT-специалист' },
-          { id: 'pos-it3', name: 'Системный администратор' },
-        ],
-        employees: [],
-      },
-      {
-        id: 'div-mkt', name: 'Отдел маркетинга', departmentId: 'dept-marketing',
-        positions: [
-          { id: 'pos-mk1', name: 'Руководитель отдела маркетинга' },
-          { id: 'pos-mk2', name: 'Маркетолог' },
-          { id: 'pos-mk3', name: 'SMM-специалист' },
-        ],
-        employees: [],
-      },
+      { id: 'div-it', name: 'ИТ-отдел', departmentId: 'dept-marketing', positions: [{ id: 'pos-it1', name: 'Руководитель ИТ-отдела' }, { id: 'pos-it2', name: 'IT-специалист' }, { id: 'pos-it3', name: 'Системный администратор' }], employees: [] },
+      { id: 'div-mkt', name: 'Отдел маркетинга', departmentId: 'dept-marketing', positions: [{ id: 'pos-mk1', name: 'Руководитель отдела маркетинга' }, { id: 'pos-mk2', name: 'Маркетолог' }, { id: 'pos-mk3', name: 'SMM-специалист' }], employees: [] },
       {
         id: 'div-dev', name: 'Отдел разработки', departmentId: 'dept-marketing',
-        positions: [
-          { id: 'pos-dev1', name: 'Lead Developer' },
-          { id: 'pos-dev2', name: 'Разработчик' },
-          { id: 'pos-dev3', name: 'Junior Developer' },
-        ],
+        positions: [{ id: 'pos-dev1', name: 'Lead Developer' }, { id: 'pos-dev2', name: 'Разработчик' }, { id: 'pos-dev3', name: 'Junior Developer' }],
         employees: [
           { id: 'emp-admin',   fullname: 'Ислам Гадиляев',  email: 'admin@test.com',    role: { id: 'r-admin', name: 'admin' as EmployeeRole },            department: { id: 'dept-marketing', name: 'Департамент маркетинга' }, division: { id: 'div-dev', name: 'Отдел разработки' }, position: { id: 'pos-dev1', name: 'Lead Developer' }, birthDate: '1990-05-15', employmentDate: '2020-01-01' },
           { id: 'emp-5',       fullname: 'Дмитрий Козлов',  email: 'depthead@test.com', role: { id: 'r-dhead', name: 'department_head' as EmployeeRole },  department: { id: 'dept-marketing', name: 'Департамент маркетинга' }, division: { id: 'div-dev', name: 'Отдел разработки' }, position: { id: 'pos-dev1', name: 'Lead Developer' }, birthDate: '1993-09-12', employmentDate: '2021-03-20' },
@@ -141,47 +107,19 @@ export const MOCK_ORG: Department[] = [
   {
     id: 'dept-admin', name: 'Административный департамент',
     divisions: [
-      {
-        id: 'div-house', name: 'Хозяйственный отдел', departmentId: 'dept-admin',
-        positions: [
-          { id: 'pos-h1', name: 'Руководитель отдела' },
-          { id: 'pos-h2', name: 'Хозяйственный работник' },
-        ],
-        employees: [],
-      },
+      { id: 'div-house', name: 'Хозяйственный отдел', departmentId: 'dept-admin', positions: [{ id: 'pos-h1', name: 'Руководитель отдела' }, { id: 'pos-h2', name: 'Хозяйственный работник' }], employees: [] },
       {
         id: 'div-finance', name: 'Финансовый отдел', departmentId: 'dept-admin',
-        positions: [
-          { id: 'pos-f1', name: 'Главный бухгалтер' },
-          { id: 'pos-f2', name: 'Финансовый аналитик' },
-          { id: 'pos-f3', name: 'Бухгалтер' },
-        ],
+        positions: [{ id: 'pos-f1', name: 'Главный бухгалтер' }, { id: 'pos-f2', name: 'Финансовый аналитик' }, { id: 'pos-f3', name: 'Бухгалтер' }],
         employees: [
-          { id: 'emp-4', fullname: 'Наталья Орлова',  email: 'nataly@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-admin', name: 'Административный департамент' }, division: { id: 'div-finance', name: 'Финансовый отдел' }, position: { id: 'pos-f3', name: 'Бухгалтер' },           birthDate: '1992-03-27', employmentDate: '2021-07-01' },
-          { id: 'emp-7', fullname: 'Ольга Смирнова',  email: 'olga@corp.ru',   role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-admin', name: 'Административный департамент' }, division: { id: 'div-finance', name: 'Финансовый отдел' }, position: { id: 'pos-f2', name: 'Финансовый аналитик' },  birthDate: '1987-07-05', employmentDate: '2018-09-01' },
+          { id: 'emp-4', fullname: 'Наталья Орлова',  email: 'nataly@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-admin', name: 'Административный департамент' }, division: { id: 'div-finance', name: 'Финансовый отдел' }, position: { id: 'pos-f3', name: 'Бухгалтер' },          birthDate: '1992-03-27', employmentDate: '2021-07-01' },
+          { id: 'emp-7', fullname: 'Ольга Смирнова',  email: 'olga@corp.ru',   role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-admin', name: 'Административный департамент' }, division: { id: 'div-finance', name: 'Финансовый отдел' }, position: { id: 'pos-f2', name: 'Финансовый аналитик' }, birthDate: '1987-07-05', employmentDate: '2018-09-01' },
         ],
       },
-      {
-        id: 'div-secret', name: 'Секретариат', departmentId: 'dept-admin',
-        positions: [
-          { id: 'pos-sc1', name: 'Секретарь' },
-          { id: 'pos-sc2', name: 'Делопроизводитель' },
-        ],
-        employees: [],
-      },
+      { id: 'div-secret', name: 'Секретариат', departmentId: 'dept-admin', positions: [{ id: 'pos-sc1', name: 'Секретарь' }, { id: 'pos-sc2', name: 'Делопроизводитель' }], employees: [] },
     ],
   },
 ];
-
-export const ALL_EMPLOYEES: EmployeeListItem[] =
-  MOCK_ORG.flatMap(d => d.divisions.flatMap(div => div.employees));
-
-const ALL_DIVISIONS = MOCK_ORG.flatMap(d =>
-  d.divisions.map(div => ({ id: div.id, name: div.name, deptId: d.id, deptName: d.name, isService: div.isService }))
-);
-const ALL_POSITIONS = MOCK_ORG.flatMap(d =>
-  d.divisions.flatMap(div => div.positions.map(p => ({ id: p.id, name: p.name, divId: div.id })))
-);
 
 const INITIAL_INVITES: EmployeeInvite[] = [
   {
@@ -203,9 +141,9 @@ const INITIAL_INVITES: EmployeeInvite[] = [
 ];
 
 const STATUS_CONFIG: Record<InviteStatus, { label: string; color: string; bg: string }> = {
-  active:  { label: 'Активен', color: '#276749', bg: '#c6f6d5' },
-  pending: { label: 'Ожидает', color: '#7b4e0e', bg: '#fefcbf' },
-  expired: { label: 'Истёк',   color: '#9b2c2c', bg: '#fed7d7' },
+  active:  { label: 'Активен', color: '#065f46', bg: '#d1fae5' },
+  pending: { label: 'Ожидает', color: '#92400e', bg: '#fef3c7' },
+  expired: { label: 'Истёк',   color: '#991b1b', bg: '#fee2e2' },
 };
 
 type Tab = 'departments' | 'employees' | 'invites';
@@ -217,55 +155,102 @@ function formatDate(iso: string) {
 // ================================================================
 
 export function CompanyPage() {
-  const { user }  = useUser();
-  const navigate  = useNavigate();
-  const [tab, setTab]         = useState<Tab>('departments');
-  const [search, setSearch]   = useState('');
+  const { user }   = useUser();
+  const navigate   = useNavigate();
+  const adminUser  = isAdmin(user);
+
+  const [org, setOrg]             = useState<Department[]>(INITIAL_ORG);
+  const [tab, setTab]             = useState<Tab>('departments');
+  const [search, setSearch]       = useState('');
   const [deptFilter, setDeptFilter] = useState('');
-  const [invites, setInvites] = useState<EmployeeInvite[]>(INITIAL_INVITES);
+  const [invites, setInvites]     = useState<EmployeeInvite[]>(INITIAL_INVITES);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [addingDept, setAddingDept] = useState(false);
+  const [newDeptName, setNewDeptName] = useState('');
 
   const [form, setForm] = useState({
     email: '', fullname: '',
-    divisionId: ALL_DIVISIONS[0]?.id ?? '',
-    positionId: ALL_POSITIONS[0]?.id ?? '',
+    divisionId: INITIAL_ORG[0]?.divisions[0]?.id ?? '',
+    positionId: INITIAL_ORG[0]?.divisions[0]?.positions[0]?.id ?? '',
     roleId: 'manager' as EmployeeRole,
   });
 
-  // Только canCreateCourse (admin, department_head, division_head, senior_manager)
   useEffect(() => {
     if (!canCreateCourse(user)) navigate('/dashboard', { replace: true });
   }, [user, navigate]);
   if (!canCreateCourse(user)) return null;
 
-  // Отделы, доступные для приглашения
-  const availableDivisions = isAdmin(user)
-    ? ALL_DIVISIONS
-    : ALL_DIVISIONS.filter(d => d.deptId === user.employee?.department.id);
+  // Derived from org state
+  const allEmployees: EmployeeListItem[] = useMemo(
+    () => org.flatMap(d => d.divisions.flatMap(div => div.employees)),
+    [org]
+  );
+  const allDivisions = useMemo(
+    () => org.flatMap(d => d.divisions.map(div => ({ id: div.id, name: div.name, deptId: d.id, deptName: d.name, isService: div.isService }))),
+    [org]
+  );
+  const allPositions = useMemo(
+    () => org.flatMap(d => d.divisions.flatMap(div => div.positions.map(p => ({ id: p.id, name: p.name, divId: div.id })))),
+    [org]
+  );
 
-  const availablePositions = ALL_POSITIONS.filter(p => p.divId === form.divisionId);
-  const availableRoles: EmployeeRole[] = isAdmin(user)
+  const availableDivisions = adminUser
+    ? allDivisions
+    : allDivisions.filter(d => d.deptId === user.employee?.department.id);
+
+  const availablePositions = allPositions.filter(p => p.divId === form.divisionId);
+  const availableRoles: EmployeeRole[] = adminUser
     ? ['admin', 'department_head', 'division_head', 'senior_manager', 'manager']
     : ['department_head', 'division_head', 'senior_manager', 'manager'];
 
   const filtered = useMemo(() => {
-    let list = ALL_EMPLOYEES;
-    if (!isAdmin(user)) {
-      list = list.filter(e => e.department.id === user.employee?.department.id);
-    }
+    let list = allEmployees;
+    if (!adminUser) list = list.filter(e => e.department.id === user.employee?.department.id);
     const q = search.toLowerCase();
     if (q) list = list.filter(e => (e.fullname ?? '').toLowerCase().includes(q) || e.email.toLowerCase().includes(q));
     if (deptFilter) list = list.filter(e => e.department.id === deptFilter);
     return list;
-  }, [search, deptFilter, user]);
+  }, [allEmployees, search, deptFilter, adminUser, user]);
+
+  // ── Обработчики org-management ──────────────────────────────────
+
+  const handleAddDepartment = () => {
+    const name = newDeptName.trim();
+    if (!name) return;
+    const id = `dept-${Date.now()}`;
+    setOrg(prev => [...prev, { id, name, divisions: [] }]);
+    setNewDeptName('');
+    setAddingDept(false);
+  };
+
+  const handleAddDivision = (deptId: string, name: string) => {
+    const divId = `div-${Date.now()}`;
+    setOrg(prev => prev.map(d => {
+      if (d.id !== deptId) return d;
+      return {
+        ...d,
+        divisions: [...d.divisions, {
+          id: divId, name, departmentId: deptId,
+          positions: [], employees: [],
+        }],
+      };
+    }));
+  };
+
+  // Dept head's own department id (for restricting division add)
+  const editableDeptId: string | null | undefined = adminUser
+    ? undefined  // undefined → admin can edit all depts
+    : (user.employee?.department.id ?? null);
+
+  // ── Invite submit ──────────────────────────────────────────────
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     await new Promise<void>(r => setTimeout(r, 400));
     const now  = new Date().toISOString();
-    const dept = MOCK_ORG.find(d => d.divisions.some(dv => dv.id === form.divisionId));
+    const dept = org.find(d => d.divisions.some(dv => dv.id === form.divisionId));
     const invite: EmployeeInvite = {
       id: `inv-${Date.now()}`, type: 'EMPLOYEE',
       email: form.email, fullname: form.fullname || null, password: '',
@@ -280,25 +265,32 @@ export function CompanyPage() {
     setTab('invites');
   };
 
+  // ================================================================
+
   return (
     <div className={styles.page}>
+
+      {/* ── Заголовок ── */}
       <div className={styles.pageHeader}>
-        <div className={styles.pageTitleRow}>
-          <h1 className={styles.pageTitle}>Компания</h1>
-          <span className={styles.totalBadge}>{ALL_EMPLOYEES.length} сотрудников</span>
+        <div>
+          <div className={styles.pageTitleRow}>
+            <h1 className={styles.pageTitle}>Компания</h1>
+            <span className={styles.totalBadge}>{allEmployees.length} сотрудников</span>
+          </div>
+          <p className={styles.pageSubtitle}>Структура организации и управление персоналом</p>
         </div>
         <button className={styles.inviteBtn} onClick={() => setInviteOpen(true)}>
           <UserPlus size={16} /> Пригласить сотрудника
         </button>
       </div>
 
-      {/* Табы */}
+      {/* ── Табы ── */}
       <div className={styles.tabs}>
         <button className={`${styles.tab} ${tab === 'departments' ? styles.activeTab : ''}`} onClick={() => setTab('departments')}>
-          <Users size={16} /> По отделам
+          <Building2 size={15} /> По отделам
         </button>
         <button className={`${styles.tab} ${tab === 'employees' ? styles.activeTab : ''}`} onClick={() => setTab('employees')}>
-          Все сотрудники
+          <Users size={15} /> Сотрудники
         </button>
         <button className={`${styles.tab} ${tab === 'invites' ? styles.activeTab : ''}`} onClick={() => setTab('invites')}>
           Инвайты
@@ -308,28 +300,104 @@ export function CompanyPage() {
         </button>
       </div>
 
-      {/* Вкладка: По отделам */}
+      {/* ── Вкладка: Структура ── */}
       {tab === 'departments' && (
-        <DepartmentList
-          departments={isAdmin(user) ? MOCK_ORG : MOCK_ORG.filter(d => d.id === user.employee?.department.id)}
-        />
+        <div>
+          {/* Кнопка добавления департамента (только admin) */}
+          {adminUser && (
+            <div style={{ marginBottom: '1rem' }}>
+              {!addingDept ? (
+                <button
+                  onClick={() => setAddingDept(true)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
+                    padding: '0.4375rem 0.875rem',
+                    background: 'transparent',
+                    border: '1.5px dashed rgba(79,70,229,0.35)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--primary)',
+                    fontSize: '0.875rem', fontWeight: 600,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'background 0.12s',
+                  }}
+                >
+                  <PlusCircle size={15} /> Добавить департамент
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <input
+                    autoFocus
+                    value={newDeptName}
+                    onChange={e => setNewDeptName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') handleAddDepartment();
+                      if (e.key === 'Escape') { setAddingDept(false); setNewDeptName(''); }
+                    }}
+                    placeholder="Название департамента..."
+                    style={{
+                      padding: '0.4375rem 0.75rem',
+                      border: '1.5px solid var(--primary)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.875rem', fontFamily: 'inherit',
+                      outline: 'none', width: 280,
+                      boxShadow: '0 0 0 3px var(--ring)',
+                    }}
+                  />
+                  <button
+                    onClick={handleAddDepartment}
+                    style={{
+                      padding: '0.4375rem 0.875rem', background: 'var(--primary)', color: '#fff',
+                      border: 'none', borderRadius: 'var(--radius-md)', fontWeight: 600,
+                      cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8125rem',
+                    }}
+                  >
+                    Добавить
+                  </button>
+                  <button
+                    onClick={() => { setAddingDept(false); setNewDeptName(''); }}
+                    style={{
+                      padding: '0.4375rem 0.75rem', background: 'transparent',
+                      border: '1.5px solid var(--border)', borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8125rem',
+                      color: 'var(--muted-foreground)',
+                    }}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DepartmentList
+            departments={adminUser ? org : org.filter(d => d.id === user.employee?.department.id)}
+            onAddDivision={handleAddDivision}
+            editableDeptId={editableDeptId}
+          />
+        </div>
       )}
 
-      {/* Вкладка: Все сотрудники */}
+      {/* ── Вкладка: Сотрудники ── */}
       {tab === 'employees' && (
         <div>
           <div className={styles.filters}>
             <div className={styles.searchWrapper}>
-              <Search size={16} className={styles.searchIcon} />
-              <input className={styles.searchInput} placeholder="Поиск по имени или email..." value={search} onChange={e => setSearch(e.target.value)} />
+              <Search size={15} className={styles.searchIcon} />
+              <input
+                className={styles.searchInput}
+                placeholder="Поиск по имени или email..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
-            {isAdmin(user) && (
+            {adminUser && (
               <select className={styles.select} value={deptFilter} onChange={e => setDeptFilter(e.target.value)}>
                 <option value="">Все департаменты</option>
-                {MOCK_ORG.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                {org.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
           </div>
+
           {filtered.length === 0 ? (
             <p className={styles.empty}>Сотрудники не найдены</p>
           ) : (
@@ -353,37 +421,38 @@ export function CompanyPage() {
               ))}
             </div>
           )}
-          <p className={styles.resultsNote}>Показано {filtered.length} из {ALL_EMPLOYEES.length}</p>
+          <p className={styles.resultsNote}>Показано {filtered.length} из {allEmployees.length}</p>
         </div>
       )}
 
-      {/* Вкладка: Инвайты */}
+      {/* ── Вкладка: Инвайты ── */}
       {tab === 'invites' && (
         <div className={styles.inviteList}>
-          {invites.length === 0 ? <p className={styles.empty}>Нет инвайтов</p>
-            : invites.map(inv => {
-              const cfg = STATUS_CONFIG[inv.status];
-              return (
-                <div key={inv.id} className={styles.inviteCard}>
-                  <div className={styles.inviteLeft}>
-                    <div className={styles.empAvatar}>{(inv.fullname ?? inv.email)[0].toUpperCase()}</div>
-                    <div>
-                      <span className={styles.empName}>{inv.fullname ?? '—'}</span>
-                      <span className={styles.empEmail}>{inv.email}</span>
-                      <span className={styles.inviteMeta}>{inv.department.name} · {inv.role.name}</span>
-                    </div>
-                  </div>
-                  <div className={styles.inviteRight}>
-                    <span className={styles.statusBadge} style={{ background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
-                    <span className={styles.dateLabel}>{inv.status === 'expired' ? 'Истёк' : 'До'} {formatDate(inv.expiresAt)}</span>
+          {invites.length === 0 ? (
+            <p className={styles.empty}>Нет инвайтов</p>
+          ) : invites.map(inv => {
+            const cfg = STATUS_CONFIG[inv.status];
+            return (
+              <div key={inv.id} className={styles.inviteCard}>
+                <div className={styles.inviteLeft}>
+                  <div className={styles.empAvatar}>{(inv.fullname ?? inv.email)[0].toUpperCase()}</div>
+                  <div>
+                    <span className={styles.empName}>{inv.fullname ?? '—'}</span>
+                    <span style={{ display: 'block' }} className={styles.empEmail}>{inv.email}</span>
+                    <span className={styles.inviteMeta}>{inv.department.name} · {inv.role.name}</span>
                   </div>
                 </div>
-              );
-            })}
+                <div className={styles.inviteRight}>
+                  <span className={styles.statusBadge} style={{ background: cfg.bg, color: cfg.color }}>{cfg.label}</span>
+                  <span className={styles.dateLabel}>{inv.status === 'expired' ? 'Истёк' : 'До'} {formatDate(inv.expiresAt)}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Модалка приглашения */}
+      {/* ── Модалка приглашения ── */}
       {inviteOpen && (
         <div className={styles.overlay} onClick={e => { if (e.target === e.currentTarget) setInviteOpen(false); }}>
           <div className={styles.modal}>
@@ -391,7 +460,7 @@ export function CompanyPage() {
               <h2 className={styles.modalTitle}>Пригласить сотрудника</h2>
               <button className={styles.closeBtn} onClick={() => setInviteOpen(false)}><X size={18} /></button>
             </div>
-            <p style={{ margin: '-0.5rem 0 1.25rem', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+            <p style={{ margin: '-0.5rem 0 1.375rem', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
               Сотрудник получит письмо со ссылкой для завершения регистрации
             </p>
             <form onSubmit={e => { void handleInvite(e); }} className={styles.form}>
@@ -413,7 +482,7 @@ export function CompanyPage() {
                   <select className={styles.input} value={form.divisionId}
                     onChange={e => {
                       const divId = e.target.value;
-                      const firstPos = ALL_POSITIONS.find(p => p.divId === divId);
+                      const firstPos = allPositions.find(p => p.divId === divId);
                       setForm(p => ({ ...p, divisionId: divId, positionId: firstPos?.id ?? '' }));
                     }}>
                     {availableDivisions.map(d => (
@@ -449,3 +518,8 @@ export function CompanyPage() {
     </div>
   );
 }
+
+// Export для совместимости с другими модулями, которые могут использовать MOCK_ORG
+export const MOCK_ORG = INITIAL_ORG;
+export const ALL_EMPLOYEES: EmployeeListItem[] =
+  INITIAL_ORG.flatMap(d => d.divisions.flatMap(div => div.employees));

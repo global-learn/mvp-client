@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, UserPlus, X, Users, PlusCircle, Building2 } from 'lucide-react';
-import { useUser } from '@entities/user/model/UserContext';
+import { Search, UserPlus, X, Users, PlusCircle, Building2, Copy, CheckCheck } from 'lucide-react';
+import { useUser, useAuth } from '@entities/user/model/UserContext';
 import { isAdmin, canCreateCourse, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import type { Department, EmployeeListItem } from '@entities/company/model/types';
 import type { EmployeeInvite, InviteStatus } from '@entities/invite/model/types';
@@ -156,6 +156,7 @@ function formatDate(iso: string) {
 
 export function CompanyPage() {
   const { user }   = useUser();
+  const { createInviteToken } = useAuth();
   const navigate   = useNavigate();
   const adminUser  = isAdmin(user);
 
@@ -165,6 +166,8 @@ export function CompanyPage() {
   const [deptFilter, setDeptFilter] = useState('');
   const [invites, setInvites]     = useState<EmployeeInvite[]>(INITIAL_INVITES);
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [addingDept, setAddingDept] = useState(false);
   const [newDeptName, setNewDeptName] = useState('');
@@ -250,19 +253,32 @@ export function CompanyPage() {
     setSubmitting(true);
     await new Promise<void>(r => setTimeout(r, 400));
     const now  = new Date().toISOString();
+    const expiresAt = makeExpiresAt(now);
     const dept = org.find(d => d.divisions.some(dv => dv.id === form.divisionId));
     const invite: EmployeeInvite = {
       id: `inv-${Date.now()}`, type: 'EMPLOYEE',
       email: form.email, fullname: form.fullname || null, password: '',
       department: { id: dept?.id ?? '', name: dept?.name ?? '' },
       role: { id: form.roleId, name: form.roleId },
-      status: 'pending', createdAt: now, expiresAt: makeExpiresAt(now),
+      status: 'pending', createdAt: now, expiresAt,
     };
+    // Генерируем токен для invite-ссылки (mock «письмо»)
+    const token = createInviteToken(form.email, form.fullname || null, expiresAt);
+    const link = `${window.location.origin}/register?token=${token}`;
+    setInviteLink(link);
     setInvites(prev => [invite, ...prev]);
     setForm(f => ({ ...f, email: '', fullname: '' }));
     setInviteOpen(false);
     setSubmitting(false);
     setTab('invites');
+  };
+
+  const handleCopyLink = () => {
+    if (!inviteLink) return;
+    void navigator.clipboard.writeText(inviteLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   // ================================================================
@@ -449,6 +465,21 @@ export function CompanyPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ── Уведомление с ссылкой после создания инвайта ── */}
+      {inviteLink && (
+        <div className={styles.inviteLinkBanner}>
+          <div className={styles.inviteLinkInfo}>
+            <span className={styles.inviteLinkLabel}>Ссылка для приглашения</span>
+            <span className={styles.inviteLinkUrl}>{inviteLink}</span>
+          </div>
+          <button className={styles.copyBtn} onClick={handleCopyLink}>
+            {copied ? <CheckCheck size={15} /> : <Copy size={15} />}
+            {copied ? 'Скопировано' : 'Копировать'}
+          </button>
+          <button className={styles.closeLinkBtn} onClick={() => setInviteLink(null)}><X size={15} /></button>
         </div>
       )}
 

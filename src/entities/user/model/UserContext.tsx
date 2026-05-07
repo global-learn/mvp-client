@@ -141,6 +141,13 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
 const SESSION_KEY        = 'gl_auth_user';
 const PENDING_REG_KEY    = 'gl_pending_reg';
 const REGISTERED_KEY     = 'gl_registered_users';
+const INVITE_TOKENS_KEY  = 'gl_invite_tokens';
+
+export interface InviteRecord {
+  email: string;
+  fullname: string | null;
+  expiresAt: string;
+}
 
 // Вспомогательные функции для работы с хранилищем pending/registered пользователей
 function getPendingRegs(): Record<string, { fullname: string; email: string; password: string }> {
@@ -149,6 +156,10 @@ function getPendingRegs(): Record<string, { fullname: string; email: string; pas
 }
 function getRegisteredUsers(): Record<string, { fullname: string; password: string }> {
   try { return JSON.parse(sessionStorage.getItem(REGISTERED_KEY) ?? '{}') as Record<string, { fullname: string; password: string }>; }
+  catch { return {}; }
+}
+function getInviteTokensStore(): Record<string, InviteRecord> {
+  try { return JSON.parse(sessionStorage.getItem(INVITE_TOKENS_KEY) ?? '{}') as Record<string, InviteRecord>; }
   catch { return {}; }
 }
 
@@ -163,6 +174,12 @@ interface AuthContextValue {
   register: (fullname: string, email: string, password: string) => Promise<string>;
   /** Подтверждение email по токену. Возвращает true при успехе */
   verifyEmail: (token: string) => boolean;
+  /** Создаёт invite-токен (mock "отправить письмо"). Возвращает токен. */
+  createInviteToken: (email: string, fullname: string | null, expiresAt: string) => string;
+  /** Возвращает данные invite по токену, или null если не найден / истёк */
+  getInviteData: (token: string) => InviteRecord | null;
+  /** Завершает регистрацию по invite-токену. Возвращает true при успехе. */
+  completeInvite: (token: string, fullname: string, password: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -241,6 +258,38 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
+  const createInviteToken = useCallback((
+    email: string,
+    fullname: string | null,
+    expiresAt: string,
+  ): string => {
+    const token = `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const store = getInviteTokensStore();
+    store[token] = { email: email.toLowerCase(), fullname, expiresAt };
+    sessionStorage.setItem(INVITE_TOKENS_KEY, JSON.stringify(store));
+    return token;
+  }, []);
+
+  const getInviteData = useCallback((token: string): InviteRecord | null => {
+    const store = getInviteTokensStore();
+    return store[token] ?? null;
+  }, []);
+
+  const completeInvite = useCallback((token: string, fullname: string, password: string): boolean => {
+    const store = getInviteTokensStore();
+    const record = store[token];
+    if (!record) return false;
+    if (new Date(record.expiresAt) < new Date()) return false;
+
+    const registered = getRegisteredUsers();
+    registered[record.email] = { fullname, password };
+    sessionStorage.setItem(REGISTERED_KEY, JSON.stringify(registered));
+
+    delete store[token];
+    sessionStorage.setItem(INVITE_TOKENS_KEY, JSON.stringify(store));
+    return true;
+  }, []);
+
   const logout = useCallback(async (): Promise<void> => {
     sessionStorage.removeItem(SESSION_KEY);
     setUser(null);
@@ -257,7 +306,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar, register, verifyEmail }}
+      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar, register, verifyEmail, createInviteToken, getInviteData, completeInvite }}
     >
       {children}
     </AuthContext.Provider>

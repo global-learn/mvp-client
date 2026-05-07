@@ -178,21 +178,64 @@
   border-bottom: none;
 }
 
-.divHeader {
-  width: 100%;
+/* Строка отдела — div, не button, чтобы внутри можно было иметь кнопки */
+.divHeaderRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.5625rem 1.125rem 0.5625rem 2.25rem;
+  padding-right: 1rem;
+  transition: background 0.12s;
+}
+
+.divHeaderRow:hover {
+  background: var(--secondary);
+}
+
+/* Кнопка раскрытия занимает основное пространство строки */
+.divHeaderBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.5625rem 0.5rem 0.5625rem 2.25rem;
   background: transparent;
   border: none;
   cursor: pointer;
   font-family: inherit;
-  transition: background 0.12s;
+  min-width: 0;
+  text-align: left;
 }
 
-.divHeader:hover {
-  background: var(--secondary);
+/* Правая зона: кнопка инвайта + счётчик */
+.divActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Кнопка «Пригласить» — появляется при наведении на строку */
+.inviteDivBtn {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-light);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.divHeaderRow:hover .inviteDivBtn {
+  display: inline-flex;
+}
+
+.inviteDivBtn:hover {
+  background: rgba(0, 113, 227, 0.16);
 }
 
 .divLeft {

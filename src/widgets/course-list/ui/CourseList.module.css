@@ -109,13 +109,11 @@
   font-weight: 600;
   font-family: inherit;
   cursor: pointer;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: opacity 0.15s;
   white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.25);
 }
-.approveBtn:hover:not(:disabled) { opacity: 0.88; transform: translateY(-1px); }
-.approveBtn:active:not(:disabled) { transform: translateY(0); }
-.approveBtn:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
+.approveBtn:hover:not(:disabled) { opacity: 0.88; }
+.approveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .rejectBtn {
   display: inline-flex;
@@ -144,7 +142,7 @@
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   background: var(--warning-light);
   color: #92400e;
   border: 1px solid rgba(245, 158, 11, 0.25);

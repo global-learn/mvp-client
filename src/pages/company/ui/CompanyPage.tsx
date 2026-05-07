@@ -313,7 +313,7 @@ export function CompanyPage() {
                     display: 'inline-flex', alignItems: 'center', gap: '0.375rem',
                     padding: '0.4375rem 0.875rem',
                     background: 'transparent',
-                    border: '1.5px dashed rgba(79,70,229,0.35)',
+                    border: '1px dashed var(--border)',
                     borderRadius: 'var(--radius-md)',
                     color: 'var(--primary)',
                     fontSize: '0.875rem', fontWeight: 600,
@@ -486,7 +486,7 @@ export function CompanyPage() {
                       setForm(p => ({ ...p, divisionId: divId, positionId: firstPos?.id ?? '' }));
                     }}>
                     {availableDivisions.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}{d.isService ? ' 🎧' : ''}</option>
+                      <option key={d.id} value={d.id}>{d.name}{d.isService ? ' (сервис)' : ''}</option>
                     ))}
                   </select>
                 </label>
@@ -508,7 +508,7 @@ export function CompanyPage() {
               <div className={styles.modalActions}>
                 <button type="button" className={styles.cancelBtn} onClick={() => setInviteOpen(false)}>Отмена</button>
                 <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Отправляем...' : '✉️ Отправить ссылку'}
+                  {submitting ? 'Отправляем...' : 'Отправить ссылку'}
                 </button>
               </div>
             </form>

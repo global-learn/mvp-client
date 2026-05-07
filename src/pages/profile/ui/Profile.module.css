@@ -1,5 +1,4 @@
 .page {
-  max-width: 680px;
   width: 100%;
 }
 
@@ -74,7 +73,7 @@
   color: var(--primary);
   background: oklch(0.95 0.04 250);
   padding: 0.125rem 0.625rem;
-  border-radius: 999px;
+  border-radius: 3px;
 }
 
 /* Статистика */
@@ -143,7 +142,7 @@
   color: var(--muted-foreground);
   background: var(--secondary);
   padding: 0.125rem 0.625rem;
-  border-radius: 999px;
+  border-radius: 3px;
 }
 
 /* ── Сертификаты ─────────────────────────────────────────── */

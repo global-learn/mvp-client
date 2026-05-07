@@ -3,7 +3,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #eef2ff 0%, #f1f5f9 40%, #ede9fe 100%);
+  background: var(--background);
   padding: 1.5rem;
 }
 
@@ -11,7 +11,7 @@
   width: 100%;
   max-width: 400px;
   background: var(--card);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   padding: 2.5rem 2.25rem 2rem;
   border: 1px solid rgba(226, 232, 240, 0.8);
   box-shadow: var(--shadow-xl);
@@ -26,16 +26,8 @@
 }
 
 .logoIcon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
+  color: var(--primary);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
 }
 
 .logoText {
@@ -110,22 +102,16 @@
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  transition: background 0.15s;
 }
 
 .submitBtn:hover:not(:disabled) {
   background: var(--primary-hover);
-  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
-  transform: translateY(-1px);
 }
-
-.submitBtn:active:not(:disabled) { transform: translateY(0); }
 
 .submitBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  box-shadow: none;
 }
 
 .error {

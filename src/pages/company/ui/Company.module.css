@@ -1,5 +1,4 @@
 .page {
-  max-width: 960px;
   width: 100%;
 }
 
@@ -40,7 +39,7 @@
   color: var(--muted-foreground);
   background: var(--secondary);
   padding: 0.25rem 0.75rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   border: 1px solid var(--border);
 }
 
@@ -58,18 +57,13 @@
   font-family: inherit;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+  transition: background 0.15s;
   flex-shrink: 0;
 }
 
 .inviteBtn:hover {
   background: var(--primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
 }
-
-.inviteBtn:active { transform: translateY(0); }
 
 /* ---- Tabs ---- */
 .tabs {
@@ -113,7 +107,7 @@
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   background: var(--primary);
   color: var(--primary-foreground);
   font-size: 0.625rem;
@@ -261,7 +255,7 @@
   color: var(--primary);
   background: var(--primary-light);
   padding: 0.1875rem 0.625rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
 }
 
 .empDates {
@@ -339,7 +333,7 @@
   font-size: 0.6875rem;
   font-weight: 700;
   padding: 0.1875rem 0.625rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -486,19 +480,14 @@
   font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+  transition: background 0.15s;
 }
 
 .submitBtn:hover:not(:disabled) {
   background: var(--primary-hover);
-  transform: translateY(-1px);
 }
-
-.submitBtn:active:not(:disabled) { transform: translateY(0); }
 
 .submitBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  box-shadow: none;
 }

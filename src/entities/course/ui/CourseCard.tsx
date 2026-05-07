@@ -21,42 +21,36 @@ export function CourseCard({ course, enrollment }: CourseCardProps) {
 
   return (
     <div className={styles.card}>
-      {/* Заголовок + статус */}
       <div className={styles.header}>
         <h3 className={styles.title}>{course.title}</h3>
         {enrollStatus && (
-          <span className={`${styles.enrollBadge} ${styles[enrollStatus]}`}>
+          <span className={`${styles.status} ${styles[enrollStatus]}`}>
             {enrollLabels[enrollStatus]}
           </span>
         )}
       </div>
 
-      {/* Тип курса */}
-      <span className={`${styles.typeTag} ${styles[course.courseType]}`}>
-        {COURSE_TYPE_LABELS[course.courseType]}
-      </span>
+      <p className={styles.meta}>
+        {COURSE_TYPE_LABELS[course.courseType]} &middot; {course.lessonsCount} уроков
+      </p>
 
-      {/* Описание */}
       <p className={styles.description}>{course.description}</p>
 
-      {/* Прогресс */}
       {enrollment && enrollment.progress > 0 && (
         <div className={styles.progressWrap}>
-          <div className={styles.progressMeta}>
-            <span className={styles.progressLabel}>Прогресс</span>
-            <span className={styles.progressValue}>{enrollment.progress}%</span>
+          <div className={styles.progressRow}>
+            <span className={styles.progressText}>Прогресс</span>
+            <span className={styles.progressPct}>{enrollment.progress}%</span>
           </div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${enrollment.progress}%` }} />
+          <div className={styles.bar}>
+            <div className={styles.fill} style={{ width: `${enrollment.progress}%` }} />
           </div>
         </div>
       )}
 
-      {/* Футер */}
       <div className={styles.footer}>
-        <span className={styles.lessonsCount}>{course.lessonsCount} уроков</span>
-        <Link to={`/courses/${course.id}`} className={styles.openLink}>
-          Открыть <ArrowRight size={14} />
+        <Link to={`/courses/${course.id}`} className={styles.link}>
+          Открыть курс <ArrowRight size={13} />
         </Link>
       </div>
     </div>

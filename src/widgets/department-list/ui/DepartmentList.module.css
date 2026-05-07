@@ -74,7 +74,7 @@
   color: var(--muted-foreground);
   background: var(--secondary);
   padding: 0.1875rem 0.625rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   border: 1px solid var(--border);
 }
 
@@ -214,7 +214,7 @@
   color: var(--muted-foreground);
   background: var(--secondary);
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   flex-shrink: 0;
 }
 
@@ -225,13 +225,11 @@
   font-size: 0.6563rem;
   font-weight: 700;
   padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
+  border-radius: 3px;
   background: var(--info-light);
   color: var(--info);
   margin-left: 0.25rem;
   flex-shrink: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 /* ── Employees ── */
@@ -305,12 +303,10 @@
 }
 
 .roleBadge {
-  font-size: 0.6563rem;
-  font-weight: 600;
-  color: var(--primary);
-  background: var(--primary-light);
-  padding: 0.125rem 0.5rem;
-  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: none;
   white-space: nowrap;
   flex-shrink: 0;
 }

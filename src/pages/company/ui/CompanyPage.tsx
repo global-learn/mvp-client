@@ -246,6 +246,17 @@ export function CompanyPage() {
     ? undefined  // undefined → admin can edit all depts
     : (user.employee?.department.id ?? null);
 
+  // Открыть форму инвайта с предзаполненным отделом (из вкладки «По отделам»)
+  const handleInviteFromDiv = (divisionId: string) => {
+    const firstPos = allPositions.find(p => p.divId === divisionId);
+    setForm(f => ({
+      ...f,
+      divisionId,
+      positionId: firstPos?.id ?? '',
+    }));
+    setInviteOpen(true);
+  };
+
   // ── Invite submit ──────────────────────────────────────────────
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -389,6 +400,7 @@ export function CompanyPage() {
             departments={adminUser ? org : org.filter(d => d.id === user.employee?.department.id)}
             onAddDivision={handleAddDivision}
             editableDeptId={editableDeptId}
+            onInvite={handleInviteFromDiv}
           />
         </div>
       )}
@@ -507,28 +519,29 @@ export function CompanyPage() {
                   onChange={e => setForm(p => ({ ...p, fullname: e.target.value }))}
                   placeholder="Иван Иванов" />
               </label>
-              <div className={styles.row}>
-                <label className={styles.label}>
-                  Отдел
-                  <select className={styles.input} value={form.divisionId}
-                    onChange={e => {
-                      const divId = e.target.value;
-                      const firstPos = allPositions.find(p => p.divId === divId);
-                      setForm(p => ({ ...p, divisionId: divId, positionId: firstPos?.id ?? '' }));
-                    }}>
-                    {availableDivisions.map(d => (
-                      <option key={d.id} value={d.id}>{d.name}{d.isService ? ' (сервис)' : ''}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className={styles.label}>
-                  Должность
-                  <select className={styles.input} value={form.positionId}
-                    onChange={e => setForm(p => ({ ...p, positionId: e.target.value }))}>
-                    {availablePositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                  </select>
-                </label>
-              </div>
+              <label className={styles.label}>
+                Отдел
+                <select className={styles.input} value={form.divisionId}
+                  onChange={e => {
+                    const divId = e.target.value;
+                    const firstPos = allPositions.find(p => p.divId === divId);
+                    setForm(p => ({ ...p, divisionId: divId, positionId: firstPos?.id ?? '' }));
+                  }}>
+                  {availableDivisions.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}{d.isService ? ' (сервис)' : ''}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.label}>
+                Должность
+                <select className={styles.input} value={form.positionId}
+                  onChange={e => setForm(p => ({ ...p, positionId: e.target.value }))}>
+                  {availablePositions.length === 0
+                    ? <option value="">— нет должностей в отделе —</option>
+                    : availablePositions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)
+                  }
+                </select>
+              </label>
               <label className={styles.label}>
                 Роль
                 <select className={styles.input} value={form.roleId}

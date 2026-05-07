@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { ChevronRight, Headset, PlusCircle } from 'lucide-react';
+import { ChevronRight, Headset, PlusCircle, UserPlus } from 'lucide-react';
 import type { Department } from '@entities/company/model/types';
 import { ROLE_LABELS } from '@entities/user/model/types';
 import styles from './DepartmentList.module.css';
 
 interface DepartmentListProps {
   departments: Department[];
-  /** Вызывается когда нужно добавить отдел в departmentId.
-   *  Если undefined — кнопка не показывается. */
+  /** Вызывается когда нужно добавить отдел в departmentId. */
   onAddDivision?: (deptId: string, name: string) => void;
   /** ID департамента текущего пользователя (руководитель видит только свой) */
   editableDeptId?: string | null;
+  /** Открыть форму инвайта с предзаполненным отделом */
+  onInvite?: (divisionId: string) => void;
 }
 
 const toggle = (set: Set<string>, id: string): Set<string> => {
@@ -19,7 +20,7 @@ const toggle = (set: Set<string>, id: string): Set<string> => {
   return next;
 };
 
-export function DepartmentList({ departments, onAddDivision, editableDeptId }: DepartmentListProps) {
+export function DepartmentList({ departments, onAddDivision, editableDeptId, onInvite }: DepartmentListProps) {
   const [openDepts, setOpenDepts] = useState<Set<string>>(
     new Set(departments.slice(0, 1).map(d => d.id))
   );
@@ -125,24 +126,38 @@ export function DepartmentList({ departments, onAddDivision, editableDeptId }: D
                       <div key={div.id} className={styles.division}>
 
                         {/* ── Заголовок отдела ── */}
-                        <button
-                          className={styles.divHeader}
-                          onClick={() => setOpenDivs(s => toggle(s, div.id))}
-                        >
-                          <div className={styles.divLeft}>
-                            <ChevronRight
-                              size={13}
-                              className={`${styles.chevron} ${isDivOpen ? styles.open : ''}`}
-                            />
-                            <span className={styles.divName}>{div.name}</span>
-                            {div.isService && (
-                              <span className={styles.serviceBadge}>
-                                <Headset size={10} /> сервис
-                              </span>
+                        <div className={styles.divHeaderRow}>
+                          <button
+                            className={styles.divHeaderBtn}
+                            onClick={() => setOpenDivs(s => toggle(s, div.id))}
+                          >
+                            <div className={styles.divLeft}>
+                              <ChevronRight
+                                size={13}
+                                className={`${styles.chevron} ${isDivOpen ? styles.open : ''}`}
+                              />
+                              <span className={styles.divName}>{div.name}</span>
+                              {div.isService && (
+                                <span className={styles.serviceBadge}>
+                                  <Headset size={10} /> сервис
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                          <div className={styles.divActions}>
+                            {onInvite && (
+                              <button
+                                className={styles.inviteDivBtn}
+                                onClick={() => onInvite(div.id)}
+                                title={`Пригласить в ${div.name}`}
+                              >
+                                <UserPlus size={12} />
+                                Пригласить
+                              </button>
                             )}
+                            <span className={styles.divCount}>{div.employees.length} чел.</span>
                           </div>
-                          <span className={styles.divCount}>{div.employees.length} чел.</span>
-                        </button>
+                        </div>
 
                         {isDivOpen && (
                           <div className={styles.employees}>

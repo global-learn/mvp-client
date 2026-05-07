@@ -15,9 +15,11 @@ export function AppLayout() {
     <CoursesProvider>
       <div className={styles.layout}>
         <Sidebar />
-        <main className={styles.main}>
-          <Outlet />
-        </main>
+        <div className={styles.contentArea}>
+          <main className={styles.main}>
+            <Outlet />
+          </main>
+        </div>
       </div>
     </CoursesProvider>
   );

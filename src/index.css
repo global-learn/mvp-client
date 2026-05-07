@@ -4,44 +4,53 @@
    Design Tokens
    ================================================================ */
 :root {
-  --background:   #f8fafc;
-  --foreground:   #0f172a;
+  --background:   #f2f2f7;
+  --foreground:   #1c1c1e;
   --card:         #ffffff;
 
-  --primary:            oklch(0.55 0.18 250);
-  --primary-hover:      oklch(0.50 0.18 250);
-  --primary-light:      oklch(0.96 0.03 250);
+  --primary:            #0071e3;
+  --primary-hover:      #0064cc;
+  --primary-light:      rgba(0, 113, 227, 0.09);
   --primary-foreground: #ffffff;
 
-  --secondary:            #f1f5f9;
-  --secondary-foreground: #334155;
+  --secondary:            #e5e5ea;
+  --secondary-foreground: #3c3c43;
 
-  --muted:            #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted:            #e5e5ea;
+  --muted-foreground: #8e8e93;
 
-  --destructive: #dc2626;
-  --success:     #16a34a;
-  --warning:     #d97706;
+  --destructive: #ff3b30;
+  --success:     #34c759;
+  --warning:     #ff9500;
+  --warning-light: rgba(255, 149, 0, 0.12);
+  --info:          #0071e3;
+  --info-light:    rgba(0, 113, 227, 0.09);
+  --accent:        #5856d6;
 
-  --border: #e2e8f0;
-  --ring:   oklch(0.55 0.18 250 / 0.25);
+  --border: #d1d1d6;
+  --ring:   rgba(0, 113, 227, 0.2);
 
-  --radius:    6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius:    8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
 
-  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.07), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow:    0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.04);
-  --shadow-lg: 0 10px 20px -4px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+  --shadow:    0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.1),  0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 48px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.06);
 
-  --sidebar:              #1e293b;
-  --sidebar-foreground:   #94a3b8;
-  --sidebar-primary:      #60a5fa;
-  --sidebar-primary-fg:   #1e293b;
-  --sidebar-accent:       rgba(255,255,255,0.06);
-  --sidebar-border:       rgba(255,255,255,0.08);
-  --sidebar-section:      #475569;
+  --sidebar:              #ffffff;
+  --sidebar-foreground:   #3c3c43;
+  --sidebar-primary:      #0071e3;
+  --sidebar-primary-fg:   #0071e3;
+  --sidebar-active-bg:    rgba(0, 113, 227, 0.09);
+  --sidebar-active-fg:    #0071e3;
+  --sidebar-hover-bg:     rgba(0, 0, 0, 0.04);
+  --sidebar-accent:       rgba(0, 0, 0, 0.04);
+  --sidebar-border:       #e5e5ea;
+  --sidebar-section:      #aeaeb2;
 }
 
 /* ================================================================
@@ -78,7 +87,7 @@ input, textarea, button, select { font-family: inherit; }
 
 ::-webkit-scrollbar         { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track   { background: transparent; }
-::-webkit-scrollbar-thumb   { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb   { background: #c7c7cc; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
 :focus-visible {

@@ -192,7 +192,7 @@
 }
 
 .divHeader:hover {
-  background: #f8fafc;
+  background: var(--secondary);
 }
 
 .divLeft {
@@ -236,7 +236,7 @@
 .employees {
   border-top: 1px solid var(--border);
   padding: 0.375rem 0.875rem 0.5rem 2.75rem;
-  background: #fafbfc;
+  background: var(--background);
   display: flex;
   flex-direction: column;
   gap: 0.125rem;
@@ -267,7 +267,7 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--accent));
+  background: var(--primary);
   color: var(--primary-foreground);
   display: flex;
   align-items: center;

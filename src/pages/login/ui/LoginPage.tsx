@@ -38,9 +38,7 @@ export function LoginPage() {
       <div className={styles.card}>
 
         <div className={styles.logo}>
-          <div className={styles.logoIcon}>
-            <GraduationCap size={20} strokeWidth={2.5} />
-          </div>
+          <GraduationCap size={22} className={styles.logoIcon} />
           <span className={styles.logoText}>GlobalLearn</span>
         </div>
 

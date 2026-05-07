@@ -1,23 +1,23 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { GraduationCap, Mail, CheckCircle2 } from 'lucide-react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { GraduationCap, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '@entities/user/model/UserContext';
 import styles from './Register.module.css';
 
-type Step = 'form' | 'sent';
-
 export function RegisterPage() {
-  const { register, isAuthenticated, isLoading } = useAuth();
+  const { completeInvite, getInviteData, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [step, setStep]           = useState<Step>('form');
-  const [fullname, setFullname]   = useState('');
-  const [email, setEmail]         = useState('');
-  const [password, setPassword]   = useState('');
-  const [confirm, setConfirm]     = useState('');
-  const [error, setError]         = useState('');
+  const token = searchParams.get('token') ?? '';
+  const inviteData = token ? getInviteData(token) : null;
+
+  const [step, setStep]         = useState<'form' | 'done'>('form');
+  const [fullname, setFullname] = useState(inviteData?.fullname ?? '');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm]   = useState('');
+  const [error, setError]       = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [verifyToken, setVerifyToken] = useState('');
 
   if (!isLoading && isAuthenticated) {
     navigate('/dashboard', { replace: true });
@@ -25,10 +25,81 @@ export function RegisterPage() {
   }
   if (isLoading) return null;
 
+  // ── Нет токена или токен неизвестен ──────────────────────────────
+  if (!token || !inviteData) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.logo}>
+            <GraduationCap size={22} className={styles.logoIcon} />
+            <span className={styles.logoText}>GlobalLearn</span>
+          </div>
+          <h1 className={styles.title}>Ссылка недействительна</h1>
+          <p className={styles.subtitle}>
+            Приглашение не найдено или истёк срок действия ссылки.
+            Обратитесь к администратору.
+          </p>
+          <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <Link to="/login" className={styles.link}>← Вернуться ко входу</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Токен истёк ───────────────────────────────────────────────────
+  if (new Date(inviteData.expiresAt) < new Date()) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.logo}>
+            <GraduationCap size={22} className={styles.logoIcon} />
+            <span className={styles.logoText}>GlobalLearn</span>
+          </div>
+          <h1 className={styles.title}>Ссылка истекла</h1>
+          <p className={styles.subtitle}>
+            Срок действия приглашения истёк. Обратитесь к администратору для повторного приглашения.
+          </p>
+          <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <Link to="/login" className={styles.link}>← Вернуться ко входу</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Успешно завершено ─────────────────────────────────────────────
+  if (step === 'done') {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.logo}>
+            <GraduationCap size={22} className={styles.logoIcon} />
+            <span className={styles.logoText}>GlobalLearn</span>
+          </div>
+          <div className={styles.sentIcon}>
+            <CheckCircle2 size={40} />
+          </div>
+          <h1 className={styles.title}>Добро пожаловать!</h1>
+          <p className={styles.subtitle}>
+            Ваш аккаунт успешно создан. Теперь вы можете войти в систему.
+          </p>
+          <p style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+            <Link to="/login" className={styles.link}>Войти в систему →</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Форма завершения регистрации ──────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
+    if (!fullname.trim()) {
+      setError('Введите полное имя');
+      return;
+    }
     if (password !== confirm) {
       setError('Пароли не совпадают');
       return;
@@ -37,101 +108,61 @@ export function RegisterPage() {
       setError('Пароль должен быть не менее 4 символов');
       return;
     }
-
     setSubmitting(true);
-    try {
-      const token = await register(fullname.trim(), email.trim(), password);
-      setVerifyToken(token);
-      setStep('sent');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Ошибка регистрации');
-    } finally {
+    await new Promise<void>(r => setTimeout(r, 300));
+    const ok = completeInvite(token, fullname.trim(), password);
+    if (!ok) {
+      setError('Не удалось завершить регистрацию. Обратитесь к администратору.');
       setSubmitting(false);
+      return;
     }
+    setStep('done');
   };
 
-  /* ── Шаг 2: письмо «отправлено» ── */
-  if (step === 'sent') {
-    const verifyUrl = `/verify-email?token=${verifyToken}`;
-    return (
-      <div className={styles.page}>
-        <div className={styles.card}>
-          <div className={styles.logo}>
-            <GraduationCap size={28} />
-            <span>GlobalLearn</span>
-          </div>
-
-          <div className={styles.sentIcon}>
-            <Mail size={40} />
-          </div>
-
-          <h1 className={styles.title}>Проверьте почту</h1>
-          <p className={styles.subtitle}>
-            Мы отправили письмо на <strong>{email}</strong>.<br />
-            Перейдите по ссылке в письме, чтобы завершить регистрацию.
-          </p>
-
-          {/* В демо-режиме показываем ссылку прямо здесь */}
-          <div className={styles.demoBox}>
-            <p className={styles.demoLabel}>🔧 Демо-режим — ссылка из письма:</p>
-            <Link to={verifyUrl} className={styles.demoLink}>
-              Подтвердить email →
-            </Link>
-          </div>
-
-          <p className={styles.backHint}>
-            <Link to="/login" className={styles.link}>← Вернуться ко входу</Link>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  /* ── Шаг 1: форма ── */
   return (
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.logo}>
-          <GraduationCap size={28} />
-          <span>GlobalLearn</span>
+          <GraduationCap size={22} className={styles.logoIcon} />
+          <span className={styles.logoText}>GlobalLearn</span>
         </div>
 
-        <h1 className={styles.title}>Регистрация</h1>
-        <p className={styles.subtitle}>Создайте аккаунт для доступа к платформе</p>
+        <h1 className={styles.title}>Завершение регистрации</h1>
+        <p className={styles.subtitle}>Вас пригласили в систему обучения GlobalLearn</p>
 
         {error && <div className={styles.error}>{error}</div>}
 
         <form className={styles.form} onSubmit={e => { void handleSubmit(e); }}>
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="fullname">Полное имя</label>
+            <label className={styles.label} htmlFor="reg-email">Email</label>
             <input
-              id="fullname"
+              id="reg-email"
+              type="email"
+              className={`${styles.input} ${styles.inputReadonly}`}
+              value={inviteData.email}
+              readOnly
+              disabled
+              autoComplete="off"
+            />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="reg-fullname">Полное имя</label>
+            <input
+              id="reg-fullname"
               type="text"
               className={styles.input}
               value={fullname}
               onChange={e => setFullname(e.target.value)}
               placeholder="Иван Иванов"
               required
+              autoFocus={!inviteData.fullname}
               autoComplete="name"
             />
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label} htmlFor="reg-email">Email</label>
-            <input
-              id="reg-email"
-              type="email"
-              className={styles.input}
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="reg-password">Пароль</label>
+            <label className={styles.label} htmlFor="reg-password">Придумайте пароль</label>
             <input
               id="reg-password"
               type="password"
@@ -158,15 +189,14 @@ export function RegisterPage() {
             />
           </div>
 
-          <button type="submit" className={styles.submitBtn} disabled={submitting}>
-            {submitting ? 'Регистрируем...' : 'Зарегистрироваться'}
+          <button
+            type="submit"
+            className={styles.submitBtn}
+            disabled={submitting || !fullname.trim()}
+          >
+            {submitting ? 'Создаём аккаунт...' : 'Создать аккаунт'}
           </button>
         </form>
-
-        <p className={styles.loginHint}>
-          Уже есть аккаунт?{' '}
-          <Link to="/login" className={styles.link}>Войти</Link>
-        </p>
       </div>
     </div>
   );

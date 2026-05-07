@@ -1,5 +1,4 @@
 .page {
-  max-width: 1040px;
   width: 100%;
 }
 
@@ -16,10 +15,10 @@
 
 .title {
   margin: 0 0 0.25rem;
-  font-size: 1.75rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: var(--foreground);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.025em;
 }
 
 .subtitle {

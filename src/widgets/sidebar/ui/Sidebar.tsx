@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Users, Building2,
   LogOut, GraduationCap, BarChart2, MessageSquare,
-  Search, ChevronRight,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canCreateCourse, canManageClients, displayName, type User } from '@entities/user/model/types';
@@ -26,9 +24,9 @@ type NavGroup = {
 const NAV_GROUPS: NavGroup[] = [
   {
     items: [
-      { to: '/dashboard',      label: 'Главная',     icon: Home,          visible: () => true },
-      { to: '/courses',        label: 'Курсы',       icon: BookOpen,      visible: () => true },
-      { to: '/courses/create', label: 'Создать курс', icon: PlusCircle,   visible: canCreateCourse },
+      { to: '/dashboard',      label: 'Главная',      icon: Home,          visible: () => true },
+      { to: '/courses',        label: 'Курсы',         icon: BookOpen,      visible: () => true },
+      { to: '/courses/create', label: 'Создать курс',  icon: PlusCircle,    visible: canCreateCourse },
     ],
   },
   {
@@ -47,7 +45,6 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
-// Flatten all items for active-state lookup
 const ALL_ITEMS = NAV_GROUPS.flatMap(g => g.items);
 
 function getIsActive(itemTo: string, pathname: string): boolean {
@@ -61,12 +58,9 @@ export function Sidebar() {
   const { user, logout } = useUser();
   const navigate = useNavigate();
   const { courses } = useCourses();
-  const [query, setQuery] = useState('');
 
   const userIsAdmin = isAdmin(user);
-  const pendingCount = userIsAdmin
-    ? courses.filter(c => c.status === 'pending').length
-    : 0;
+  const pendingCount = userIsAdmin ? courses.filter(c => c.status === 'pending').length : 0;
 
   const handleLogout = async () => {
     await logout();
@@ -74,35 +68,17 @@ export function Sidebar() {
   };
 
   const roleName = user.employee?.role.name ?? user.type.toLowerCase();
-  const q = query.toLowerCase();
 
   return (
     <aside className={styles.sidebar}>
-      {/* Logo */}
-      <div className={styles.logoArea}>
-        <div className={styles.logoIcon}>
-          <GraduationCap size={18} strokeWidth={2.5} />
-        </div>
+      <div className={styles.logo}>
+        <GraduationCap size={22} strokeWidth={2} className={styles.logoIcon} />
         <span className={styles.logoText}>GlobalLearn</span>
       </div>
 
-      {/* Search */}
-      <div className={styles.searchWrap}>
-        <Search size={14} className={styles.searchIcon} />
-        <input
-          className={styles.searchInput}
-          placeholder="Найти раздел..."
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-        />
-      </div>
-
-      {/* Navigation groups */}
       <nav className={styles.nav}>
         {NAV_GROUPS.map((group, gi) => {
-          const visible = group.items.filter(item =>
-            item.visible(user) && (q === '' || item.label.toLowerCase().includes(q))
-          );
+          const visible = group.items.filter(item => item.visible(user));
           if (visible.length === 0) return null;
           return (
             <div key={gi} className={styles.navGroup}>
@@ -117,14 +93,9 @@ export function Sidebar() {
                     to={item.to}
                     className={`${styles.navItem} ${active ? styles.active : ''}`}
                   >
-                    <Icon size={17} className={styles.navIcon} strokeWidth={active ? 2.5 : 2} />
-                    <span className={styles.navLabel}>{item.label}</span>
-                    {hasBadge && (
-                      <span className={styles.badge}>{pendingCount}</span>
-                    )}
-                    {active && !hasBadge && (
-                      <ChevronRight size={13} className={styles.activeArrow} />
-                    )}
+                    <Icon size={17} strokeWidth={active ? 2.5 : 2} />
+                    <span>{item.label}</span>
+                    {hasBadge && <span className={styles.badge}>{pendingCount}</span>}
                   </Link>
                 );
               })}
@@ -133,18 +104,16 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Footer — user card + logout */}
       <div className={styles.footer}>
-        <Link to="/profile" className={styles.userCard}>
+        <Link to="/profile" className={styles.profile}>
           <UserAvatar user={user} size={34} />
-          <div className={styles.userInfo}>
-            <span className={styles.userName}>{displayName(user)}</span>
-            <span className={styles.userRole}>{roleName}</span>
+          <div className={styles.profileInfo}>
+            <span className={styles.profileName}>{displayName(user)}</span>
+            <span className={styles.profileRole}>{roleName}</span>
           </div>
-          <div className={styles.onlineDot} />
         </Link>
         <button className={styles.logoutBtn} onClick={() => { void handleLogout(); }}>
-          <LogOut size={15} />
+          <LogOut size={17} />
           <span>Выйти</span>
         </button>
       </div>

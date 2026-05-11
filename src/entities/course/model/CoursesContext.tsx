@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import type { Course, Enrollment, Certificate, CreateCourseDto } from './types';
+import type { Course, Enrollment, Certificate, CreateCourseDto, EnrollmentRequest } from './types';
 import { courseApi } from '../api/courseApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, isAdmin } from '@entities/user/model/types';
@@ -17,6 +17,14 @@ interface CoursesContextValue {
   certificates: Certificate[];
   isLoading: boolean;
   enroll: (courseId: string) => Promise<void>;
+  /** Подать заявку на прохождение — создаёт enrollment со статусом pending_approval */
+  requestEnrollment: (courseId: string) => Promise<void>;
+  /** Получить заявки на прохождение для конкретного курса (для canControl-пользователей) */
+  getCourseRequests: (courseId: string) => Promise<EnrollmentRequest[]>;
+  /** Одобрить заявку — меняет статус на in_progress */
+  approveEnrollmentRequest: (courseId: string, userId: string) => Promise<void>;
+  /** Отклонить заявку */
+  rejectEnrollmentRequest: (courseId: string, userId: string) => Promise<void>;
   assignCourse: (courseId: string, userId: string) => Promise<void>;
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>) => Promise<Course>;
   approveCourse: (courseId: string) => Promise<void>;
@@ -66,6 +74,39 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     setEnrollments(prev => [
       ...prev.filter(e => !(e.courseId === courseId && e.userId === user.id)),
       enrollment,
+    ]);
+  };
+
+  const requestEnrollment = async (courseId: string) => {
+    const enrollment = await courseApi.requestEnrollment(
+      courseId,
+      user.id,
+      displayName(user),
+      user.email,
+    );
+    setEnrollments(prev => [
+      ...prev.filter(e => !(e.courseId === courseId && e.userId === user.id)),
+      enrollment,
+    ]);
+  };
+
+  const getCourseRequests = async (courseId: string): Promise<EnrollmentRequest[]> => {
+    return courseApi.getEnrollmentRequestsByCourse(courseId);
+  };
+
+  const approveEnrollmentRequest = async (courseId: string, userId: string): Promise<void> => {
+    const updated = await courseApi.approveEnrollmentRequest(courseId, userId);
+    setEnrollments(prev => [
+      ...prev.filter(e => !(e.courseId === courseId && e.userId === userId)),
+      updated,
+    ]);
+  };
+
+  const rejectEnrollmentRequest = async (courseId: string, userId: string): Promise<void> => {
+    const updated = await courseApi.rejectEnrollmentRequest(courseId, userId);
+    setEnrollments(prev => [
+      ...prev.filter(e => !(e.courseId === courseId && e.userId === userId)),
+      updated,
     ]);
   };
 
@@ -136,6 +177,10 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         certificates,
         isLoading,
         enroll,
+        requestEnrollment,
+        getCourseRequests,
+        approveEnrollmentRequest,
+        rejectEnrollmentRequest,
         assignCourse,
         createCourse,
         approveCourse,

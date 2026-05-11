@@ -50,7 +50,7 @@ export interface Module {
 
 export type CourseStatus = 'draft' | 'pending' | 'published' | 'archived';
 
-export type EnrollmentStatus = 'not_enrolled' | 'in_progress' | 'completed';
+export type EnrollmentStatus = 'not_enrolled' | 'pending_approval' | 'in_progress' | 'completed' | 'rejected';
 
 // Кому предназначен курс — используется для фильтрации в списке курсов
 export type CourseType = 'employee' | 'client' | 'all';
@@ -71,6 +71,12 @@ export interface Course {
   createdAt: string;
   lessonsCount: number;
   modules?: Module[]; // опционально — загружается при открытии курса
+  /** Если задан — курс предназначен конкретному департаменту */
+  targetDepartmentId?: string | null;
+  targetDepartmentName?: string | null;
+  /** Если задан — курс предназначен конкретному отделу */
+  targetDivisionId?: string | null;
+  targetDivisionName?: string | null;
 }
 
 // Запись пользователя на курс
@@ -96,6 +102,16 @@ export function calcProgress(course: Course, completedItems: string[]): number {
 }
 
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;
+
+// ── Заявка на прохождение курса (требует одобрения) ──────────────
+export interface EnrollmentRequest {
+  id: string;
+  courseId: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  requestedAt: string;
+}
 
 // ── Сертификат о прохождении курса ──────────────────────────────
 export interface Certificate {

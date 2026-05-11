@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList } from 'lucide-react';
+import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin } from '@entities/user/model/types';
-import type { Course, StepItem, LessonContent, TestContent } from '@entities/course/model/types';
+import { isAdmin, canControl } from '@entities/user/model/types';
+import type { Course, StepItem, LessonContent, TestContent, EnrollmentRequest } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal';
@@ -200,15 +200,30 @@ function TestPlayer({
 // ─────────────────────────────────────────────────────────
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { courses, getEnrollment, enroll, markItemComplete, certificates, isLoading } = useCourses();
+  const {
+    courses, getEnrollment, enroll, requestEnrollment,
+    getCourseRequests, approveEnrollmentRequest, rejectEnrollmentRequest,
+    markItemComplete, certificates, isLoading,
+  } = useCourses();
   const { user } = useUser();
 
   const [assignOpen, setAssignOpen] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
-  const [enrollPending, setEnrollPending] = useState(false);
+  const [actionPending, setActionPending] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['m1-1', 'm2-1', 'm3-1', 'm4-1']));
   const [completionOpen, setCompletionOpen] = useState(false);
+  const [pendingRequests, setPendingRequests] = useState<EnrollmentRequest[]>([]);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+
+  const isController = canControl(user);
+
+  // Загружаем заявки для менеджеров
+  useEffect(() => {
+    if (!isController || !id) return;
+    void getCourseRequests(id).then(setPendingRequests);
+  }, [isController, id, getCourseRequests]);
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
 
@@ -223,10 +238,16 @@ export function CourseDetailPage() {
   }
 
   const enrollment = getEnrollment(course.id);
-  const isEnrolled   = !!enrollment;
-  const isCompleted  = enrollment?.status === 'completed';
+  const enrollStatus = enrollment?.status ?? 'not_enrolled';
+  const isEnrolled   = enrollStatus === 'in_progress' || enrollStatus === 'completed';
+  const isPending    = enrollStatus === 'pending_approval';
+  const isRejected   = enrollStatus === 'rejected';
+  const isCompleted  = enrollStatus === 'completed';
   const completedSet = new Set(enrollment?.completedItems ?? []);
   const allItems     = getAllItems(course);
+
+  // Когда плеер открыт — скрываем шапку курса
+  const isPlaying = playerOpen && isEnrolled;
 
   // ── Навигация по дереву ──────────────────────────────────
   const firstUndone = allItems.find(item => !completedSet.has(item.id));
@@ -241,103 +262,236 @@ export function CourseDetailPage() {
     });
   };
 
-  // ── Запись на курс ───────────────────────────────────────
-  const handleEnroll = async () => {
-    setEnrollPending(true);
+  // ── Подача заявки (обычный пользователь) ─────────────────
+  const handleRequestEnrollment = async () => {
+    setActionPending(true);
+    await requestEnrollment(course.id);
+    setActionPending(false);
+  };
+
+  // ── Прямая запись (admin назначает себя напрямую) ─────────
+  const handleEnrollDirect = async () => {
+    setActionPending(true);
     await enroll(course.id);
-    setEnrollPending(false);
+    setActionPending(false);
     setPlayerOpen(true);
   };
 
   // ── Завершение элемента ───────────────────────────────────
   const handleItemComplete = async (itemId: string) => {
     const updated = await markItemComplete(course.id, itemId);
-
-    // Курс только что завершён — показываем экран поздравления
     if (updated.status === 'completed') {
       setCompletionOpen(true);
       return;
     }
-
-    // Иначе переходим к следующему непройденному
     const idx = allItems.findIndex(i => i.id === itemId);
     const next = allItems.slice(idx + 1).find(i => !completedSet.has(i.id) && i.id !== itemId);
     if (next) setSelectedItemId(next.id);
   };
 
-  const pageClass = playerOpen && isEnrolled ? styles.pageWide : styles.page;
+  // ── Одобрение/отклонение заявок ──────────────────────────
+  const handleApproveRequest = async (req: EnrollmentRequest) => {
+    setApprovingId(req.userId);
+    await approveEnrollmentRequest(course.id, req.userId);
+    setPendingRequests(prev => prev.filter(r => r.userId !== req.userId));
+    setApprovingId(null);
+  };
+
+  const handleRejectRequest = async (req: EnrollmentRequest) => {
+    setRejectingId(req.userId);
+    await rejectEnrollmentRequest(course.id, req.userId);
+    setPendingRequests(prev => prev.filter(r => r.userId !== req.userId));
+    setRejectingId(null);
+  };
+
+  const pageClass = isPlaying ? styles.pageWide : styles.page;
 
   return (
     <div className={pageClass}>
       <Link to="/courses" className={styles.backLink}>← Все курсы</Link>
 
-      {/* Шапка */}
-      <div className={styles.titleRow}>
-        <h1 className={styles.title}>{course.title}</h1>
-        {isAdmin(user) && (
-          <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
-            Назначить сотрудникам
-          </button>
-        )}
-      </div>
-
-      <div className={styles.metaRow}>
-        <span className={styles.meta}>{course.lessonsCount} уроков · Добавлен {course.createdAt}</span>
-        <span className={styles.courseTypeBadge}>{COURSE_TYPE_LABELS[course.courseType]}</span>
-      </div>
-
-      {/* Описание */}
-      <div className={styles.descriptionCard}>
-        <h2 className={styles.descriptionTitle}>О курсе</h2>
-        <p className={styles.descriptionText}>{course.description}</p>
-      </div>
-
-      {/* Прогресс */}
-      {isEnrolled && (
-        <div className={styles.progressSection}>
-          <div className={styles.progressHeader}>
-            <span className={styles.progressLabel}>
-              Пройдено {completedSet.size} из {allItems.length} элементов
-            </span>
-            <span className={styles.progressValue}>{enrollment?.progress ?? 0}%</span>
+      {/* ── Шапка курса — скрывается во время просмотра ── */}
+      {!isPlaying && (
+        <>
+          <div className={styles.titleRow}>
+            <h1 className={styles.title}>{course.title}</h1>
+            {isAdmin(user) && (
+              <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
+                Назначить сотрудникам
+              </button>
+            )}
           </div>
-          <div className={styles.progressBar}>
-            <div className={styles.progressFill} style={{ width: `${enrollment?.progress ?? 0}%` }} />
+
+          <div className={styles.metaRow}>
+            <span className={styles.meta}>{course.lessonsCount} уроков · Добавлен {course.createdAt}</span>
+            <span className={styles.courseTypeBadge}>{COURSE_TYPE_LABELS[course.courseType]}</span>
+            {course.targetDepartmentName && (
+              <span className={styles.targetBadge}>
+                <Building2 size={11} /> {course.targetDepartmentName}
+              </span>
+            )}
+            {course.targetDivisionName && (
+              <span className={styles.targetBadge}>
+                <Target size={11} /> {course.targetDivisionName}
+              </span>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Кнопки действия */}
-      {!isEnrolled && (
-        <button
-          className={styles.startBtn}
-          onClick={() => void handleEnroll()}
-          disabled={enrollPending}
-        >
-          <Play size={18} />
-          {enrollPending ? 'Записываем...' : 'Записаться на курс'}
-        </button>
-      )}
-
-      {isEnrolled && isCompleted && !playerOpen && (
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap' }}>
-          <div className={styles.completedBanner}>
-            <CheckCircle2 size={18} /> Курс завершён!
+          {/* Описание */}
+          <div className={styles.descriptionCard}>
+            <h2 className={styles.descriptionTitle}>О курсе</h2>
+            <p className={styles.descriptionText}>{course.description}</p>
           </div>
-          <button className={styles.startBtn} style={{ margin: 0 }} onClick={() => setPlayerOpen(true)}>
-            Повторить материал
-          </button>
-        </div>
+
+          {/* Прогресс (только если идёт прохождение) */}
+          {isEnrolled && (
+            <div className={styles.progressSection}>
+              <div className={styles.progressHeader}>
+                <span className={styles.progressLabel}>
+                  Пройдено {completedSet.size} из {allItems.length} элементов
+                </span>
+                <span className={styles.progressValue}>{enrollment?.progress ?? 0}%</span>
+              </div>
+              <div className={styles.progressBar}>
+                <div className={styles.progressFill} style={{ width: `${enrollment?.progress ?? 0}%` }} />
+              </div>
+            </div>
+          )}
+
+          {/* ── Панель одобрения для руководителей ── */}
+          {isController && (
+            <div className={styles.approvalPanel}>
+              <h3 className={styles.approvalPanelTitle}>
+                <Users size={16} /> Заявки на прохождение
+                {pendingRequests.length > 0 && (
+                  <span style={{ marginLeft: '0.375rem', background: 'var(--primary)', color: '#fff', borderRadius: '3px', padding: '0 6px', fontSize: '0.75rem' }}>
+                    {pendingRequests.length}
+                  </span>
+                )}
+              </h3>
+              {pendingRequests.length === 0 ? (
+                <p className={styles.approvalPanelEmpty}>Нет ожидающих заявок</p>
+              ) : (
+                pendingRequests.map(req => (
+                  <div key={req.userId} className={styles.approvalRequestRow}>
+                    <div className={styles.approvalRequestAvatar}>
+                      {(req.userName || req.userEmail)[0].toUpperCase()}
+                    </div>
+                    <div className={styles.approvalRequestInfo}>
+                      <div className={styles.approvalRequestName}>{req.userName}</div>
+                      <div className={styles.approvalRequestMeta}>
+                        {req.userEmail} · {new Date(req.requestedAt).toLocaleDateString('ru-RU')}
+                      </div>
+                    </div>
+                    <div className={styles.approvalActions}>
+                      <button
+                        className={styles.approveBtn}
+                        onClick={() => void handleApproveRequest(req)}
+                        disabled={approvingId === req.userId || rejectingId === req.userId}
+                      >
+                        <CheckCircle2 size={14} />
+                        {approvingId === req.userId ? '...' : 'Одобрить'}
+                      </button>
+                      <button
+                        className={styles.rejectReqBtn}
+                        onClick={() => void handleRejectRequest(req)}
+                        disabled={approvingId === req.userId || rejectingId === req.userId}
+                      >
+                        <XCircle size={14} />
+                        {rejectingId === req.userId ? '...' : 'Отклонить'}
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* ── Кнопки / статусы записи ── */}
+
+          {/* Не записан — подать заявку */}
+          {enrollStatus === 'not_enrolled' && !isAdmin(user) && (
+            <button
+              className={styles.requestBtn}
+              onClick={() => void handleRequestEnrollment()}
+              disabled={actionPending}
+            >
+              <Clock size={18} />
+              {actionPending ? 'Отправляем...' : 'Подать заявку на прохождение'}
+            </button>
+          )}
+
+          {/* Admin — записывается напрямую */}
+          {enrollStatus === 'not_enrolled' && isAdmin(user) && (
+            <button
+              className={styles.requestBtn}
+              onClick={() => void handleEnrollDirect()}
+              disabled={actionPending}
+            >
+              <Play size={18} />
+              {actionPending ? 'Записываем...' : 'Начать курс'}
+            </button>
+          )}
+
+          {/* Заявка на рассмотрении */}
+          {isPending && (
+            <div className={styles.pendingBanner}>
+              <Clock size={20} className={styles.pendingBannerIcon} />
+              <div className={styles.pendingBannerText}>
+                <div className={styles.pendingBannerTitle}>Заявка на рассмотрении</div>
+                <div className={styles.pendingBannerSub}>
+                  Ваша заявка отправлена руководителю. Вы получите доступ после одобрения.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Заявка отклонена */}
+          {isRejected && (
+            <>
+              <div className={styles.rejectedBanner}>
+                <XCircle size={20} className={styles.rejectedBannerIcon} />
+                <div>
+                  <div style={{ fontWeight: 600, marginBottom: '0.125rem' }}>Заявка отклонена</div>
+                  <div style={{ fontSize: '0.8125rem', opacity: 0.8 }}>
+                    Обратитесь к руководителю или подайте заявку повторно.
+                  </div>
+                </div>
+              </div>
+              <button
+                className={styles.reRequestBtn}
+                onClick={() => void handleRequestEnrollment()}
+                disabled={actionPending}
+              >
+                <Clock size={14} />
+                {actionPending ? 'Отправляем...' : 'Подать заявку повторно'}
+              </button>
+            </>
+          )}
+
+          {/* Курс завершён */}
+          {isCompleted && !playerOpen && (
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap' }}>
+              <div className={styles.completedBanner}>
+                <CheckCircle2 size={18} /> Курс завершён!
+              </div>
+              <button className={styles.startBtn} style={{ margin: 0 }} onClick={() => setPlayerOpen(true)}>
+                Повторить материал
+              </button>
+            </div>
+          )}
+
+          {/* Курс одобрен — начать/продолжить */}
+          {isEnrolled && !isCompleted && !playerOpen && (
+            <button className={styles.startBtn} onClick={() => setPlayerOpen(true)}>
+              <Play size={18} />
+              {completedSet.size === 0 ? 'Начать курс' : 'Продолжить курс'}
+            </button>
+          )}
+        </>
       )}
 
-      {isEnrolled && !isCompleted && !playerOpen && (
-        <button className={styles.startBtn} onClick={() => setPlayerOpen(true)}>
-          <Play size={18} />
-          {completedSet.size === 0 ? 'Начать курс' : 'Продолжить курс'}
-        </button>
-      )}
-
-      {/* Плеер */}
+      {/* ── Плеер ── */}
       {isEnrolled && playerOpen && course.modules && course.modules.length > 0 && (
         <div className={styles.player}>
           {/* Дерево модулей */}

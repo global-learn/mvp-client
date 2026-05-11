@@ -1,4 +1,4 @@
-import type { Course, Enrollment, CreateCourseDto } from '../model/types';
+import type { Course, Enrollment, CreateCourseDto, EnrollmentRequest } from '../model/types';
 import { getAllItems, calcProgress } from '../model/types';
 
 // ================================================================
@@ -15,6 +15,8 @@ let mockCourses: Course[] = [
     courseType: 'employee',
     createdAt: '2024-01-15',
     lessonsCount: 6,
+    targetDepartmentId: 'dept-monitoring',
+    targetDepartmentName: 'Департамент мониторинга',
     modules: [
       {
         id: 'm1-1', title: 'Переменные и типы данных',
@@ -191,6 +193,8 @@ greet("Иван"); // "Привет, Иван"
     courseType: 'employee',
     createdAt: '2024-02-10',
     lessonsCount: 5,
+    targetDivisionId: 'div-meat',
+    targetDivisionName: 'Отдел мясной промышленности',
     modules: [
       {
         id: 'm2-1', title: 'Основы компонентов',
@@ -566,6 +570,7 @@ GlobalLearn — корпоративная платформа для обуче�
 ];
 
 let mockEnrollments: Enrollment[] = [];
+let mockRequests: EnrollmentRequest[] = [];
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
@@ -631,6 +636,66 @@ export const courseApi = {
     if (idx === -1) throw new Error('Course not found');
     const updated = { ...mockCourses[idx], status: 'draft' as const };
     mockCourses = [...mockCourses.slice(0, idx), updated, ...mockCourses.slice(idx + 1)];
+    return updated;
+  },
+
+  /** Подать заявку на прохождение курса (требует одобрения менеджером) */
+  async requestEnrollment(
+    courseId: string,
+    userId: string,
+    userName: string,
+    userEmail: string,
+  ): Promise<Enrollment> {
+    await delay(300);
+    const existing = mockEnrollments.find(e => e.courseId === courseId && e.userId === userId);
+    if (existing) return existing;
+
+    const enrollment: Enrollment = {
+      courseId, userId,
+      status: 'pending_approval',
+      progress: 0,
+      completedItems: [],
+    };
+    mockEnrollments = [...mockEnrollments, enrollment];
+
+    const request: EnrollmentRequest = {
+      id: `req-${courseId}-${userId}`,
+      courseId,
+      userId,
+      userName,
+      userEmail,
+      requestedAt: new Date().toISOString(),
+    };
+    mockRequests = [...mockRequests, request];
+
+    return enrollment;
+  },
+
+  /** Получить все заявки на прохождение курса (для менеджеров/администраторов) */
+  async getEnrollmentRequestsByCourse(courseId: string): Promise<EnrollmentRequest[]> {
+    await delay(150);
+    return mockRequests.filter(r => r.courseId === courseId);
+  },
+
+  /** Одобрить заявку — меняет статус на in_progress */
+  async approveEnrollmentRequest(courseId: string, userId: string): Promise<Enrollment> {
+    await delay(200);
+    const idx = mockEnrollments.findIndex(e => e.courseId === courseId && e.userId === userId);
+    if (idx === -1) throw new Error('Enrollment not found');
+    const updated: Enrollment = { ...mockEnrollments[idx], status: 'in_progress' };
+    mockEnrollments = [...mockEnrollments.slice(0, idx), updated, ...mockEnrollments.slice(idx + 1)];
+    mockRequests = mockRequests.filter(r => !(r.courseId === courseId && r.userId === userId));
+    return updated;
+  },
+
+  /** Отклонить заявку — меняет статус на rejected */
+  async rejectEnrollmentRequest(courseId: string, userId: string): Promise<Enrollment> {
+    await delay(200);
+    const idx = mockEnrollments.findIndex(e => e.courseId === courseId && e.userId === userId);
+    if (idx === -1) throw new Error('Enrollment not found');
+    const updated: Enrollment = { ...mockEnrollments[idx], status: 'rejected' };
+    mockEnrollments = [...mockEnrollments.slice(0, idx), updated, ...mockEnrollments.slice(idx + 1)];
+    mockRequests = mockRequests.filter(r => !(r.courseId === courseId && r.userId === userId));
     return updated;
   },
 

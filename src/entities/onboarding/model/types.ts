@@ -1,0 +1,98 @@
+import type { EmployeeRole } from '@entities/user/model/types';
+
+// ================================================================
+// Шаг онбординга
+// ================================================================
+
+export type OnboardingStepType = 'task' | 'document' | 'meeting' | 'video' | 'course';
+
+export const STEP_TYPE_LABELS: Record<OnboardingStepType, string> = {
+  task:     'Задача',
+  document: 'Документ',
+  meeting:  'Встреча',
+  video:    'Видео',
+  course:   'Курс',
+};
+
+export interface OnboardingStep {
+  id: string;
+  title: string;
+  description: string;
+  type: OnboardingStepType;
+  required: boolean;
+  order: number;
+  /** Если type === 'course', можно прикрепить courseId */
+  courseId?: string;
+}
+
+// ================================================================
+// Шаблон онбординга (черновик / активный)
+// ================================================================
+
+export interface OnboardingTemplate {
+  id: string;
+  title: string;
+  description: string;
+  /** Для какой роли (опционально) */
+  targetRole?: EmployeeRole | null;
+  /** Для какого подразделения (опционально) */
+  targetDivisionId?: string | null;
+  targetDivisionName?: string | null;
+  targetDepartmentId?: string | null;
+  targetDepartmentName?: string | null;
+  steps: OnboardingStep[];
+  createdBy: string;
+  status: 'draft' | 'active';
+  createdAt: string;
+}
+
+// ================================================================
+// Сообщение в чате онбординга
+// ================================================================
+
+export interface OnboardingMessage {
+  id: string;
+  senderId: string;
+  senderName: string;
+  text: string;
+  sentAt: string;
+}
+
+// ================================================================
+// Назначение онбординга сотруднику
+// ================================================================
+
+export interface OnboardingAssignment {
+  id: string;
+  templateId: string;
+  templateTitle: string;
+  /** Кому назначено */
+  employeeId: string;
+  employeeName: string;
+  employeeEmail: string;
+  /** Кто назначил */
+  assignedBy: string;
+  assignedByName: string;
+  /** Структура */
+  divisionId: string;
+  divisionName: string;
+  departmentId: string;
+  departmentName: string;
+  /** Редактируемый снапшот шагов (копия из шаблона + возможные правки) */
+  steps: OnboardingStep[];
+  /** ID пройденных шагов */
+  completedSteps: string[];
+  status: 'in_progress' | 'completed';
+  startedAt: string;
+  completedAt?: string;
+  /** Переписка между назначившим и сотрудником */
+  messages: OnboardingMessage[];
+}
+
+// ── Утилиты ─────────────────────────────────────────────────────
+
+export function calcOnboardingProgress(assignment: OnboardingAssignment): number {
+  const total = assignment.steps.length;
+  if (total === 0) return 0;
+  return Math.round((assignment.completedSteps.length / total) * 100);
+}

@@ -1,0 +1,405 @@
+.page {
+  width: 100%;
+  max-width: 760px;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--primary);
+  text-decoration: none;
+  margin-bottom: 1.75rem;
+}
+
+.backLink:hover { text-decoration: underline; }
+
+/* ── Header ── */
+.header {
+  margin-bottom: 2rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: var(--foreground);
+  letter-spacing: -0.04em;
+  flex: 1;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.875rem;
+}
+
+.targetBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 3px;
+  background: var(--primary-light, rgba(0,113,227,0.08));
+  color: var(--primary);
+}
+
+.metaDot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--muted-foreground);
+}
+
+.metaText {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.desc {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Overall progress */
+.overallProgress {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.375rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2.25rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.overallProgressLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.overallProgressBar {
+  flex: 1;
+  height: 8px;
+  background: var(--secondary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.overallProgressFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.overallProgressFillDone { background: #16a34a; }
+
+.overallProgressPct {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  min-width: 42px;
+  text-align: right;
+}
+
+/* Completed banner */
+.completedBanner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.375rem;
+  background: #f0fdf4;
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  border-radius: var(--radius-lg);
+  margin-bottom: 2rem;
+  color: #166534;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+/* ── Timeline ── */
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Вертикальная линия */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 23px;
+  top: 28px;
+  bottom: 28px;
+  width: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  z-index: 0;
+}
+
+/* ── Step row ── */
+.step {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+
+.step:last-child { padding-bottom: 0; }
+
+/* Circle indicator */
+.stepIndicator {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--muted-foreground);
+  position: relative;
+  z-index: 1;
+  transition: border-color 0.2s, background 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.stepIndicatorDone {
+  border-color: #16a34a;
+  background: #16a34a;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.15);
+}
+
+.stepIndicatorActive {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.15);
+}
+
+.stepIndicatorPending {
+  border-color: #d97706;
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.stepIndicatorRejected {
+  border-color: #ef4444;
+  background: #fef2f2;
+  color: #ef4444;
+}
+
+.stepIndicatorLocked {
+  border-color: var(--border);
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  opacity: 0.55;
+}
+
+/* Card */
+.stepCard {
+  flex: 1;
+  min-width: 0;
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.stepCardActive {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1), var(--shadow-sm);
+}
+
+.stepCardDone {
+  border-color: rgba(22, 163, 74, 0.3);
+}
+
+.stepCardLocked {
+  opacity: 0.6;
+}
+
+.stepCardBody {
+  padding: 1.125rem 1.375rem;
+}
+
+.stepCardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.375rem;
+}
+
+.stepCardTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.015em;
+}
+
+.stepCardTitleDone {
+  color: var(--muted-foreground);
+}
+
+/* Status badge */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.statusDone       { background: #f0fdf4; color: #166534; border: 1px solid rgba(22,163,74,0.25); }
+.statusActive     { background: var(--primary-light, rgba(0,113,227,0.08)); color: var(--primary); border: 1px solid rgba(0,113,227,0.2); }
+.statusPending    { background: #fffbeb; color: #92400e; border: 1px solid rgba(245,158,11,0.25); }
+.statusRejected   { background: #fef2f2; color: #991b1b; border: 1px solid rgba(239,68,68,0.25); }
+.statusLocked     { background: var(--secondary); color: var(--muted-foreground); border: 1px solid var(--border); }
+.statusUnlocked   { background: var(--secondary); color: var(--muted-foreground); border: 1px solid var(--border); }
+
+.stepCardDesc {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Action footer */
+.stepCardFooter {
+  padding: 0.875rem 1.375rem;
+  border-top: 1px solid var(--border);
+  background: var(--secondary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.stepCardFooterNote {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* Action buttons */
+.requestBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.125rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.requestBtn:hover:not(:disabled) { background: var(--primary-hover); }
+.requestBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.continueBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.125rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.continueBtn:hover { background: var(--primary-hover); }
+
+.reRequestBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.125rem;
+  background: transparent;
+  border: 1.5px solid var(--primary);
+  color: var(--primary);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+  white-space: nowrap;
+}
+
+.reRequestBtn:hover { background: var(--primary-light, rgba(0,113,227,0.07)); }
+
+.pendingInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #92400e;
+}
+
+.lockedInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.loading {
+  padding: 3rem 0;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.notFound {
+  padding: 4rem 0;
+  text-align: center;
+  color: var(--muted-foreground);
+}

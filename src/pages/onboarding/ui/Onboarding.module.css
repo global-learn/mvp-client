@@ -117,6 +117,35 @@
   text-align: right;
 }
 
+/* ── Assignment tabs (when multiple assignments) ── */
+.assignmentTabs {
+  display: flex;
+  gap: 0.375rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.assignmentTab {
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: transparent;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+
+.assignmentTab:hover { background: var(--secondary); color: var(--foreground); }
+
+.assignmentTabActive {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light, rgba(0,113,227,0.06));
+}
+
 /* ── Steps list ── */
 .steps {
   display: flex;
@@ -129,12 +158,13 @@
   gap: 1rem;
   padding: 1rem 1.75rem;
   border-bottom: 1px solid var(--border);
-  transition: background 0.1s;
-  cursor: pointer;
 }
 
 .step:last-child { border-bottom: none; }
-.step:hover { background: var(--secondary); }
+
+.stepCompleted {
+  background: color-mix(in srgb, #16a34a 3%, var(--card));
+}
 
 .stepCheck {
   flex-shrink: 0;
@@ -215,6 +245,132 @@
   color: var(--destructive);
   font-weight: 700;
 }
+
+/* ── Course link ── */
+.courseLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  margin-top: 0.375rem;
+  transition: opacity 0.12s;
+}
+.courseLink:hover { opacity: 0.75; text-decoration: underline; }
+
+/* ── Completed feedback display ── */
+.stepFeedbackDisplay {
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+}
+
+.feedbackLabel {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #16a34a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.feedbackText {
+  font-size: 0.8125rem;
+  color: var(--foreground);
+  line-height: 1.5;
+}
+
+/* ── Mark done button ── */
+.markDoneBtn {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.markDoneBtn:hover {
+  border-color: #16a34a;
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* ── Inline feedback form ── */
+.feedbackForm {
+  margin-top: 0.625rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feedbackTextarea {
+  width: 100%;
+  resize: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--foreground);
+  background: var(--secondary);
+  outline: none;
+  line-height: 1.5;
+  transition: border-color 0.12s, background 0.12s;
+  box-sizing: border-box;
+}
+
+.feedbackTextarea:focus {
+  border-color: var(--primary);
+  background: var(--card);
+}
+
+.feedbackFormActions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.feedbackCancelBtn {
+  padding: 0.375rem 0.875rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.feedbackCancelBtn:hover { background: var(--secondary); }
+
+.feedbackSubmitBtn {
+  padding: 0.375rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.feedbackSubmitBtn:hover:not(:disabled) { background: #15803d; }
+.feedbackSubmitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* ── Completed banner ── */
 .completedBanner {

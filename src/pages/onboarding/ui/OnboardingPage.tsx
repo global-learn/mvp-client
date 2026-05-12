@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
-  CheckCircle2, ClipboardList, FileText, Video, BookOpen, Users, Send, MessageSquare,
+  CheckCircle2, ClipboardList, FileText, Video, BookOpen, Users, Send, MessageSquare, ExternalLink,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
 import { useUser } from '@entities/user/model/UserContext';
@@ -39,7 +40,6 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
   const { user } = useUser();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
   const handleSend = async () => {
     const msg = text.trim();
@@ -48,7 +48,6 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
     setText('');
     await sendMessage(assignment.id, msg);
     setSending(false);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
   };
 
   return (
@@ -78,7 +77,6 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
             );
           })
         )}
-        <div ref={bottomRef} />
       </div>
 
       <div className={styles.chatInput}>
@@ -109,13 +107,39 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
 
 // ── Карточка назначения ──────────────────────────────────────────
 function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
-  const { toggleStep } = useOnboarding();
+  const { completeStepWithFeedback } = useOnboarding();
+  const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
+  const [feedbackTexts, setFeedbackTexts] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState(false);
+
   const progress = calcOnboardingProgress(assignment);
   const isDone = assignment.status === 'completed';
 
-  const handleToggle = async (stepId: string, currentlyDone: boolean) => {
-    if (isDone) return;
-    await toggleStep(assignment.id, stepId, !currentlyDone);
+  const handleExpand = (stepId: string) => {
+    setExpandedStepId(prev => (prev === stepId ? null : stepId));
+  };
+
+  const handleCancel = (stepId: string) => {
+    setExpandedStepId(null);
+    setFeedbackTexts(prev => {
+      const next = { ...prev };
+      delete next[stepId];
+      return next;
+    });
+  };
+
+  const handleSubmit = async (stepId: string) => {
+    const text = (feedbackTexts[stepId] ?? '').trim();
+    if (!text || submitting) return;
+    setSubmitting(true);
+    await completeStepWithFeedback(assignment.id, stepId, text);
+    setSubmitting(false);
+    setExpandedStepId(null);
+    setFeedbackTexts(prev => {
+      const next = { ...prev };
+      delete next[stepId];
+      return next;
+    });
   };
 
   return (
@@ -144,16 +168,18 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
       <div className={styles.steps}>
         {[...assignment.steps].sort((a, b) => a.order - b.order).map(step => {
           const done = assignment.completedSteps.includes(step.id);
+          const feedback = assignment.feedbacks.find(f => f.stepId === step.id);
+          const isExpanded = expandedStepId === step.id;
+          const feedbackText = feedbackTexts[step.id] ?? '';
+
           return (
-            <div
-              key={step.id}
-              className={styles.step}
-              onClick={() => void handleToggle(step.id, done)}
-            >
+            <div key={step.id} className={`${styles.step} ${done ? styles.stepCompleted : ''}`}>
               <div className={`${styles.stepCheck} ${done ? styles.stepCheckDone : ''}`}>
                 {done && <CheckCircle2 size={12} />}
               </div>
+
               <div className={styles.stepBody}>
+                {/* Title row */}
                 <div className={styles.stepTitleRow}>
                   <span className={`${styles.stepTitle} ${done ? styles.stepTitleDone : ''}`}>
                     {step.title}
@@ -166,7 +192,68 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
                     <span className={styles.requiredMark}>обязательно</span>
                   )}
                 </div>
+
+                {/* Description */}
                 <p className={styles.stepDesc}>{step.description}</p>
+
+                {/* Course link */}
+                {step.type === 'course' && step.courseId && (
+                  <Link
+                    to={`/courses/${step.courseId}`}
+                    className={styles.courseLink}
+                  >
+                    <ExternalLink size={12} />
+                    {done ? 'Повторить курс' : 'Открыть курс на платформе'}
+                  </Link>
+                )}
+
+                {/* Completed: show saved feedback */}
+                {done && feedback && (
+                  <div className={styles.stepFeedbackDisplay}>
+                    <span className={styles.feedbackLabel}>Ваш отзыв:</span>
+                    <span className={styles.feedbackText}>{feedback.text}</span>
+                  </div>
+                )}
+
+                {/* Not done: mark-done button or inline feedback form */}
+                {!done && !isDone && (
+                  isExpanded ? (
+                    <div className={styles.feedbackForm}>
+                      <textarea
+                        className={styles.feedbackTextarea}
+                        placeholder="Опишите, что было сделано, какие возникли вопросы или сложности..."
+                        rows={3}
+                        value={feedbackText}
+                        onChange={e =>
+                          setFeedbackTexts(prev => ({ ...prev, [step.id]: e.target.value }))
+                        }
+                        autoFocus
+                      />
+                      <div className={styles.feedbackFormActions}>
+                        <button
+                          className={styles.feedbackCancelBtn}
+                          onClick={() => handleCancel(step.id)}
+                        >
+                          Отмена
+                        </button>
+                        <button
+                          className={styles.feedbackSubmitBtn}
+                          disabled={!feedbackText.trim() || submitting}
+                          onClick={() => void handleSubmit(step.id)}
+                        >
+                          {submitting ? 'Сохраняем...' : 'Отметить выполненным'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      className={styles.markDoneBtn}
+                      onClick={() => handleExpand(step.id)}
+                    >
+                      Отметить как выполненное
+                    </button>
+                  )
+                )}
               </div>
             </div>
           );
@@ -199,7 +286,7 @@ export function OnboardingPage() {
           <h1 className={styles.title}>Мой онбординг</h1>
         </div>
         <p className={styles.subtitle}>
-          Выполните все шаги — куратор следит за прогрессом и готов ответить на вопросы.
+          Выполните все шаги — перед отметкой оставьте краткий отзыв. Куратор следит за прогрессом.
         </p>
       </div>
 
@@ -211,9 +298,20 @@ export function OnboardingPage() {
       ) : (
         <div className={styles.layout}>
           <div>
-            {myAssignments.map(a => (
-              <AssignmentCard key={a.id} assignment={a} />
-            ))}
+            {myAssignments.length > 1 && (
+              <div className={styles.assignmentTabs}>
+                {myAssignments.map(a => (
+                  <button
+                    key={a.id}
+                    className={`${styles.assignmentTab} ${(selected ?? myAssignments[0].id) === a.id ? styles.assignmentTabActive : ''}`}
+                    onClick={() => setSelected(a.id)}
+                  >
+                    {a.templateTitle}
+                  </button>
+                ))}
+              </div>
+            )}
+            {active && <AssignmentCard assignment={active} />}
           </div>
 
           {active && <ChatPanel assignment={active} />}

@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import {
   UserPlus, X, Send, CheckCircle2, MessageSquare, ClipboardList,
+  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
+import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
-import type { OnboardingAssignment } from '@entities/onboarding/model/types';
-import { calcOnboardingProgress } from '@entities/onboarding/model/types';
+import type { OnboardingAssignment, OnboardingStep, OnboardingStepType } from '@entities/onboarding/model/types';
+import { STEP_TYPE_LABELS, calcOnboardingProgress } from '@entities/onboarding/model/types';
 import styles from './OnboardingManage.module.css';
 
 // ── Форматирование времени ───────────────────────────────────────
@@ -117,14 +119,28 @@ function DetailPanel({ assignment }: { assignment: OnboardingAssignment }) {
         <div className={styles.detailSteps}>
           {[...assignment.steps].sort((a, b) => a.order - b.order).map(step => {
             const isStepDone = done.has(step.id);
+            const feedback = assignment.feedbacks.find(f => f.stepId === step.id);
             return (
               <div key={step.id} className={styles.detailStep}>
                 <div className={`${styles.detailStepCheck} ${isStepDone ? styles.detailStepCheckDone : ''}`}>
                   {isStepDone && <CheckCircle2 size={11} />}
                 </div>
-                <span className={`${styles.detailStepTitle} ${isStepDone ? styles.detailStepTitleDone : ''}`}>
-                  {step.title}
-                </span>
+                <div className={styles.detailStepContent}>
+                  <span className={`${styles.detailStepTitle} ${isStepDone ? styles.detailStepTitleDone : ''}`}>
+                    {step.title}
+                  </span>
+                  {step.type === 'course' && step.courseId && (
+                    <span className={styles.detailStepCourse}>
+                      <BookOpen size={10} /> Курс
+                    </span>
+                  )}
+                  {isStepDone && feedback && (
+                    <div className={styles.detailStepFeedback}>
+                      <span className={styles.feedbackLabel}>Отзыв сотрудника:</span>
+                      <span className={styles.feedbackText}>{feedback.text}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -136,32 +152,285 @@ function DetailPanel({ assignment }: { assignment: OnboardingAssignment }) {
   );
 }
 
+// ── Редактор шагов ───────────────────────────────────────────────
+interface StepEditorProps {
+  steps: OnboardingStep[];
+  onChange: (steps: OnboardingStep[]) => void;
+}
+
+const EMPTY_NEW_STEP: Omit<OnboardingStep, 'id' | 'order'> = {
+  title: '',
+  description: '',
+  type: 'task',
+  required: false,
+};
+
+function StepEditor({ steps, onChange }: StepEditorProps) {
+  const { courses } = useCourses();
+  const publishedCourses = courses.filter(c =>
+    c.status === 'published' && (c.courseType === 'employee' || c.courseType === 'all'),
+  );
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<OnboardingStep | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newStep, setNewStep] = useState<Omit<OnboardingStep, 'id' | 'order'>>(EMPTY_NEW_STEP);
+
+  const sorted = [...steps].sort((a, b) => a.order - b.order);
+
+  const moveStep = (id: string, dir: -1 | 1) => {
+    const list = [...sorted];
+    const idx = list.findIndex(s => s.id === id);
+    const target = idx + dir;
+    if (target < 0 || target >= list.length) return;
+    [list[idx], list[target]] = [list[target], list[idx]];
+    onChange(list.map((s, i) => ({ ...s, order: i + 1 })));
+  };
+
+  const deleteStep = (id: string) => {
+    const next = sorted.filter(s => s.id !== id).map((s, i) => ({ ...s, order: i + 1 }));
+    onChange(next);
+    if (editingId === id) { setEditingId(null); setEditDraft(null); }
+  };
+
+  const startEdit = (step: OnboardingStep) => {
+    setEditingId(step.id);
+    setEditDraft({ ...step });
+    setShowAddForm(false);
+  };
+
+  const saveEdit = () => {
+    if (!editDraft) return;
+    onChange(steps.map(s => s.id === editDraft.id ? editDraft : s));
+    setEditingId(null);
+    setEditDraft(null);
+  };
+
+  const cancelEdit = () => { setEditingId(null); setEditDraft(null); };
+
+  const addStep = () => {
+    if (!newStep.title.trim()) return;
+    const id = `step-new-${Date.now()}`;
+    const step: OnboardingStep = {
+      ...newStep,
+      id,
+      order: steps.length + 1,
+      title: newStep.title.trim(),
+      description: newStep.description.trim(),
+      courseId: newStep.type === 'course' ? newStep.courseId : undefined,
+    };
+    onChange([...steps, step]);
+    setNewStep(EMPTY_NEW_STEP);
+    setShowAddForm(false);
+  };
+
+  return (
+    <div className={styles.stepEditorFull}>
+      <div className={styles.stepEditorHeader}>
+        <span>Шаги онбординга</span>
+        <span className={styles.stepEditorCount}>{steps.length} шагов</span>
+      </div>
+
+      <div className={styles.stepEditorList}>
+        {sorted.map((step, idx) => (
+          <div key={step.id} className={styles.stepEditorItem}>
+            {editingId === step.id && editDraft ? (
+              /* ── Inline edit form ── */
+              <div className={styles.stepInlineForm}>
+                <div className={styles.stepFormRow}>
+                  <input
+                    className={styles.stepFormInput}
+                    placeholder="Название шага *"
+                    value={editDraft.title}
+                    onChange={e => setEditDraft({ ...editDraft, title: e.target.value })}
+                  />
+                </div>
+                <div className={styles.stepFormRow2}>
+                  <select
+                    className={styles.stepFormSelect}
+                    value={editDraft.type}
+                    onChange={e => setEditDraft({ ...editDraft, type: e.target.value as OnboardingStepType, courseId: undefined })}
+                  >
+                    {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
+                      <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
+                    ))}
+                  </select>
+                  <label className={styles.stepFormCheckbox}>
+                    <input
+                      type="checkbox"
+                      checked={editDraft.required}
+                      onChange={e => setEditDraft({ ...editDraft, required: e.target.checked })}
+                    />
+                    Обязательный
+                  </label>
+                </div>
+                {editDraft.type === 'course' && (
+                  <select
+                    className={styles.stepFormSelect}
+                    value={editDraft.courseId ?? ''}
+                    onChange={e => setEditDraft({ ...editDraft, courseId: e.target.value || undefined })}
+                  >
+                    <option value="">Выбрать курс...</option>
+                    {publishedCourses.map(c => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
+                )}
+                <textarea
+                  className={styles.stepFormTextarea}
+                  placeholder="Описание шага..."
+                  rows={2}
+                  value={editDraft.description}
+                  onChange={e => setEditDraft({ ...editDraft, description: e.target.value })}
+                />
+                <div className={styles.stepFormActions}>
+                  <button className={styles.stepFormCancelBtn} onClick={cancelEdit}>Отмена</button>
+                  <button
+                    className={styles.stepFormSaveBtn}
+                    disabled={!editDraft.title.trim()}
+                    onClick={saveEdit}
+                  >
+                    Сохранить
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* ── Read-only row ── */
+              <div className={styles.stepEditorRow}>
+                <span className={styles.stepEditorOrder}>{idx + 1}.</span>
+                <span className={styles.stepEditorTitle}>{step.title}</span>
+                <span className={styles.stepEditorType}>{STEP_TYPE_LABELS[step.type]}</span>
+                {step.required && <span className={styles.stepEditorRequired}>обяз.</span>}
+                <div className={styles.stepEditorActions}>
+                  <button className={styles.stepMoveBtn} disabled={idx === 0} onClick={() => moveStep(step.id, -1)}>
+                    <ChevronUp size={13} />
+                  </button>
+                  <button className={styles.stepMoveBtn} disabled={idx === sorted.length - 1} onClick={() => moveStep(step.id, 1)}>
+                    <ChevronDown size={13} />
+                  </button>
+                  <button className={styles.stepEditBtn} onClick={() => startEdit(step)}>
+                    <Pencil size={13} />
+                  </button>
+                  <button className={styles.stepDeleteBtn} onClick={() => deleteStep(step.id)}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {steps.length === 0 && !showAddForm && (
+          <div className={styles.stepEditorEmpty}>Нет шагов — добавьте хотя бы один</div>
+        )}
+      </div>
+
+      {/* Add step form */}
+      {showAddForm ? (
+        <div className={styles.addStepForm}>
+          <div className={styles.stepFormRow}>
+            <input
+              className={styles.stepFormInput}
+              placeholder="Название шага *"
+              value={newStep.title}
+              onChange={e => setNewStep({ ...newStep, title: e.target.value })}
+              autoFocus
+            />
+          </div>
+          <div className={styles.stepFormRow2}>
+            <select
+              className={styles.stepFormSelect}
+              value={newStep.type}
+              onChange={e => setNewStep({ ...newStep, type: e.target.value as OnboardingStepType, courseId: undefined })}
+            >
+              {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
+                <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+            <label className={styles.stepFormCheckbox}>
+              <input
+                type="checkbox"
+                checked={newStep.required}
+                onChange={e => setNewStep({ ...newStep, required: e.target.checked })}
+              />
+              Обязательный
+            </label>
+          </div>
+          {newStep.type === 'course' && (
+            <select
+              className={styles.stepFormSelect}
+              value={newStep.courseId ?? ''}
+              onChange={e => setNewStep({ ...newStep, courseId: e.target.value || undefined })}
+            >
+              <option value="">Выбрать курс...</option>
+              {publishedCourses.map(c => (
+                <option key={c.id} value={c.id}>{c.title}</option>
+              ))}
+            </select>
+          )}
+          <textarea
+            className={styles.stepFormTextarea}
+            placeholder="Описание шага..."
+            rows={2}
+            value={newStep.description}
+            onChange={e => setNewStep({ ...newStep, description: e.target.value })}
+          />
+          <div className={styles.stepFormActions}>
+            <button className={styles.stepFormCancelBtn} onClick={() => { setShowAddForm(false); setNewStep(EMPTY_NEW_STEP); }}>
+              Отмена
+            </button>
+            <button
+              className={styles.stepFormSaveBtn}
+              disabled={!newStep.title.trim()}
+              onClick={addStep}
+            >
+              Добавить шаг
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          className={styles.addStepBtn}
+          onClick={() => { setShowAddForm(true); setEditingId(null); setEditDraft(null); }}
+        >
+          <Plus size={14} /> Добавить шаг
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Модальное окно назначения ────────────────────────────────────
 interface AssignModalProps {
   onClose: () => void;
 }
 
-// Простой список сотрудников (mock)
 const MOCK_EMPLOYEES = [
-  { id: 'emp-2',   name: 'Мария Иванова',      email: 'user@test.com',    divId: 'div-sales',   divName: 'Отдел продаж',              deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-3',   name: 'Сергей Волков',       email: 'serg@corp.ru',     divId: 'div-sales',   divName: 'Отдел продаж',              deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-8',   name: 'Артём Лебедев',       email: 'artem@corp.ru',    divId: 'div-sales',   divName: 'Отдел продаж',              deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-9',   name: 'Ольга Рыбакова',      email: 'olga.r@corp.ru',   divId: 'div-supply',  divName: 'Отдел обеспечения продаж',  deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-10',  name: 'Павел Зайцев',        email: 'pavel@corp.ru',    divId: 'div-meat',    divName: 'Отдел мясной промышленности', deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
-  { id: 'emp-11',  name: 'Екатерина Морозова',  email: 'kate@corp.ru',     divId: 'div-retail',  divName: 'Отдел сетевого ретейла',    deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
+  { id: 'emp-2',  name: 'Мария Иванова',     email: 'user@test.com',  divId: 'div-sales',   divName: 'Отдел продаж',                deptId: 'dept-sales',      deptName: 'Департамент продаж' },
+  { id: 'emp-3',  name: 'Сергей Волков',      email: 'serg@corp.ru',   divId: 'div-sales',   divName: 'Отдел продаж',                deptId: 'dept-sales',      deptName: 'Департамент продаж' },
+  { id: 'emp-8',  name: 'Артём Лебедев',      email: 'artem@corp.ru',  divId: 'div-sales',   divName: 'Отдел продаж',                deptId: 'dept-sales',      deptName: 'Департамент продаж' },
+  { id: 'emp-9',  name: 'Ольга Рыбакова',     email: 'olga.r@corp.ru', divId: 'div-supply',  divName: 'Отдел обеспечения продаж',    deptId: 'dept-sales',      deptName: 'Департамент продаж' },
+  { id: 'emp-10', name: 'Павел Зайцев',       email: 'pavel@corp.ru',  divId: 'div-meat',    divName: 'Отдел мясной промышленности', deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
+  { id: 'emp-11', name: 'Екатерина Морозова', email: 'kate@corp.ru',   divId: 'div-retail',  divName: 'Отдел сетевого ретейла',      deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
 ];
 
 function AssignModal({ onClose }: AssignModalProps) {
   const { templates, assign } = useOnboarding();
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
   const [empId, setEmpId] = useState(MOCK_EMPLOYEES[0].id);
+  const [steps, setSteps] = useState<OnboardingStep[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const selectedTemplate = templates.find(t => t.id === templateId);
+  // Sync steps when template changes
+  useEffect(() => {
+    const tmpl = templates.find(t => t.id === templateId);
+    setSteps(tmpl ? tmpl.steps.map(s => ({ ...s })) : []);
+  }, [templateId, templates]);
+
   const selectedEmp = MOCK_EMPLOYEES.find(e => e.id === empId)!;
 
   const handleSubmit = async () => {
-    if (!templateId || !empId) return;
+    if (!templateId || !empId || steps.length === 0) return;
     setSubmitting(true);
     await assign(
       templateId,
@@ -172,6 +441,7 @@ function AssignModal({ onClose }: AssignModalProps) {
       selectedEmp.divName,
       selectedEmp.deptId,
       selectedEmp.deptName,
+      steps,
     );
     setSubmitting(false);
     onClose();
@@ -187,11 +457,7 @@ function AssignModal({ onClose }: AssignModalProps) {
 
         <label className={styles.label}>
           Сотрудник
-          <select
-            className={styles.select}
-            value={empId}
-            onChange={e => setEmpId(e.target.value)}
-          >
+          <select className={styles.select} value={empId} onChange={e => setEmpId(e.target.value)}>
             {MOCK_EMPLOYEES.map(e => (
               <option key={e.id} value={e.id}>{e.name} — {e.divName}</option>
             ))}
@@ -200,38 +466,21 @@ function AssignModal({ onClose }: AssignModalProps) {
 
         <label className={styles.label}>
           Шаблон онбординга
-          <select
-            className={styles.select}
-            value={templateId}
-            onChange={e => setTemplateId(e.target.value)}
-          >
+          <select className={styles.select} value={templateId} onChange={e => setTemplateId(e.target.value)}>
             {templates.map(t => (
               <option key={t.id} value={t.id}>{t.title}</option>
             ))}
           </select>
         </label>
 
-        {selectedTemplate && (
-          <div>
-            <p className={styles.stepsEditorTitle}>Шаги ({selectedTemplate.steps.length})</p>
-            <div className={styles.stepsEditor}>
-              {[...selectedTemplate.steps].sort((a, b) => a.order - b.order).map(step => (
-                <div key={step.id} className={styles.stepEditorRow}>
-                  <span className={styles.stepEditorOrder}>{step.order}.</span>
-                  <span className={styles.stepEditorTitle}>{step.title}</span>
-                  {step.required && <span className={styles.stepEditorRequired}>обязательно</span>}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <StepEditor steps={steps} onChange={setSteps} />
 
         <div className={styles.modalActions}>
           <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
           <button
             className={styles.submitBtn}
             onClick={() => void handleSubmit()}
-            disabled={!templateId || !empId || submitting}
+            disabled={!templateId || !empId || steps.length === 0 || submitting}
           >
             {submitting ? 'Назначаем...' : 'Назначить'}
           </button>
@@ -259,7 +508,7 @@ export function OnboardingManagePage() {
             <h1 className={styles.title}>Управление онбордингом</h1>
           </div>
           <p className={styles.subtitle}>
-            Прогресс сотрудников и чат — всё на одном экране.
+            Прогресс сотрудников, их отзывы по шагам и чат — всё на одном экране.
           </p>
         </div>
         <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
@@ -279,7 +528,6 @@ export function OnboardingManagePage() {
             managedAssignments.map(a => {
               const progress = calcOnboardingProgress(a);
               const isDone = a.status === 'completed';
-              const unread = a.messages.filter(m => m.senderId === a.employeeId || m.senderId !== 'user-current').length;
 
               return (
                 <div

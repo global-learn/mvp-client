@@ -47,6 +47,16 @@ export interface OnboardingTemplate {
 }
 
 // ================================================================
+// Обратная связь по шагу (оставляет сотрудник перед отметкой)
+// ================================================================
+
+export interface StepFeedback {
+  stepId: string;
+  text: string;
+  submittedAt: string;
+}
+
+// ================================================================
 // Сообщение в чате онбординга
 // ================================================================
 
@@ -82,6 +92,8 @@ export interface OnboardingAssignment {
   steps: OnboardingStep[];
   /** ID пройденных шагов */
   completedSteps: string[];
+  /** Обратная связь по шагам (одна запись на шаг) */
+  feedbacks: StepFeedback[];
   status: 'in_progress' | 'completed';
   startedAt: string;
   completedAt?: string;

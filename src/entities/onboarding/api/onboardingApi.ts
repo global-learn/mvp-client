@@ -3,6 +3,7 @@ import type {
   OnboardingAssignment,
   OnboardingStep,
   OnboardingMessage,
+  StepFeedback,
 } from '../model/types';
 
 // ================================================================
@@ -89,6 +90,9 @@ let mockAssignments: OnboardingAssignment[] = [
       { id: 's-5', order: 5, required: true,  type: 'task',     title: 'Провести первый звонок клиенту', description: 'Под наблюдением ментора. Запишите итоги в CRM.' },
     ],
     completedSteps: ['s-1'],
+    feedbacks: [
+      { stepId: 's-1', text: 'Прочитал регламент, всё понятно. Особенно полезен раздел про процессы согласования.', submittedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
+    ],
     status: 'in_progress',
     startedAt: '2024-05-01',
     messages: [
@@ -121,6 +125,10 @@ let mockAssignments: OnboardingAssignment[] = [
       { id: 'am-4', order: 4, required: false, type: 'task',     title: 'Подготовить первый отчёт',     description: 'Шаблон в Google Sheets. Срок — конец первой недели.' },
     ],
     completedSteps: ['am-1', 'am-2'],
+    feedbacks: [
+      { stepId: 'am-1', text: 'Изучил методологию мониторинга и основные инструменты. Вопросов нет.', submittedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString() },
+      { stepId: 'am-2', text: 'Познакомился с командой на еженедельном созвоне, все очень приветливые!', submittedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
+    ],
     status: 'in_progress',
     startedAt: '2024-05-03',
     messages: [
@@ -160,6 +168,12 @@ let mockAssignments: OnboardingAssignment[] = [
       { id: 'ag-4', order: 4, required: true,  type: 'meeting',  title: 'Встреча с HR',               description: 'Расскажем об условиях работы.' },
     ],
     completedSteps: ['ag-1', 'ag-2', 'ag-3', 'ag-4'],
+    feedbacks: [
+      { stepId: 'ag-1', text: 'Ознакомилась с кодексом, подписала форму.', submittedAt: '2024-04-21T10:00:00.000Z' },
+      { stepId: 'ag-2', text: 'Заполнила профиль полностью, добавила фото.', submittedAt: '2024-04-22T14:00:00.000Z' },
+      { stepId: 'ag-3', text: 'Посмотрела видео, офис очень уютный.', submittedAt: '2024-04-24T11:00:00.000Z' },
+      { stepId: 'ag-4', text: 'Встреча с HR прошла отлично, все вопросы прояснены.', submittedAt: '2024-04-27T16:00:00.000Z' },
+    ],
     status: 'completed',
     startedAt: '2024-04-20',
     completedAt: '2024-04-27',
@@ -254,6 +268,7 @@ export const onboardingApi = {
       departmentName,
       steps: customSteps ?? tmpl.steps.map(s => ({ ...s })),
       completedSteps: [],
+      feedbacks: [],
       status: 'in_progress',
       startedAt: new Date().toISOString().split('T')[0],
       messages: [],
@@ -262,41 +277,35 @@ export const onboardingApi = {
     return assignment;
   },
 
-  /** Пометить шаг как пройденный */
-  async completeStep(assignmentId: string, stepId: string): Promise<OnboardingAssignment> {
+  /** Пометить шаг как пройденный с обязательным отзывом */
+  async completeStepWithFeedback(
+    assignmentId: string,
+    stepId: string,
+    feedbackText: string,
+  ): Promise<OnboardingAssignment> {
     await delay(150);
     const idx = mockAssignments.findIndex(a => a.id === assignmentId);
     if (idx === -1) throw new Error('Assignment not found');
     const asgn = mockAssignments[idx];
     if (asgn.completedSteps.includes(stepId)) return asgn;
+
     const completedSteps = [...asgn.completedSteps, stepId];
-    const allRequired = asgn.steps.filter(s => s.required).every(s => completedSteps.includes(s.id));
+    const feedback: StepFeedback = {
+      stepId,
+      text: feedbackText.trim(),
+      submittedAt: new Date().toISOString(),
+    };
+    const feedbacks = [...asgn.feedbacks, feedback];
+
     const allDone = asgn.steps.every(s => completedSteps.includes(s.id));
-    const status: OnboardingAssignment['status'] = (allRequired && allDone) || completedSteps.length === asgn.steps.length
-      ? 'completed'
-      : 'in_progress';
+    const status: OnboardingAssignment['status'] = allDone ? 'completed' : 'in_progress';
+
     const updated: OnboardingAssignment = {
       ...asgn,
       completedSteps,
+      feedbacks,
       status,
       completedAt: status === 'completed' ? new Date().toISOString() : undefined,
-    };
-    mockAssignments = [...mockAssignments.slice(0, idx), updated, ...mockAssignments.slice(idx + 1)];
-    return updated;
-  },
-
-  /** Снять отметку с шага */
-  async uncompleteStep(assignmentId: string, stepId: string): Promise<OnboardingAssignment> {
-    await delay(150);
-    const idx = mockAssignments.findIndex(a => a.id === assignmentId);
-    if (idx === -1) throw new Error('Assignment not found');
-    const asgn = mockAssignments[idx];
-    const completedSteps = asgn.completedSteps.filter(id => id !== stepId);
-    const updated: OnboardingAssignment = {
-      ...asgn,
-      completedSteps,
-      status: 'in_progress',
-      completedAt: undefined,
     };
     mockAssignments = [...mockAssignments.slice(0, idx), updated, ...mockAssignments.slice(idx + 1)];
     return updated;

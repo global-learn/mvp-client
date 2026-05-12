@@ -24,8 +24,8 @@ interface OnboardingContextValue {
   managedAssignments: OnboardingAssignment[];
   isLoading: boolean;
 
-  /** Пометить / снять шаг */
-  toggleStep: (assignmentId: string, stepId: string, done: boolean) => Promise<void>;
+  /** Оставить отзыв и пометить шаг выполненным */
+  completeStepWithFeedback: (assignmentId: string, stepId: string, feedbackText: string) => Promise<void>;
   /** Отправить сообщение */
   sendMessage: (assignmentId: string, text: string) => Promise<void>;
   /** Назначить шаблон сотруднику */
@@ -77,10 +77,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setManagedAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
   };
 
-  const toggleStep = async (assignmentId: string, stepId: string, done: boolean) => {
-    const updated = done
-      ? await onboardingApi.completeStep(assignmentId, stepId)
-      : await onboardingApi.uncompleteStep(assignmentId, stepId);
+  const completeStepWithFeedback = async (assignmentId: string, stepId: string, feedbackText: string) => {
+    const updated = await onboardingApi.completeStepWithFeedback(assignmentId, stepId, feedbackText);
     patchAssignment(updated);
   };
 
@@ -137,7 +135,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         myAssignments,
         managedAssignments,
         isLoading,
-        toggleStep,
+        completeStepWithFeedback,
         sendMessage,
         assign,
         updateSteps,

@@ -1,0 +1,231 @@
+.page { width: 100%; }
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.headerLeft {}
+
+.title {
+  margin: 0 0 0.25rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--foreground);
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+}
+
+.manageBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.125rem;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--foreground);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s, border-color 0.12s;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.manageBtn:hover {
+  background: var(--secondary);
+  border-color: rgba(0,113,227,0.3);
+}
+
+/* ── Grid of path cards ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.125rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--muted-foreground);
+}
+
+/* ── Path card ── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(0, 113, 227, 0.2);
+  transform: translateY(-2px);
+}
+
+.cardTop {
+  padding: 1.375rem 1.5rem 1.125rem;
+  flex: 1;
+}
+
+.cardTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.cardTitle {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--foreground);
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.stepCount {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 3px;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.cardDesc {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  line-height: 1.55;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.targetBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.1875rem 0.5rem;
+  border-radius: 3px;
+  background: var(--primary-light, rgba(0,113,227,0.08));
+  color: var(--primary);
+}
+
+/* Step mini-icons preview */
+.stepsPreview {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.stepDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
+.stepDotDone {
+  border-color: #16a34a;
+  background: #f0fdf4;
+  color: #16a34a;
+}
+
+.stepDotActive {
+  border-color: var(--primary);
+  background: var(--primary-light, rgba(0,113,227,0.08));
+  color: var(--primary);
+}
+
+.stepDotLocked {
+  opacity: 0.4;
+}
+
+.stepConnector {
+  height: 2px;
+  width: 14px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.stepConnectorDone {
+  background: #16a34a;
+}
+
+/* ── Progress bar ── */
+.cardBottom {
+  padding: 0.875rem 1.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.progressBar {
+  flex: 1;
+  height: 5px;
+  background: var(--border);
+  border-radius: 2.5px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2.5px;
+  transition: width 0.4s ease;
+}
+
+.progressFillDone { background: #16a34a; }
+
+.progressLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  min-width: 36px;
+  text-align: right;
+}
+
+.createdBy {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}

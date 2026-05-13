@@ -39,6 +39,7 @@ interface OnboardingContextValue {
     departmentId: string,
     departmentName: string,
     customSteps?: OnboardingStep[],
+    dueDate?: string,
   ) => Promise<OnboardingAssignment>;
   /** Обновить шаги конкретного назначения */
   updateSteps: (assignmentId: string, steps: OnboardingStep[]) => Promise<void>;
@@ -105,6 +106,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     departmentId: string,
     departmentName: string,
     customSteps?: OnboardingStep[],
+    dueDate?: string,
   ): Promise<OnboardingAssignment> => {
     const created = await onboardingApi.assignTemplate(
       templateId,
@@ -118,6 +120,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       departmentId,
       departmentName,
       customSteps,
+      dueDate,
     );
     setManagedAssignments(prev => [...prev, created]);
     return created;

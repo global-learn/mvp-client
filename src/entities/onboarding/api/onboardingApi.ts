@@ -83,12 +83,13 @@ let mockAssignments: OnboardingAssignment[] = [
     departmentId: 'dept-sales',
     departmentName: 'Департамент продаж',
     steps: [
-      { id: 's-1', order: 1, required: true,  type: 'document', title: 'Прочитать регламент отдела',     description: 'Ознакомьтесь с внутренними правилами и процессами отдела продаж.' },
-      { id: 's-2', order: 2, required: true,  type: 'meeting',  title: 'Встреча с руководителем',         description: 'Индивидуальная встреча — знакомство и постановка первых задач.' },
-      { id: 's-3', order: 3, required: true,  type: 'course',   title: 'Курс «Основы JavaScript»',       description: 'Базовый курс. Тест в конце обязателен.', courseId: '1' },
+      { id: 's-1', order: 1, required: true,  type: 'document', title: 'Прочитать регламент отдела',     description: 'Ознакомьтесь с внутренними правилами и процессами отдела продаж.', dueDate: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString().split('T')[0] },
+      { id: 's-2', order: 2, required: true,  type: 'meeting',  title: 'Встреча с руководителем',         description: 'Индивидуальная встреча — знакомство и постановка первых задач.', dueDate: new Date(Date.now() + 2 * 24 * 3600 * 1000).toISOString().split('T')[0] },
+      { id: 's-3', order: 3, required: true,  type: 'course',   title: 'Курс «Основы JavaScript»',       description: 'Базовый курс. Тест в конце обязателен.', courseId: '1', dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0] },
       { id: 's-4', order: 4, required: false, type: 'task',     title: 'Настроить рабочее место',         description: 'Установите необходимые приложения по инструкции IT.' },
-      { id: 's-5', order: 5, required: true,  type: 'task',     title: 'Провести первый звонок клиенту', description: 'Под наблюдением ментора. Запишите итоги в CRM.' },
+      { id: 's-5', order: 5, required: true,  type: 'task',     title: 'Провести первый звонок клиенту', description: 'Под наблюдением ментора. Запишите итоги в CRM.', dueDate: new Date(Date.now() + 10 * 24 * 3600 * 1000).toISOString().split('T')[0] },
     ],
+    dueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString().split('T')[0],
     completedSteps: ['s-1'],
     feedbacks: [
       { stepId: 's-1', text: 'Прочитал регламент, всё понятно. Особенно полезен раздел про процессы согласования.', submittedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
@@ -249,6 +250,7 @@ export const onboardingApi = {
     departmentId: string,
     departmentName: string,
     customSteps?: OnboardingStep[],
+    dueDate?: string,
   ): Promise<OnboardingAssignment> {
     await delay(300);
     const tmpl = mockTemplates.find(t => t.id === templateId);
@@ -266,6 +268,7 @@ export const onboardingApi = {
       divisionName,
       departmentId,
       departmentName,
+      dueDate,
       steps: customSteps ?? tmpl.steps.map(s => ({ ...s })),
       completedSteps: [],
       feedbacks: [],

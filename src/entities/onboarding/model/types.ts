@@ -23,6 +23,8 @@ export interface OnboardingStep {
   order: number;
   /** Если type === 'course', можно прикрепить courseId */
   courseId?: string;
+  /** Дедлайн шага (ISO date) */
+  dueDate?: string;
 }
 
 // ================================================================
@@ -90,6 +92,8 @@ export interface OnboardingAssignment {
   departmentName: string;
   /** Редактируемый снапшот шагов (копия из шаблона + возможные правки) */
   steps: OnboardingStep[];
+  /** Общий дедлайн онбординга (ISO date) */
+  dueDate?: string;
   /** ID пройденных шагов */
   completedSteps: string[];
   /** Обратная связь по шагам (одна запись на шаг) */

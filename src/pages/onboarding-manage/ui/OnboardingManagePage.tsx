@@ -163,6 +163,7 @@ const EMPTY_NEW_STEP: Omit<OnboardingStep, 'id' | 'order'> = {
   description: '',
   type: 'task',
   required: false,
+  dueDate: undefined,
 };
 
 function StepEditor({ steps, onChange }: StepEditorProps) {
@@ -276,6 +277,16 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
                     ))}
                   </select>
                 )}
+                <div className={styles.stepFormRow2}>
+                  <label className={styles.stepFormLabel}>Срок:</label>
+                  <input
+                    type="date"
+                    className={styles.stepFormInput}
+                    style={{ flex: 'none', width: 'auto' }}
+                    value={editDraft.dueDate ?? ''}
+                    onChange={e => setEditDraft({ ...editDraft, dueDate: e.target.value || undefined })}
+                  />
+                </div>
                 <textarea
                   className={styles.stepFormTextarea}
                   placeholder="Описание шага..."
@@ -368,6 +379,16 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
               ))}
             </select>
           )}
+          <div className={styles.stepFormRow2}>
+            <label className={styles.stepFormLabel}>Срок:</label>
+            <input
+              type="date"
+              className={styles.stepFormInput}
+              style={{ flex: 'none', width: 'auto' }}
+              value={newStep.dueDate ?? ''}
+              onChange={e => setNewStep({ ...newStep, dueDate: e.target.value || undefined })}
+            />
+          </div>
           <textarea
             className={styles.stepFormTextarea}
             placeholder="Описание шага..."
@@ -419,6 +440,7 @@ function AssignModal({ onClose }: AssignModalProps) {
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
   const [empId, setEmpId] = useState(MOCK_EMPLOYEES[0].id);
   const [steps, setSteps] = useState<OnboardingStep[]>([]);
+  const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Sync steps when template changes
@@ -442,6 +464,7 @@ function AssignModal({ onClose }: AssignModalProps) {
       selectedEmp.deptId,
       selectedEmp.deptName,
       steps,
+      dueDate || undefined,
     );
     setSubmitting(false);
     onClose();
@@ -471,6 +494,17 @@ function AssignModal({ onClose }: AssignModalProps) {
               <option key={t.id} value={t.id}>{t.title}</option>
             ))}
           </select>
+        </label>
+
+        <label className={styles.label}>
+          Срок завершения онбординга
+          <input
+            type="date"
+            className={styles.select}
+            value={dueDate}
+            min={new Date().toISOString().split('T')[0]}
+            onChange={e => setDueDate(e.target.value)}
+          />
         </label>
 
         <StepEditor steps={steps} onChange={setSteps} />

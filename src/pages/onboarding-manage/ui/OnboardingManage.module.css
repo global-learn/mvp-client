@@ -740,6 +740,14 @@
   line-height: 1.45;
 }
 
+.stepFormLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .stepFormCheckbox {
   display: flex;
   align-items: center;

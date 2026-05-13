@@ -9,7 +9,64 @@ import {
 import type { Course, Enrollment, Certificate, CreateCourseDto, EnrollmentRequest } from './types';
 import { courseApi } from '../api/courseApi';
 import { useUser } from '@entities/user/model/UserContext';
-import { displayName, isAdmin } from '@entities/user/model/types';
+import { displayName, isAdmin, type User } from '@entities/user/model/types';
+
+// ── Видимость курса для конкретного пользователя ─────────────────
+function isCourseVisibleToUser(
+  course: Course,
+  user: User,
+  enrollments: Enrollment[],
+): boolean {
+  const isEnrolled = enrollments.some(e => e.courseId === course.id);
+
+  // CLIENT: видит только курсы, на которые его записали
+  if (user.type === 'CLIENT') {
+    return course.status === 'published' && isEnrolled;
+  }
+
+  const emp = user.employee;
+  if (!emp) return false;
+  const r = emp.role.name;
+
+  // Свои авторские (даже pending/draft) — всегда видны
+  if (course.authorId === user.id) return true;
+
+  // Остальные видят только published
+  if (course.status !== 'published') return false;
+
+  // Admin: видит всё
+  if (r === 'admin') return true;
+
+  // Клиентские курсы: только отдел сервиса
+  if (course.courseType === 'client') {
+    return emp.division.isService === true;
+  }
+
+  // Employee/all курсы далее:
+
+  // Общий курс без таргетирования — видят все сотрудники
+  if (!course.targetDepartmentId && !course.targetDivisionId) return true;
+
+  // Если курс лично назначен (enrollment создан через assignCourse) — показываем
+  if (isEnrolled) return true;
+
+  // Курс таргетирован на департамент (без конкретного отдела)
+  if (course.targetDepartmentId && !course.targetDivisionId) {
+    return course.targetDepartmentId === emp.department.id;
+  }
+
+  // Курс таргетирован на отдел (может также иметь targetDepartmentId)
+  if (course.targetDivisionId) {
+    if (r === 'department_head') {
+      // Руководитель департамента видит курсы своего департамента
+      return course.targetDepartmentId === emp.department.id;
+    }
+    // Руководитель отдела / старший менеджер видят свой отдел
+    return course.targetDivisionId === emp.division.id;
+  }
+
+  return false;
+}
 
 interface CoursesContextValue {
   courses: Course[];
@@ -51,14 +108,10 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       courseApi.getEnrollments(user.id),
     ]);
 
-    // Фильтрация по роли:
-    //   admin видит все (published + pending)
-    //   остальные видят только published + свои pending/draft
-    const filtered = isAdmin(user)
-      ? coursesData
-      : coursesData.filter(
-          c => c.status === 'published' || c.authorId === user.id,
-        );
+    // Фильтрация по роли — каждый видит только то, что ему разрешено
+    const filtered = coursesData.filter(c =>
+      isCourseVisibleToUser(c, user, enrollmentsData),
+    );
 
     setCourses(filtered);
     setEnrollments(enrollmentsData);

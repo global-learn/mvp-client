@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
-import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, BookOpen } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin } from '@entities/user/model/types';
+import { isAdmin, isServiceDivision } from '@entities/user/model/types';
 import type { CourseType } from '@entities/course/model/types';
 import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import styles from './CourseList.module.css';
@@ -11,9 +11,11 @@ import styles from './CourseList.module.css';
 type TabFilter = 'all_types' | CourseType;
 
 export function CourseList() {
-  const { courses, getEnrollment, approveCourse, rejectCourse, isLoading } = useCourses();
+  const { courses, enrollments, getEnrollment, approveCourse, rejectCourse, isLoading } = useCourses();
   const { user } = useUser();
   const admin = isAdmin(user);
+  const isClient = user.type === 'CLIENT';
+  const canSeeClientCourses = admin || isServiceDivision(user);
 
   const [approving, setApproving] = useState<string | null>(null);
   const [rejecting, setRejecting]  = useState<string | null>(null);
@@ -21,76 +23,90 @@ export function CourseList() {
   const [filterDeptId, setFilterDeptId] = useState('');
   const [filterDivId, setFilterDivId] = useState('');
 
-  // Только опубликованные, доступные по типу пользователя
-  const accessibleCourses = courses.filter(c => {
-    if (c.status !== 'published') return false;
-    if (c.courseType === 'all') return true;
-    return c.courseType === user.type.toLowerCase();
-  });
-
-  // Уникальные департаменты/отделы из курсов для сотрудников
-  const depts = useMemo(() => {
-    const map = new Map<string, string>();
-    accessibleCourses.forEach(c => {
-      if (c.courseType === 'employee' && c.targetDepartmentId && c.targetDepartmentName) {
-        map.set(c.targetDepartmentId, c.targetDepartmentName);
-      }
-    });
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [accessibleCourses]);
-
-  const divs = useMemo(() => {
-    const map = new Map<string, string>();
-    accessibleCourses.forEach(c => {
-      if (c.courseType === 'employee' && c.targetDivisionId && c.targetDivisionName) {
-        map.set(c.targetDivisionId, c.targetDivisionName);
-      }
-    });
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [accessibleCourses]);
-
+  // Контекст уже вернул только видимые пользователю курсы.
+  // Для отображения фильтруем только published (pending — в отдельной секции).
   const publishedCourses = useMemo(() => {
-    return accessibleCourses.filter(c => {
-      // Фильтр по вкладке типа
+    const base = courses.filter(c => c.status === 'published');
+    return base.filter(c => {
       if (activeTab !== 'all_types' && c.courseType !== activeTab) return false;
-
-      // Доп. фильтры только для employee-курсов
       if (activeTab === 'employee') {
         if (filterDeptId && c.targetDepartmentId !== filterDeptId) return false;
         if (filterDivId && c.targetDivisionId !== filterDivId) return false;
       }
-
       return true;
     });
-  }, [accessibleCourses, activeTab, filterDeptId, filterDivId]);
+  }, [courses, activeTab, filterDeptId, filterDivId]);
 
   const pendingCourses = courses.filter(c => c.status === 'pending');
+
+  // Уникальные департаменты/отделы для dropdown-фильтров
+  const allPublished = courses.filter(c => c.status === 'published');
+  const depts = useMemo(() => {
+    const map = new Map<string, string>();
+    allPublished.forEach(c => {
+      if (c.courseType === 'employee' && c.targetDepartmentId && c.targetDepartmentName)
+        map.set(c.targetDepartmentId, c.targetDepartmentName);
+    });
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [allPublished]);
+
+  const divs = useMemo(() => {
+    const map = new Map<string, string>();
+    allPublished.forEach(c => {
+      if (c.courseType === 'employee' && c.targetDivisionId && c.targetDivisionName)
+        map.set(c.targetDivisionId, c.targetDivisionName);
+    });
+    return [...map.entries()].map(([id, name]) => ({ id, name }));
+  }, [allPublished]);
 
   const handleApprove = async (courseId: string) => {
     setApproving(courseId);
     try { await approveCourse(courseId); } finally { setApproving(null); }
   };
-
   const handleReject = async (courseId: string) => {
     setRejecting(courseId);
     try { await rejectCourse(courseId); } finally { setRejecting(null); }
   };
-
   const handleTabChange = (tab: TabFilter) => {
     setActiveTab(tab);
     setFilterDeptId('');
     setFilterDivId('');
   };
 
-  if (isLoading) {
-    return <div className={styles.empty}>Загрузка курсов...</div>;
+  if (isLoading) return <div className={styles.empty}>Загрузка курсов...</div>;
+
+  // ── Вид для клиента ───────────────────────────────────────────
+  if (isClient) {
+    const myEnrolledCourses = publishedCourses.filter(c =>
+      enrollments.some(e => e.courseId === c.id),
+    );
+    return (
+      <div>
+        {myEnrolledCourses.length === 0 ? (
+          <div className={styles.empty}>
+            <BookOpen size={40} style={{ opacity: 0.25, marginBottom: '1rem' }} />
+            <p>Вам пока не назначено ни одного курса.</p>
+            <p style={{ fontSize: '0.875rem' }}>Обратитесь к вашему менеджеру сервиса.</p>
+          </div>
+        ) : (
+          <div className={styles.grid}>
+            {myEnrolledCourses.map(course => (
+              <CourseCard key={course.id} course={course} enrollment={getEnrollment(course.id)} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
   }
 
+  // ── Вкладки: зависят от роли ─────────────────────────────────
   const tabs: { key: TabFilter; label: string }[] = [
     { key: 'all_types', label: 'Все' },
     { key: 'all',       label: COURSE_TYPE_LABELS.all },
     { key: 'employee',  label: COURSE_TYPE_LABELS.employee },
-    { key: 'client',    label: COURSE_TYPE_LABELS.client },
+    ...(canSeeClientCourses
+      ? [{ key: 'client' as TabFilter, label: COURSE_TYPE_LABELS.client }]
+      : []),
   ];
 
   return (
@@ -170,7 +186,6 @@ export function CourseList() {
           ))}
         </div>
 
-        {/* Доп. фильтры по отделам — только на вкладке "employee" */}
         {activeTab === 'employee' && (depts.length > 0 || divs.length > 0) && (
           <div className={styles.filterSelects}>
             {depts.length > 0 && (
@@ -180,9 +195,7 @@ export function CourseList() {
                 onChange={e => setFilterDeptId(e.target.value)}
               >
                 <option value="">Все департаменты</option>
-                {depts.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
+                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
             {divs.length > 0 && (
@@ -192,9 +205,7 @@ export function CourseList() {
                 onChange={e => setFilterDivId(e.target.value)}
               >
                 <option value="">Все отделы</option>
-                {divs.map(d => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
+                {divs.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
           </div>
@@ -204,7 +215,7 @@ export function CourseList() {
       {/* ── Опубликованные курсы ── */}
       {publishedCourses.length === 0 ? (
         <div className={styles.empty}>
-          {accessibleCourses.length === 0
+          {allPublished.length === 0
             ? 'Курсов пока нет. Создайте первый!'
             : 'Нет курсов по выбранным фильтрам.'}
         </div>

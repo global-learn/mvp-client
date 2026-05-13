@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { CheckCircle2, XCircle, Clock, BookOpen } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, BookOpen, TrendingUp } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
 import { useUser } from '@entities/user/model/UserContext';
@@ -109,6 +110,11 @@ export function CourseList() {
       : []),
   ];
 
+  // Курсы, на которые записан текущий пользователь
+  const myEnrolledCourses = useMemo(() =>
+    publishedCourses.filter(c => enrollments.some(e => e.courseId === c.id)),
+  [publishedCourses, enrollments]);
+
   return (
     <div>
       {/* ── Секция модерации (только admin) ── */}
@@ -168,6 +174,47 @@ export function CourseList() {
                 <span className={styles.pendingBadge}>На модерации</span>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Мои курсы ── */}
+      {myEnrolledCourses.length > 0 && (
+        <section className={styles.myCoursesSection}>
+          <div className={styles.myCoursesHeader}>
+            <TrendingUp size={16} className={styles.myCoursesIcon} />
+            <h2 className={styles.myCoursesTitle}>Мои курсы</h2>
+          </div>
+          <div className={styles.myCoursesList}>
+            {myEnrolledCourses.map(course => {
+              const enrollment = getEnrollment(course.id);
+              const progress = enrollment?.progress ?? 0;
+              const isDone   = enrollment?.status === 'completed';
+              return (
+                <Link
+                  key={course.id}
+                  to={`/courses/${course.id}`}
+                  className={styles.myCourseCard}
+                >
+                  <div className={styles.myCourseInfo}>
+                    <span className={styles.myCourseName}>{course.title}</span>
+                    <span className={styles.myCourseMeta}>
+                      {course.lessonsCount} уроков
+                      {isDone && <span className={styles.myCourseCompletedBadge}>✓ Завершён</span>}
+                    </span>
+                  </div>
+                  <div className={styles.myCourseProgress}>
+                    <div className={styles.myCourseProgressBar}>
+                      <div
+                        className={isDone ? styles.myCourseProgressFillDone : styles.myCourseProgressFill}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <span className={styles.myCourseProgressPct}>{progress}%</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
       )}

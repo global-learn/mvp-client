@@ -3,8 +3,9 @@ import { useParams, Link } from 'react-router-dom';
 import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, canControl } from '@entities/user/model/types';
-import type { Course, StepItem, LessonContent, TestContent, EnrollmentRequest } from '@entities/course/model/types';
+import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
+import { MOCK_USER_INFO } from '@entities/course/api/courseApi';
+import type { Course, StepItem, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal';
@@ -196,6 +197,110 @@ function TestPlayer({
 }
 
 // ─────────────────────────────────────────────────────────
+// Панель статистики курса (для canControl-пользователей)
+// ─────────────────────────────────────────────────────────
+function CourseStatsPanel({ courseId, getCourseEnrollments }: {
+  courseId: string;
+  getCourseEnrollments: (id: string) => Promise<Enrollment[]>;
+}) {
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    void getCourseEnrollments(courseId).then(data => {
+      setEnrollments(data);
+      setLoading(false);
+    });
+  }, [courseId, getCourseEnrollments]);
+
+  const statusLabel: Record<string, { text: string; cls: string }> = {
+    in_progress:      { text: 'В процессе',    cls: styles.statsBadgeProgress },
+    completed:        { text: 'Завершён',       cls: styles.statsBadgeDone },
+    pending_approval: { text: 'Ожидает',        cls: styles.statsBadgePending },
+    not_enrolled:     { text: 'Не записан',     cls: styles.statsBadgeNone },
+    rejected:         { text: 'Отклонён',       cls: styles.statsBadgeRejected },
+  };
+
+  const counts = {
+    total:    enrollments.length,
+    done:     enrollments.filter(e => e.status === 'completed').length,
+    progress: enrollments.filter(e => e.status === 'in_progress').length,
+    pending:  enrollments.filter(e => e.status === 'pending_approval').length,
+  };
+
+  return (
+    <div className={styles.statsPanel}>
+      <h3 className={styles.statsPanelTitle}>
+        <Users size={16} /> Статистика прохождения
+      </h3>
+
+      {/* Итоги */}
+      <div className={styles.statsCards}>
+        <div className={styles.statsCard}>
+          <div className={styles.statsCardNum}>{counts.total}</div>
+          <div className={styles.statsCardLabel}>Записаны</div>
+        </div>
+        <div className={styles.statsCard}>
+          <div className={`${styles.statsCardNum} ${styles.statsCardNumDone}`}>{counts.done}</div>
+          <div className={styles.statsCardLabel}>Завершили</div>
+        </div>
+        <div className={styles.statsCard}>
+          <div className={`${styles.statsCardNum} ${styles.statsCardNumProgress}`}>{counts.progress}</div>
+          <div className={styles.statsCardLabel}>В процессе</div>
+        </div>
+        <div className={styles.statsCard}>
+          <div className={`${styles.statsCardNum} ${styles.statsCardNumPending}`}>{counts.pending}</div>
+          <div className={styles.statsCardLabel}>Ожидают</div>
+        </div>
+      </div>
+
+      {/* Список */}
+      {loading ? (
+        <p className={styles.statsEmpty}>Загрузка...</p>
+      ) : enrollments.length === 0 ? (
+        <p className={styles.statsEmpty}>Никто ещё не записан на этот курс.</p>
+      ) : (
+        <div className={styles.statsTable}>
+          {enrollments.map(e => {
+            const info = MOCK_USER_INFO[e.userId];
+            const name = info?.name ?? e.userId;
+            const division = info?.division ?? '—';
+            const badge = statusLabel[e.status] ?? { text: e.status, cls: '' };
+            const enrollDate = e.enrolledAt
+              ? new Date(e.enrolledAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '—';
+            const assignerInfo = e.assignedBy ? (MOCK_USER_INFO[e.assignedBy]?.name ?? e.assignedBy) : null;
+            return (
+              <div key={`${e.courseId}-${e.userId}`} className={styles.statsRow}>
+                <div className={styles.statsAvatar}>{name[0]}</div>
+                <div className={styles.statsInfo}>
+                  <div className={styles.statsName}>{name}</div>
+                  <div className={styles.statsMeta}>
+                    {division}
+                    {assignerInfo && <span className={styles.statsAssignedBy}> · Назначил: {assignerInfo}</span>}
+                    <span className={styles.statsDate}> · {enrollDate}</span>
+                  </div>
+                </div>
+                <div className={styles.statsRight}>
+                  <span className={`${styles.statsBadge} ${badge.cls}`}>{badge.text}</span>
+                  <div className={styles.statsProgressWrap}>
+                    <div className={styles.statsProgressBar}>
+                      <div className={styles.statsProgressFill} style={{ width: `${e.progress}%` }} />
+                    </div>
+                    <span className={styles.statsProgressPct}>{e.progress}%</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
 // Основная страница
 // ─────────────────────────────────────────────────────────
 export function CourseDetailPage() {
@@ -203,7 +308,7 @@ export function CourseDetailPage() {
   const {
     courses, getEnrollment, enroll, requestEnrollment,
     getCourseRequests, approveEnrollmentRequest, rejectEnrollmentRequest,
-    markItemComplete, certificates, isLoading,
+    markItemComplete, certificates, isLoading, getCourseEnrollments,
   } = useCourses();
   const { user } = useUser();
 
@@ -315,7 +420,7 @@ export function CourseDetailPage() {
         <>
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{course.title}</h1>
-            {isAdmin(user) && (
+            {canAssignCourse(user) && (
               <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
                 Назначить сотрудникам
               </button>
@@ -342,6 +447,14 @@ export function CourseDetailPage() {
             <h2 className={styles.descriptionTitle}>О курсе</h2>
             <p className={styles.descriptionText}>{course.description}</p>
           </div>
+
+          {/* Статистика прохождения (для canControl) */}
+          {isController && (
+            <CourseStatsPanel
+              courseId={course.id}
+              getCourseEnrollments={getCourseEnrollments}
+            />
+          )}
 
           {/* Прогресс (только если идёт прохождение) */}
           {isEnrolled && (

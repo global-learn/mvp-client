@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CheckCircle2, ClipboardList, FileText, Video, BookOpen, Users, Send, MessageSquare, ExternalLink,
+  CheckCircle2, ClipboardList, FileText, Video, BookOpen, Users, Send,
+  MessageSquare, ExternalLink, Clock, AlertCircle, Trophy, Calendar,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
+import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import type { OnboardingAssignment, OnboardingStepType } from '@entities/onboarding/model/types';
 import { STEP_TYPE_LABELS, calcOnboardingProgress } from '@entities/onboarding/model/types';
@@ -28,10 +30,74 @@ const TYPE_CSS: Record<OnboardingStepType, string> = {
   course:   styles.typeBadgeCourse,
 };
 
+// ── Форматирование даты дедлайна ─────────────────────────────────
+function fmtDue(iso: string): string {
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+function isOverdue(iso: string): boolean {
+  return new Date(iso) < new Date(new Date().toDateString());
+}
+
 // ── Форматирование времени ───────────────────────────────────────
 function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Экран завершения онбординга ───────────────────────────────────
+function CompletionScreen({ assignment }: { assignment: OnboardingAssignment }) {
+  const days = assignment.completedAt
+    ? Math.ceil((new Date(assignment.completedAt).getTime() - new Date(assignment.startedAt).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  return (
+    <div className={styles.completionCard}>
+      <div className={styles.completionIcon}>
+        <Trophy size={40} strokeWidth={1.5} />
+      </div>
+      <h2 className={styles.completionTitle}>Онбординг завершён!</h2>
+      <p className={styles.completionSub}>
+        Вы успешно прошли все шаги онбординга.
+        {days !== null && ` Это заняло ${days} ${days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'}.`}
+      </p>
+
+      <div className={styles.completionStats}>
+        <div className={styles.completionStat}>
+          <span className={styles.completionStatNum}>{assignment.steps.length}</span>
+          <span className={styles.completionStatLabel}>шагов выполнено</span>
+        </div>
+        <div className={styles.completionStatDiv} />
+        <div className={styles.completionStat}>
+          <span className={styles.completionStatNum}>{assignment.feedbacks.length}</span>
+          <span className={styles.completionStatLabel}>отзывов оставлено</span>
+        </div>
+        {days !== null && (
+          <>
+            <div className={styles.completionStatDiv} />
+            <div className={styles.completionStat}>
+              <span className={styles.completionStatNum}>{days}</span>
+              <span className={styles.completionStatLabel}>{days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'}</span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Компактный список шагов с отзывами */}
+      <div className={styles.completionSteps}>
+        {[...assignment.steps].sort((a, b) => a.order - b.order).map(step => {
+          const fb = assignment.feedbacks.find(f => f.stepId === step.id);
+          return (
+            <div key={step.id} className={styles.completionStep}>
+              <CheckCircle2 size={14} className={styles.completionStepCheck} />
+              <div className={styles.completionStepBody}>
+                <span className={styles.completionStepTitle}>{step.title}</span>
+                {fb && <span className={styles.completionStepFeedback}>«{fb.text}»</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ── Чат ─────────────────────────────────────────────────────────
@@ -87,17 +153,10 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
           value={text}
           onChange={e => setText(e.target.value)}
           onKeyDown={e => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              void handleSend();
-            }
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void handleSend(); }
           }}
         />
-        <button
-          className={styles.chatSendBtn}
-          onClick={() => void handleSend()}
-          disabled={!text.trim() || sending}
-        >
+        <button className={styles.chatSendBtn} onClick={() => void handleSend()} disabled={!text.trim() || sending}>
           <Send size={15} />
         </button>
       </div>
@@ -108,6 +167,8 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
 // ── Карточка назначения ──────────────────────────────────────────
 function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
   const { completeStepWithFeedback } = useOnboarding();
+  const { getEnrollment } = useCourses();
+
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
   const [feedbackTexts, setFeedbackTexts] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -115,17 +176,12 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
   const progress = calcOnboardingProgress(assignment);
   const isDone = assignment.status === 'completed';
 
-  const handleExpand = (stepId: string) => {
-    setExpandedStepId(prev => (prev === stepId ? null : stepId));
-  };
+  // Дедлайн онбординга
+  const overallOverdue = assignment.dueDate && !isDone && isOverdue(assignment.dueDate);
 
   const handleCancel = (stepId: string) => {
     setExpandedStepId(null);
-    setFeedbackTexts(prev => {
-      const next = { ...prev };
-      delete next[stepId];
-      return next;
-    });
+    setFeedbackTexts(prev => { const n = { ...prev }; delete n[stepId]; return n; });
   };
 
   const handleSubmit = async (stepId: string) => {
@@ -135,26 +191,41 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
     await completeStepWithFeedback(assignment.id, stepId, text);
     setSubmitting(false);
     setExpandedStepId(null);
-    setFeedbackTexts(prev => {
-      const next = { ...prev };
-      delete next[stepId];
-      return next;
-    });
+    setFeedbackTexts(prev => { const n = { ...prev }; delete n[stepId]; return n; });
   };
 
   return (
     <div className={styles.assignment}>
+      {/* ── Шапка ── */}
       <div className={styles.assignmentHead}>
-        <h2 className={styles.assignmentTitle}>{assignment.templateTitle}</h2>
+        <div className={styles.assignmentHeadTop}>
+          <h2 className={styles.assignmentTitle}>{assignment.templateTitle}</h2>
+          {isDone && (
+            <span className={styles.doneBadge}>
+              <CheckCircle2 size={11} /> Завершён
+            </span>
+          )}
+        </div>
         <div className={styles.assignmentMeta}>
           <span>{assignment.divisionName}</span>
           <span className={styles.dot} />
           <span>Куратор: {assignment.assignedByName}</span>
           <span className={styles.dot} />
           <span>Начат {assignment.startedAt}</span>
+          {assignment.dueDate && (
+            <>
+              <span className={styles.dot} />
+              <span className={`${styles.dueDateMeta} ${overallOverdue ? styles.dueDateOverdue : ''}`}>
+                <Calendar size={11} />
+                Срок: {fmtDue(assignment.dueDate)}
+                {overallOverdue && ' — просрочен'}
+              </span>
+            </>
+          )}
         </div>
       </div>
 
+      {/* Прогресс */}
       <div className={styles.progressWrap}>
         <div className={styles.progressBar}>
           <div
@@ -165,105 +236,139 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
         <span className={styles.progressLabel}>{progress}%</span>
       </div>
 
-      <div className={styles.steps}>
-        {[...assignment.steps].sort((a, b) => a.order - b.order).map(step => {
-          const done = assignment.completedSteps.includes(step.id);
-          const feedback = assignment.feedbacks.find(f => f.stepId === step.id);
-          const isExpanded = expandedStepId === step.id;
-          const feedbackText = feedbackTexts[step.id] ?? '';
+      {/* ── Экран завершения ── */}
+      {isDone ? (
+        <CompletionScreen assignment={assignment} />
+      ) : (
+        <div className={styles.steps}>
+          {[...assignment.steps].sort((a, b) => a.order - b.order).map(step => {
+            const done = assignment.completedSteps.includes(step.id);
+            const feedback = assignment.feedbacks.find(f => f.stepId === step.id);
+            const isExpanded = expandedStepId === step.id;
+            const feedbackText = feedbackTexts[step.id] ?? '';
 
-          return (
-            <div key={step.id} className={`${styles.step} ${done ? styles.stepCompleted : ''}`}>
-              <div className={`${styles.stepCheck} ${done ? styles.stepCheckDone : ''}`}>
-                {done && <CheckCircle2 size={12} />}
-              </div>
+            // Курс-гейт: шаг типа course с courseId требует завершённого курса
+            const enrollment = step.type === 'course' && step.courseId
+              ? getEnrollment(step.courseId)
+              : undefined;
+            const courseGated = step.type === 'course' && !!step.courseId
+              && enrollment?.status !== 'completed';
 
-              <div className={styles.stepBody}>
-                {/* Title row */}
-                <div className={styles.stepTitleRow}>
-                  <span className={`${styles.stepTitle} ${done ? styles.stepTitleDone : ''}`}>
-                    {step.title}
-                  </span>
-                  <span className={`${styles.typeBadge} ${TYPE_CSS[step.type]}`}>
-                    <StepIcon type={step.type} size={10} />
-                    {STEP_TYPE_LABELS[step.type]}
-                  </span>
-                  {step.required && !done && (
-                    <span className={styles.requiredMark}>обязательно</span>
-                  )}
+            // Дедлайн шага
+            const stepOverdue = step.dueDate && !done && isOverdue(step.dueDate);
+
+            return (
+              <div key={step.id} className={`${styles.step} ${done ? styles.stepCompleted : ''}`}>
+                <div className={`${styles.stepCheck} ${done ? styles.stepCheckDone : ''}`}>
+                  {done && <CheckCircle2 size={12} />}
                 </div>
 
-                {/* Description */}
-                <p className={styles.stepDesc}>{step.description}</p>
-
-                {/* Course link */}
-                {step.type === 'course' && step.courseId && (
-                  <Link
-                    to={`/courses/${step.courseId}`}
-                    className={styles.courseLink}
-                  >
-                    <ExternalLink size={12} />
-                    {done ? 'Повторить курс' : 'Открыть курс на платформе'}
-                  </Link>
-                )}
-
-                {/* Completed: show saved feedback */}
-                {done && feedback && (
-                  <div className={styles.stepFeedbackDisplay}>
-                    <span className={styles.feedbackLabel}>Ваш отзыв:</span>
-                    <span className={styles.feedbackText}>{feedback.text}</span>
-                  </div>
-                )}
-
-                {/* Not done: mark-done button or inline feedback form */}
-                {!done && !isDone && (
-                  isExpanded ? (
-                    <div className={styles.feedbackForm}>
-                      <textarea
-                        className={styles.feedbackTextarea}
-                        placeholder="Опишите, что было сделано, какие возникли вопросы или сложности..."
-                        rows={3}
-                        value={feedbackText}
-                        onChange={e =>
-                          setFeedbackTexts(prev => ({ ...prev, [step.id]: e.target.value }))
+                <div className={styles.stepBody}>
+                  {/* Заголовок строки */}
+                  <div className={styles.stepTitleRow}>
+                    <span className={`${styles.stepTitle} ${done ? styles.stepTitleDone : ''}`}>
+                      {step.title}
+                    </span>
+                    <span className={`${styles.typeBadge} ${TYPE_CSS[step.type]}`}>
+                      <StepIcon type={step.type} size={10} />
+                      {STEP_TYPE_LABELS[step.type]}
+                    </span>
+                    {step.required && !done && (
+                      <span className={styles.requiredMark}>обязательно</span>
+                    )}
+                    {step.dueDate && !done && (
+                      <span className={`${styles.dueBadge} ${stepOverdue ? styles.dueBadgeOverdue : ''}`}>
+                        {stepOverdue
+                          ? <><AlertCircle size={10} /> Просрочено {fmtDue(step.dueDate)}</>
+                          : <><Clock size={10} /> до {fmtDue(step.dueDate)}</>
                         }
-                        autoFocus
-                      />
-                      <div className={styles.feedbackFormActions}>
-                        <button
-                          className={styles.feedbackCancelBtn}
-                          onClick={() => handleCancel(step.id)}
-                        >
-                          Отмена
-                        </button>
-                        <button
-                          className={styles.feedbackSubmitBtn}
-                          disabled={!feedbackText.trim() || submitting}
-                          onClick={() => void handleSubmit(step.id)}
-                        >
-                          {submitting ? 'Сохраняем...' : 'Отметить выполненным'}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      className={styles.markDoneBtn}
-                      onClick={() => handleExpand(step.id)}
-                    >
-                      Отметить как выполненное
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                      </span>
+                    )}
+                  </div>
 
-      {isDone && (
-        <div className={styles.completedBanner}>
-          <CheckCircle2 size={18} style={{ color: '#16a34a' }} />
-          <span className={styles.completedText}>Онбординг завершён! 🎉</span>
+                  {/* Описание */}
+                  <p className={styles.stepDesc}>{step.description}</p>
+
+                  {/* Ссылка на курс */}
+                  {step.type === 'course' && step.courseId && (
+                    <Link to={`/courses/${step.courseId}`} className={styles.courseLink}>
+                      <ExternalLink size={12} />
+                      {done
+                        ? 'Повторить курс'
+                        : enrollment?.status === 'in_progress'
+                          ? 'Продолжить курс'
+                          : 'Открыть курс на платформе'
+                      }
+                    </Link>
+                  )}
+
+                  {/* Курс-гейт: не завершён */}
+                  {courseGated && !done && (
+                    <div className={styles.courseGate}>
+                      <BookOpen size={13} />
+                      <span>
+                        {!enrollment
+                          ? 'Запишитесь и пройдите курс — затем сможете отметить шаг.'
+                          : enrollment.status === 'not_enrolled'
+                            ? 'Запишитесь и пройдите курс — затем сможете отметить шаг.'
+                            : enrollment.status === 'pending_approval'
+                              ? 'Заявка на курс ожидает одобрения.'
+                              : enrollment.status === 'in_progress'
+                                ? 'Завершите курс, чтобы отметить шаг выполненным.'
+                                : 'Сначала пройдите курс.'
+                        }
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Завершённый: отзыв */}
+                  {done && feedback && (
+                    <div className={styles.stepFeedbackDisplay}>
+                      <span className={styles.feedbackLabel}>Ваш отзыв:</span>
+                      <span className={styles.feedbackText}>{feedback.text}</span>
+                    </div>
+                  )}
+
+                  {/* Не завершён и не заблокирован курсом: форма */}
+                  {!done && !courseGated && (
+                    isExpanded ? (
+                      <div className={styles.feedbackForm}>
+                        <textarea
+                          className={styles.feedbackTextarea}
+                          placeholder="Опишите, что было сделано, какие возникли вопросы или сложности..."
+                          rows={3}
+                          value={feedbackText}
+                          onChange={e =>
+                            setFeedbackTexts(prev => ({ ...prev, [step.id]: e.target.value }))
+                          }
+                          autoFocus
+                        />
+                        <div className={styles.feedbackFormActions}>
+                          <button className={styles.feedbackCancelBtn} onClick={() => handleCancel(step.id)}>
+                            Отмена
+                          </button>
+                          <button
+                            className={styles.feedbackSubmitBtn}
+                            disabled={!feedbackText.trim() || submitting}
+                            onClick={() => void handleSubmit(step.id)}
+                          >
+                            {submitting ? 'Сохраняем...' : 'Отметить выполненным'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className={styles.markDoneBtn}
+                        onClick={() => setExpandedStepId(step.id)}
+                      >
+                        Отметить как выполненное
+                      </button>
+                    )
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

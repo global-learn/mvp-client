@@ -83,6 +83,7 @@ interface CoursesContextValue {
   /** Отклонить заявку */
   rejectEnrollmentRequest: (courseId: string, userId: string) => Promise<void>;
   assignCourse: (courseId: string, userId: string) => Promise<void>;
+  getCourseEnrollments: (courseId: string) => Promise<Enrollment[]>;
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>) => Promise<Course>;
   approveCourse: (courseId: string) => Promise<void>;
   rejectCourse: (courseId: string) => Promise<void>;
@@ -170,7 +171,11 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
   };
 
   const assignCourse = async (courseId: string, userId: string): Promise<void> => {
-    await courseApi.assignCourse(courseId, userId);
+    await courseApi.assignCourse(courseId, userId, user.id);
+  };
+
+  const getCourseEnrollments = async (courseId: string): Promise<Enrollment[]> => {
+    return courseApi.getCourseEnrollments(courseId);
   };
 
   const approveCourse = async (courseId: string): Promise<void> => {
@@ -235,6 +240,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         approveEnrollmentRequest,
         rejectEnrollmentRequest,
         assignCourse,
+        getCourseEnrollments,
         createCourse,
         approveCourse,
         rejectCourse,

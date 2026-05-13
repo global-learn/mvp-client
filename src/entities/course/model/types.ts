@@ -86,6 +86,8 @@ export interface Enrollment {
   status: EnrollmentStatus;
   progress: number;        // 0-100
   completedItems: string[]; // id пройденных LessonContent / TestContent
+  enrolledAt?: string;     // ISO — когда создана запись
+  assignedBy?: string;     // userId того, кто назначил (если не сам)
 }
 
 // ── Утилиты для курсового плеера ────────────────────────

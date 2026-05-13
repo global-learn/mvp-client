@@ -571,7 +571,7 @@ GlobalLearn — корпоративная платформа для обуче�
   },
 
   {
-    id: '3',
+    id: '5',
     title: 'Работа с корпоративным порталом клиента',
     description: 'Пошаговое руководство для клиентов по использованию личного кабинета, отчётам и взаимодействию с командой сервиса.',
     authorId: 'user-admin',
@@ -612,7 +612,42 @@ GlobalLearn — корпоративная платформа для обуче�
   },
 ];
 
-let mockEnrollments: Enrollment[] = [];
+// ── Справочник имён пользователей (для статистики) ──────────────
+export const MOCK_USER_INFO: Record<string, { name: string; division: string }> = {
+  'user-admin':    { name: 'Ислам Гадиляев',     division: 'Отдел разработки' },
+  'user-depthead': { name: 'Дмитрий Козлов',     division: 'Отдел разработки' },
+  'user-divhead':  { name: 'Иван Петров',         division: 'Отдел разработки' },
+  'user-senior':   { name: 'Анна Серова',         division: 'Отдел разработки' },
+  'user-emp':      { name: 'Мария Иванова',       division: 'Отдел продаж' },
+  'user-service':  { name: 'Виктор Кузнецов',    division: 'Отдел сервиса' },
+  'emp-admin':     { name: 'Ислам Гадиляев',     division: 'Отдел разработки' },
+  'emp-2':         { name: 'Мария Иванова',       division: 'Отдел продаж' },
+  'emp-3':         { name: 'Сергей Волков',       division: 'Отдел продаж' },
+  'emp-5':         { name: 'Дмитрий Козлов',     division: 'Отдел разработки' },
+  'emp-6':         { name: 'Анна Серова',         division: 'Отдел разработки' },
+  'emp-8':         { name: 'Артём Лебедев',       division: 'Отдел продаж' },
+  'emp-10':        { name: 'Павел Зайцев',        division: 'Отдел мясной пром-сти' },
+  'emp-11':        { name: 'Екатерина Морозова',  division: 'Отдел сетевого ретейла' },
+  'emp-12':        { name: 'Николай Фёдоров',     division: 'Отдел разработки' },
+  'emp-divhead':   { name: 'Иван Петров',         division: 'Отдел разработки' },
+  'emp-service':   { name: 'Виктор Кузнецов',    division: 'Отдел сервиса' },
+};
+
+// ── Сидированные записи на курсы (для демо статистики) ──────────
+let mockEnrollments: Enrollment[] = [
+  // Курс 1 — «Основы JavaScript»
+  { courseId: '1', userId: 'emp-3',  status: 'completed',  progress: 100, completedItems: ['c1-l1','c1-t1','c1-l2','c1-t2','c1-l3','c1-t3'], enrolledAt: '2024-02-01', assignedBy: 'user-admin' },
+  { courseId: '1', userId: 'emp-8',  status: 'in_progress', progress: 33, completedItems: ['c1-l1','c1-t1'], enrolledAt: '2024-02-05', assignedBy: 'user-admin' },
+  { courseId: '1', userId: 'emp-10', status: 'in_progress', progress: 67, completedItems: ['c1-l1','c1-t1','c1-l2','c1-t2'], enrolledAt: '2024-02-10', assignedBy: 'user-admin' },
+  { courseId: '1', userId: 'emp-11', status: 'pending_approval', progress: 0, completedItems: [], enrolledAt: '2024-03-01' },
+  // Курс 2 — «React для начинающих»
+  { courseId: '2', userId: 'emp-10', status: 'in_progress', progress: 40, completedItems: ['c2-l1','c2-t1'], enrolledAt: '2024-03-15', assignedBy: 'user-admin' },
+  { courseId: '2', userId: 'emp-12', status: 'completed',  progress: 100, completedItems: ['c2-l1','c2-t1','c2-l2','c2-t2','c2-l3'], enrolledAt: '2024-03-20', assignedBy: 'user-depthead' },
+  // Курс 3 — «Git и командная разработка» (all)
+  { courseId: '3', userId: 'emp-2',  status: 'in_progress', progress: 25, completedItems: ['c3-l1'], enrolledAt: '2024-04-01' },
+  { courseId: '3', userId: 'emp-5',  status: 'completed',  progress: 100, completedItems: ['c3-l1','c3-t1','c3-l2','c3-t2'], enrolledAt: '2024-04-02', assignedBy: 'user-admin' },
+];
+
 let mockRequests: EnrollmentRequest[] = [];
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
@@ -654,14 +689,31 @@ export const courseApi = {
       status: 'in_progress',
       progress: 0,
       completedItems: [],
+      enrolledAt: new Date().toISOString(),
     };
     mockEnrollments = [...mockEnrollments, enrollment];
     return enrollment;
   },
 
-  async assignCourse(courseId: string, userId: string): Promise<Enrollment> {
+  async assignCourse(courseId: string, userId: string, assignedBy?: string): Promise<Enrollment> {
     await delay(200);
-    return this.enroll(courseId, userId);
+    const existing = mockEnrollments.find(e => e.courseId === courseId && e.userId === userId);
+    if (existing) return existing;
+    const enrollment: Enrollment = {
+      courseId, userId,
+      status: 'in_progress',
+      progress: 0,
+      completedItems: [],
+      enrolledAt: new Date().toISOString(),
+      assignedBy,
+    };
+    mockEnrollments = [...mockEnrollments, enrollment];
+    return enrollment;
+  },
+
+  async getCourseEnrollments(courseId: string): Promise<Enrollment[]> {
+    await delay(150);
+    return mockEnrollments.filter(e => e.courseId === courseId);
   },
 
   async approveCourse(courseId: string): Promise<Course> {
@@ -698,6 +750,7 @@ export const courseApi = {
       status: 'pending_approval',
       progress: 0,
       completedItems: [],
+      enrolledAt: new Date().toISOString(),
     };
     mockEnrollments = [...mockEnrollments, enrollment];
 

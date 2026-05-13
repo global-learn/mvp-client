@@ -127,20 +127,34 @@ export function isServiceDivision(user: User): boolean {
 
 // ── Права доступа ────────────────────────────────────────────────
 
-/** Создание курсов: admin, рук. департамента, рук. отдела, старший менеджер */
+/**
+ * Создание курсов: admin, рук. департамента, рук. отдела.
+ * Старший менеджер создавать курсы НЕ может.
+ */
 export function canCreateCourse(user: User): boolean {
+  const r = role(user);
+  return r === 'admin' || r === 'department_head' || r === 'division_head';
+}
+
+/**
+ * Назначение курсов сотрудникам.
+ * Старший менеджер может назначать менеджерам своего отдела.
+ */
+export function canAssignCourse(user: User): boolean {
   const r = role(user);
   return r === 'admin' || r === 'department_head' || r === 'division_head' || r === 'senior_manager';
 }
 
-/** Назначение курсов другим пользователям */
-export function canAssignCourse(user: User): boolean {
-  return canCreateCourse(user);
+/**
+ * Назначать курсы клиентам: только admin и отдел сервиса.
+ */
+export function canAssignToClients(user: User): boolean {
+  return isAdmin(user) || isServiceDivision(user);
 }
 
 /** Страница контроля (видит чью-то статистику) */
 export function canControl(user: User): boolean {
-  return canCreateCourse(user);
+  return canAssignCourse(user);
 }
 
 /** Работа с клиентами: добавление компаний, регистрация, чат */

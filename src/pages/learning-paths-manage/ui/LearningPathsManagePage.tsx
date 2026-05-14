@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, X, Trash2, Eye, Globe, ArrowLeft } from 'lucide-react';
+import { Plus, X, Trash2, Eye, Globe } from 'lucide-react';
 import { useLearningPaths } from '@entities/learning-path/model/LearningPathContext';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';

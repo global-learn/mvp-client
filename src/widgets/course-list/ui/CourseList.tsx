@@ -17,7 +17,7 @@ export function CourseList() {
   const admin        = isAdmin(user);
   const isClient     = user.type === 'CLIENT';
   const isRegularMgr = isManager(user);          // только роль manager
-  const isController = canControl(user);          // admin/dept_head/div_head/senior_manager
+  const _isController = canControl(user);          // admin/dept_head/div_head/senior_manager
   const canSeeClientCourses = admin || isServiceDivision(user);
 
   const [approving, setApproving]   = useState<string | null>(null);

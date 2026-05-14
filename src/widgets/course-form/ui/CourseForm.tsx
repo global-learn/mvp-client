@@ -23,7 +23,7 @@ export function CourseForm() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await createCourse({ title, description, lessonsCount });
+      await createCourse({ title, description, lessonsCount, status: 'draft', courseType: 'employee' });
       navigate('/courses'); // после создания — на список курсов
     } finally {
       setIsSubmitting(false);

@@ -156,3 +156,14 @@
   font-weight: 600;
   color: var(--secondary-foreground);
 }
+
+.hintDivider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 0.5rem 0;
+}
+
+.hintRoleClient {
+  font-weight: 600;
+  color: #0071e3;
+}

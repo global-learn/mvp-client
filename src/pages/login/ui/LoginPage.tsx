@@ -90,6 +90,8 @@ export function LoginPage() {
           <p className={styles.hintItem}><span className={styles.hintRole}>Старший менеджер:</span> senior@test.com / test</p>
           <p className={styles.hintItem}><span className={styles.hintRole}>Менеджер:</span> user@test.com / user</p>
           <p className={styles.hintItem}><span className={styles.hintRole}>Сервис (клиенты):</span> service@test.com / test</p>
+          <div className={styles.hintDivider} />
+          <p className={styles.hintItem}><span className={styles.hintRoleClient}>Клиент:</span> client@test.com / client</p>
         </div>
       </div>
     </div>

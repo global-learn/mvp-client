@@ -15,17 +15,19 @@ import { OnboardingManagePage }     from '@pages/onboarding-manage/ui/Onboarding
 import { LearningPathsPage }        from '@pages/learning-paths/ui/LearningPathsPage';
 import { LearningPathDetailPage }   from '@pages/learning-path-detail/ui/LearningPathDetailPage';
 import { LearningPathsManagePage }  from '@pages/learning-paths-manage/ui/LearningPathsManagePage';
-import { LoginPage }                from '@pages/login/ui/LoginPage';
-import { RegisterPage }         from '@pages/register/ui/RegisterPage';
-import { VerifyEmailPage }      from '@pages/verify-email/ui/VerifyEmailPage';
+import { LoginPage }                    from '@pages/login/ui/LoginPage';
+import { RegisterPage }                from '@pages/register/ui/RegisterPage';
+import { VerifyEmailPage }             from '@pages/verify-email/ui/VerifyEmailPage';
+import { CompleteRegistrationPage }    from '@pages/complete-registration/ui/CompleteRegistrationPage';
 
 export function AppRouter() {
   return (
     <Routes>
       {/* Публичные маршруты (без AppLayout и авторизации) */}
-      <Route path="/login"        element={<LoginPage />} />
-      <Route path="/register"     element={<RegisterPage />} />
-      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/login"                   element={<LoginPage />} />
+      <Route path="/register"                element={<RegisterPage />} />
+      <Route path="/verify-email"            element={<VerifyEmailPage />} />
+      <Route path="/complete-registration"   element={<CompleteRegistrationPage />} />
 
       {/* Защищённые маршруты */}
       <Route element={<ProtectedRoute />}>

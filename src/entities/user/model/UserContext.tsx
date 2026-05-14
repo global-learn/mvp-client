@@ -136,6 +136,16 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
       },
     },
   },
+
+  'client@test.com': {
+    password: 'client',
+    user: {
+      id: 'user-client',
+      email: 'client@test.com',
+      fullname: 'Алексей Громов',
+      type: 'CLIENT',
+    },
+  },
 };
 
 const SESSION_KEY        = 'gl_auth_user';
@@ -154,8 +164,9 @@ function getPendingRegs(): Record<string, { fullname: string; email: string; pas
   try { return JSON.parse(sessionStorage.getItem(PENDING_REG_KEY) ?? '{}') as Record<string, { fullname: string; email: string; password: string }>; }
   catch { return {}; }
 }
-function getRegisteredUsers(): Record<string, { fullname: string; password: string }> {
-  try { return JSON.parse(sessionStorage.getItem(REGISTERED_KEY) ?? '{}') as Record<string, { fullname: string; password: string }>; }
+type RegisteredUser = { fullname: string; password: string; type?: 'EMPLOYEE' | 'CLIENT' };
+function getRegisteredUsers(): Record<string, RegisteredUser> {
+  try { return JSON.parse(sessionStorage.getItem(REGISTERED_KEY) ?? '{}') as Record<string, RegisteredUser>; }
   catch { return {}; }
 }
 function getInviteTokensStore(): Record<string, InviteRecord> {
@@ -210,7 +221,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           id: `user-${normalized.replace(/[@.]/g, '-')}`,
           email: normalized,
           fullname: reg.fullname,
-          type: 'EMPLOYEE',
+          type: reg.type ?? 'EMPLOYEE',
         };
         await new Promise<void>(r => setTimeout(r, 300));
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(syntheticUser));
@@ -282,7 +293,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     if (new Date(record.expiresAt) < new Date()) return false;
 
     const registered = getRegisteredUsers();
-    registered[record.email] = { fullname, password };
+    registered[record.email] = { fullname, password, type: 'CLIENT' };
     sessionStorage.setItem(REGISTERED_KEY, JSON.stringify(registered));
 
     delete store[token];

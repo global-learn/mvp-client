@@ -225,6 +225,71 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
     setShowAddForm(false);
   };
 
+  // Shared form fields renderer
+  const renderStepFields = (
+    draft: Omit<OnboardingStep, 'id' | 'order'>,
+    set: (d: Omit<OnboardingStep, 'id' | 'order'>) => void,
+  ) => (
+    <>
+      <div className={styles.stepFormRow}>
+        <input
+          className={styles.stepFormInput}
+          placeholder="Название шага *"
+          value={draft.title}
+          onChange={e => set({ ...draft, title: e.target.value })}
+        />
+      </div>
+      <div className={styles.stepFormRow2}>
+        <select
+          className={styles.stepFormSelect}
+          value={draft.type}
+          onChange={e => set({ ...draft, type: e.target.value as OnboardingStepType, courseId: undefined })}
+        >
+          {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
+            <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
+          ))}
+        </select>
+        <label className={styles.stepFormCheckbox}>
+          <input
+            type="checkbox"
+            checked={draft.required}
+            onChange={e => set({ ...draft, required: e.target.checked })}
+          />
+          Обязательный
+        </label>
+      </div>
+      {draft.type === 'course' && (
+        <select
+          className={styles.stepFormSelect}
+          value={draft.courseId ?? ''}
+          onChange={e => set({ ...draft, courseId: e.target.value || undefined })}
+        >
+          <option value="">Выбрать курс...</option>
+          {publishedCourses.map(c => (
+            <option key={c.id} value={c.id}>{c.title}</option>
+          ))}
+        </select>
+      )}
+      <div className={styles.stepFormRow2}>
+        <label className={styles.stepFormLabel}>Срок:</label>
+        <input
+          type="date"
+          className={styles.stepFormInput}
+          style={{ flex: 'none', width: 'auto' }}
+          value={draft.dueDate ?? ''}
+          onChange={e => set({ ...draft, dueDate: e.target.value || undefined })}
+        />
+      </div>
+      <textarea
+        className={styles.stepFormTextarea}
+        placeholder="Описание шага..."
+        rows={2}
+        value={draft.description}
+        onChange={e => set({ ...draft, description: e.target.value })}
+      />
+    </>
+  );
+
   return (
     <div className={styles.stepEditorFull}>
       <div className={styles.stepEditorHeader}>
@@ -232,102 +297,33 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
         <span className={styles.stepEditorCount}>{steps.length} шагов</span>
       </div>
 
+      {/* ── Скроллящийся список шагов (только read-only строки) ── */}
       <div className={styles.stepEditorList}>
         {sorted.map((step, idx) => (
-          <div key={step.id} className={styles.stepEditorItem}>
-            {editingId === step.id && editDraft ? (
-              /* ── Inline edit form ── */
-              <div className={styles.stepInlineForm}>
-                <div className={styles.stepFormRow}>
-                  <input
-                    className={styles.stepFormInput}
-                    placeholder="Название шага *"
-                    value={editDraft.title}
-                    onChange={e => setEditDraft({ ...editDraft, title: e.target.value })}
-                  />
-                </div>
-                <div className={styles.stepFormRow2}>
-                  <select
-                    className={styles.stepFormSelect}
-                    value={editDraft.type}
-                    onChange={e => setEditDraft({ ...editDraft, type: e.target.value as OnboardingStepType, courseId: undefined })}
-                  >
-                    {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
-                      <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
-                    ))}
-                  </select>
-                  <label className={styles.stepFormCheckbox}>
-                    <input
-                      type="checkbox"
-                      checked={editDraft.required}
-                      onChange={e => setEditDraft({ ...editDraft, required: e.target.checked })}
-                    />
-                    Обязательный
-                  </label>
-                </div>
-                {editDraft.type === 'course' && (
-                  <select
-                    className={styles.stepFormSelect}
-                    value={editDraft.courseId ?? ''}
-                    onChange={e => setEditDraft({ ...editDraft, courseId: e.target.value || undefined })}
-                  >
-                    <option value="">Выбрать курс...</option>
-                    {publishedCourses.map(c => (
-                      <option key={c.id} value={c.id}>{c.title}</option>
-                    ))}
-                  </select>
-                )}
-                <div className={styles.stepFormRow2}>
-                  <label className={styles.stepFormLabel}>Срок:</label>
-                  <input
-                    type="date"
-                    className={styles.stepFormInput}
-                    style={{ flex: 'none', width: 'auto' }}
-                    value={editDraft.dueDate ?? ''}
-                    onChange={e => setEditDraft({ ...editDraft, dueDate: e.target.value || undefined })}
-                  />
-                </div>
-                <textarea
-                  className={styles.stepFormTextarea}
-                  placeholder="Описание шага..."
-                  rows={2}
-                  value={editDraft.description}
-                  onChange={e => setEditDraft({ ...editDraft, description: e.target.value })}
-                />
-                <div className={styles.stepFormActions}>
-                  <button className={styles.stepFormCancelBtn} onClick={cancelEdit}>Отмена</button>
-                  <button
-                    className={styles.stepFormSaveBtn}
-                    disabled={!editDraft.title.trim()}
-                    onClick={saveEdit}
-                  >
-                    Сохранить
-                  </button>
-                </div>
+          <div
+            key={step.id}
+            className={`${styles.stepEditorItem} ${editingId === step.id ? styles.stepEditorItemActive : ''}`}
+          >
+            <div className={styles.stepEditorRow}>
+              <span className={styles.stepEditorOrder}>{idx + 1}.</span>
+              <span className={styles.stepEditorTitle}>{step.title}</span>
+              <span className={styles.stepEditorType}>{STEP_TYPE_LABELS[step.type]}</span>
+              {step.required && <span className={styles.stepEditorRequired}>обяз.</span>}
+              <div className={styles.stepEditorActions}>
+                <button className={styles.stepMoveBtn} disabled={idx === 0} onClick={() => moveStep(step.id, -1)}>
+                  <ChevronUp size={13} />
+                </button>
+                <button className={styles.stepMoveBtn} disabled={idx === sorted.length - 1} onClick={() => moveStep(step.id, 1)}>
+                  <ChevronDown size={13} />
+                </button>
+                <button className={styles.stepEditBtn} onClick={() => startEdit(step)}>
+                  <Pencil size={13} />
+                </button>
+                <button className={styles.stepDeleteBtn} onClick={() => deleteStep(step.id)}>
+                  <Trash2 size={13} />
+                </button>
               </div>
-            ) : (
-              /* ── Read-only row ── */
-              <div className={styles.stepEditorRow}>
-                <span className={styles.stepEditorOrder}>{idx + 1}.</span>
-                <span className={styles.stepEditorTitle}>{step.title}</span>
-                <span className={styles.stepEditorType}>{STEP_TYPE_LABELS[step.type]}</span>
-                {step.required && <span className={styles.stepEditorRequired}>обяз.</span>}
-                <div className={styles.stepEditorActions}>
-                  <button className={styles.stepMoveBtn} disabled={idx === 0} onClick={() => moveStep(step.id, -1)}>
-                    <ChevronUp size={13} />
-                  </button>
-                  <button className={styles.stepMoveBtn} disabled={idx === sorted.length - 1} onClick={() => moveStep(step.id, 1)}>
-                    <ChevronDown size={13} />
-                  </button>
-                  <button className={styles.stepEditBtn} onClick={() => startEdit(step)}>
-                    <Pencil size={13} />
-                  </button>
-                  <button className={styles.stepDeleteBtn} onClick={() => deleteStep(step.id)}>
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         ))}
 
@@ -336,86 +332,50 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
         )}
       </div>
 
-      {/* Add step form */}
-      {showAddForm ? (
-        <div className={styles.addStepForm}>
-          <div className={styles.stepFormRow}>
-            <input
-              className={styles.stepFormInput}
-              placeholder="Название шага *"
-              value={newStep.title}
-              onChange={e => setNewStep({ ...newStep, title: e.target.value })}
-              autoFocus
-            />
-          </div>
-          <div className={styles.stepFormRow2}>
-            <select
-              className={styles.stepFormSelect}
-              value={newStep.type}
-              onChange={e => setNewStep({ ...newStep, type: e.target.value as OnboardingStepType, courseId: undefined })}
-            >
-              {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
-                <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
-              ))}
-            </select>
-            <label className={styles.stepFormCheckbox}>
-              <input
-                type="checkbox"
-                checked={newStep.required}
-                onChange={e => setNewStep({ ...newStep, required: e.target.checked })}
-              />
-              Обязательный
-            </label>
-          </div>
-          {newStep.type === 'course' && (
-            <select
-              className={styles.stepFormSelect}
-              value={newStep.courseId ?? ''}
-              onChange={e => setNewStep({ ...newStep, courseId: e.target.value || undefined })}
-            >
-              <option value="">Выбрать курс...</option>
-              {publishedCourses.map(c => (
-                <option key={c.id} value={c.id}>{c.title}</option>
-              ))}
-            </select>
-          )}
-          <div className={styles.stepFormRow2}>
-            <label className={styles.stepFormLabel}>Срок:</label>
-            <input
-              type="date"
-              className={styles.stepFormInput}
-              style={{ flex: 'none', width: 'auto' }}
-              value={newStep.dueDate ?? ''}
-              onChange={e => setNewStep({ ...newStep, dueDate: e.target.value || undefined })}
-            />
-          </div>
-          <textarea
-            className={styles.stepFormTextarea}
-            placeholder="Описание шага..."
-            rows={2}
-            value={newStep.description}
-            onChange={e => setNewStep({ ...newStep, description: e.target.value })}
-          />
+      {/* ── Форма редактирования шага (вне скролл-листа) ── */}
+      {editingId && editDraft && (
+        <div className={styles.stepFormPanel}>
+          <div className={styles.stepFormPanelTitle}>Редактирование шага</div>
+          {renderStepFields(editDraft, d => setEditDraft({ ...editDraft, ...d }))}
           <div className={styles.stepFormActions}>
-            <button className={styles.stepFormCancelBtn} onClick={() => { setShowAddForm(false); setNewStep(EMPTY_NEW_STEP); }}>
-              Отмена
-            </button>
+            <button className={styles.stepFormCancelBtn} onClick={cancelEdit}>Отмена</button>
             <button
               className={styles.stepFormSaveBtn}
-              disabled={!newStep.title.trim()}
-              onClick={addStep}
+              disabled={!editDraft.title.trim()}
+              onClick={saveEdit}
             >
-              Добавить шаг
+              Сохранить
             </button>
           </div>
         </div>
-      ) : (
-        <button
-          className={styles.addStepBtn}
-          onClick={() => { setShowAddForm(true); setEditingId(null); setEditDraft(null); }}
-        >
-          <Plus size={14} /> Добавить шаг
-        </button>
+      )}
+
+      {/* ── Форма добавления шага (вне скролл-листа) ── */}
+      {!editingId && (
+        showAddForm ? (
+          <div className={styles.addStepForm}>
+            {renderStepFields(newStep, d => setNewStep({ ...newStep, ...d }))}
+            <div className={styles.stepFormActions}>
+              <button className={styles.stepFormCancelBtn} onClick={() => { setShowAddForm(false); setNewStep(EMPTY_NEW_STEP); }}>
+                Отмена
+              </button>
+              <button
+                className={styles.stepFormSaveBtn}
+                disabled={!newStep.title.trim()}
+                onClick={addStep}
+              >
+                Добавить шаг
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            className={styles.addStepBtn}
+            onClick={() => { setShowAddForm(true); setEditingId(null); setEditDraft(null); }}
+          >
+            <Plus size={14} /> Добавить шаг
+          </button>
+        )
       )}
     </div>
   );
@@ -473,42 +433,47 @@ function AssignModal({ onClose }: AssignModalProps) {
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
+        {/* Фиксированный заголовок */}
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Назначить онбординг</h2>
           <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
 
-        <label className={styles.label}>
-          Сотрудник
-          <select className={styles.select} value={empId} onChange={e => setEmpId(e.target.value)}>
-            {MOCK_EMPLOYEES.map(e => (
-              <option key={e.id} value={e.id}>{e.name} — {e.divName}</option>
-            ))}
-          </select>
-        </label>
+        {/* Скроллящийся контент */}
+        <div className={styles.modalBody}>
+          <label className={styles.label}>
+            Сотрудник
+            <select className={styles.select} value={empId} onChange={e => setEmpId(e.target.value)}>
+              {MOCK_EMPLOYEES.map(e => (
+                <option key={e.id} value={e.id}>{e.name} — {e.divName}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className={styles.label}>
-          Шаблон онбординга
-          <select className={styles.select} value={templateId} onChange={e => setTemplateId(e.target.value)}>
-            {templates.map(t => (
-              <option key={t.id} value={t.id}>{t.title}</option>
-            ))}
-          </select>
-        </label>
+          <label className={styles.label}>
+            Шаблон онбординга
+            <select className={styles.select} value={templateId} onChange={e => setTemplateId(e.target.value)}>
+              {templates.map(t => (
+                <option key={t.id} value={t.id}>{t.title}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className={styles.label}>
-          Срок завершения онбординга
-          <input
-            type="date"
-            className={styles.select}
-            value={dueDate}
-            min={new Date().toISOString().split('T')[0]}
-            onChange={e => setDueDate(e.target.value)}
-          />
-        </label>
+          <label className={styles.label}>
+            Срок завершения онбординга
+            <input
+              type="date"
+              className={styles.select}
+              value={dueDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => setDueDate(e.target.value)}
+            />
+          </label>
 
-        <StepEditor steps={steps} onChange={setSteps} />
+          <StepEditor steps={steps} onChange={setSteps} />
+        </div>
 
+        {/* Фиксированный футер */}
         <div className={styles.modalActions}>
           <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
           <button
@@ -578,6 +543,7 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
+        {/* Фиксированный заголовок */}
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>
             {isEditing ? 'Редактировать шаблон' : 'Создать шаблон онбординга'}
@@ -585,48 +551,52 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
           <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
 
-        <label className={styles.label}>
-          Название шаблона *
-          <input
-            className={styles.select}
-            placeholder="Например: Онбординг отдела продаж"
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-          />
-        </label>
+        {/* Скроллящийся контент */}
+        <div className={styles.modalBody}>
+          <label className={styles.label}>
+            Название шаблона *
+            <input
+              className={styles.select}
+              placeholder="Например: Онбординг отдела продаж"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+            />
+          </label>
 
-        <label className={styles.label}>
-          Описание
-          <textarea
-            className={styles.select}
-            placeholder="Краткое описание шаблона..."
-            rows={2}
-            value={description}
-            style={{ resize: 'vertical', fontFamily: 'inherit' }}
-            onChange={e => setDescription(e.target.value)}
-          />
-        </label>
+          <label className={styles.label}>
+            Описание
+            <textarea
+              className={styles.select}
+              placeholder="Краткое описание шаблона..."
+              rows={2}
+              value={description}
+              style={{ resize: 'vertical', fontFamily: 'inherit' }}
+              onChange={e => setDescription(e.target.value)}
+            />
+          </label>
 
-        <label className={styles.label}>
-          Подразделение (необязательно)
-          <select className={styles.select} value={divisionId} onChange={e => setDivisionId(e.target.value)}>
-            <option value="">Для всех подразделений</option>
-            {DIVISIONS.map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-        </label>
+          <label className={styles.label}>
+            Подразделение (необязательно)
+            <select className={styles.select} value={divisionId} onChange={e => setDivisionId(e.target.value)}>
+              <option value="">Для всех подразделений</option>
+              {DIVISIONS.map(d => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </label>
 
-        <label className={styles.label}>
-          Статус
-          <select className={styles.select} value={status} onChange={e => setStatus(e.target.value as 'draft' | 'active')}>
-            <option value="draft">Черновик</option>
-            <option value="active">Активный</option>
-          </select>
-        </label>
+          <label className={styles.label}>
+            Статус
+            <select className={styles.select} value={status} onChange={e => setStatus(e.target.value as 'draft' | 'active')}>
+              <option value="draft">Черновик</option>
+              <option value="active">Активный</option>
+            </select>
+          </label>
 
-        <StepEditor steps={steps} onChange={setSteps} />
+          <StepEditor steps={steps} onChange={setSteps} />
+        </div>
 
+        {/* Фиксированный футер */}
         <div className={styles.modalActions}>
           <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
           <button

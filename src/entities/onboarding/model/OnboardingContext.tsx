@@ -22,6 +22,8 @@ interface OnboardingContextValue {
   myAssignments: OnboardingAssignment[];
   /** Онбординги, созданные текущим пользователем (для менеджера) */
   managedAssignments: OnboardingAssignment[];
+  /** Все назначения в системе (для admins / canControl) */
+  allAssignments: OnboardingAssignment[];
   isLoading: boolean;
 
   /** Оставить отзыв и пометить шаг выполненным */
@@ -59,27 +61,31 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [templates, setTemplates] = useState<OnboardingTemplate[]>([]);
   const [myAssignments, setMyAssignments] = useState<OnboardingAssignment[]>([]);
   const [managedAssignments, setManagedAssignments] = useState<OnboardingAssignment[]>([]);
+  const [allAssignments, setAllAssignments] = useState<OnboardingAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const load = useCallback(async () => {
     setIsLoading(true);
-    const [tmpls, mine, managed] = await Promise.all([
+    const [tmpls, mine, managed, all] = await Promise.all([
       onboardingApi.getTemplates(),
       onboardingApi.getMyAssignments(user.id),
       onboardingApi.getManagedAssignments(user.id),
+      onboardingApi.getAllAssignments(),
     ]);
     setTemplates(tmpls);
     setMyAssignments(mine);
     setManagedAssignments(managed);
+    setAllAssignments(all);
     setIsLoading(false);
   }, [user.id]);
 
   useEffect(() => { void load(); }, [load]);
 
-  // ── Обновить конкретное назначение в обоих списках ────────────
+  // ── Обновить конкретное назначение во всех списках ───────────
   const patchAssignment = (updated: OnboardingAssignment) => {
     setMyAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
     setManagedAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
+    setAllAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
   };
 
   const completeStepWithFeedback = async (assignmentId: string, stepId: string, feedbackText: string) => {
@@ -127,6 +133,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       dueDate,
     );
     setManagedAssignments(prev => [...prev, created]);
+    setAllAssignments(prev => [...prev, created]);
     return created;
   };
 
@@ -153,6 +160,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         templates,
         myAssignments,
         managedAssignments,
+        allAssignments,
         isLoading,
         completeStepWithFeedback,
         sendMessage,

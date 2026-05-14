@@ -188,6 +188,132 @@ let mockAssignments: OnboardingAssignment[] = [
       },
     ],
   },
+
+  // ── дополнительные назначения для демо-фильтрации ──────────────
+
+  {
+    id: 'asgn-4',
+    templateId: 'tmpl-sales',
+    templateTitle: 'Онбординг: Отдел продаж',
+    employeeId: 'emp-3',
+    employeeName: 'Сергей Волков',
+    employeeEmail: 'serg@corp.ru',
+    assignedBy: 'user-admin',
+    assignedByName: 'Администратор',
+    divisionId: 'div-sales',
+    divisionName: 'Отдел продаж',
+    departmentId: 'dept-sales',
+    departmentName: 'Департамент продаж',
+    steps: [
+      { id: 'as4-1', order: 1, required: true,  type: 'document', title: 'Прочитать регламент отдела', description: 'Ознакомьтесь с внутренними правилами.' },
+      { id: 'as4-2', order: 2, required: true,  type: 'meeting',  title: 'Встреча с руководителем',   description: 'Знакомство и постановка задач.' },
+      { id: 'as4-3', order: 3, required: true,  type: 'course',   title: 'Курс «Основы продаж»',      description: 'Базовый курс по техникам продаж.', courseId: '1' },
+      { id: 'as4-4', order: 4, required: false, type: 'task',     title: 'Настроить рабочее место',   description: 'Установить CRM и корпоративную почту.' },
+      { id: 'as4-5', order: 5, required: true,  type: 'task',     title: 'Первый звонок клиенту',     description: 'Под наблюдением ментора.' },
+    ],
+    completedSteps: ['as4-1', 'as4-2', 'as4-3', 'as4-4', 'as4-5'],
+    feedbacks: [
+      { stepId: 'as4-1', text: 'Регламент изучил полностью.', submittedAt: '2024-05-02T09:00:00.000Z' },
+      { stepId: 'as4-2', text: 'Встреча прошла продуктивно, задачи поставлены.', submittedAt: '2024-05-04T14:00:00.000Z' },
+      { stepId: 'as4-3', text: 'Курс пройден, тест сдан на 90%.', submittedAt: '2024-05-06T11:00:00.000Z' },
+      { stepId: 'as4-4', text: 'CRM настроен, почта работает.', submittedAt: '2024-05-07T10:00:00.000Z' },
+      { stepId: 'as4-5', text: 'Первый звонок прошёл успешно, клиент доволен.', submittedAt: '2024-05-09T15:00:00.000Z' },
+    ],
+    status: 'completed',
+    startedAt: '2024-05-01',
+    completedAt: '2024-05-09',
+    messages: [],
+  },
+
+  {
+    id: 'asgn-5',
+    templateId: 'tmpl-sales',
+    templateTitle: 'Онбординг: Отдел продаж',
+    employeeId: 'emp-8',
+    employeeName: 'Артём Лебедев',
+    employeeEmail: 'artem@corp.ru',
+    assignedBy: 'user-admin',
+    assignedByName: 'Администратор',
+    divisionId: 'div-sales',
+    divisionName: 'Отдел продаж',
+    departmentId: 'dept-sales',
+    departmentName: 'Департамент продаж',
+    steps: [
+      { id: 'as5-1', order: 1, required: true,  type: 'document', title: 'Прочитать регламент отдела', description: 'Ознакомьтесь с внутренними правилами.' },
+      { id: 'as5-2', order: 2, required: true,  type: 'meeting',  title: 'Встреча с руководителем',   description: 'Знакомство.' },
+      { id: 'as5-3', order: 3, required: true,  type: 'course',   title: 'Курс «Основы продаж»',      description: 'Пройдите курс.', courseId: '1' },
+      { id: 'as5-4', order: 4, required: true,  type: 'task',     title: 'Первый звонок',              description: 'Под контролем ментора.' },
+    ],
+    dueDate: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    completedSteps: ['as5-1'],
+    feedbacks: [
+      { stepId: 'as5-1', text: 'Ознакомился с регламентом.', submittedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() },
+    ],
+    status: 'in_progress',
+    startedAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    messages: [
+      { id: 'msg-5', senderId: 'user-admin', senderName: 'Администратор', text: 'Артём, добро пожаловать! Начни с регламента.', sentAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString() },
+    ],
+  },
+
+  {
+    id: 'asgn-6',
+    templateId: 'tmpl-general',
+    templateTitle: 'Общий онбординг компании',
+    employeeId: 'emp-9',
+    employeeName: 'Ольга Рыбакова',
+    employeeEmail: 'olga.r@corp.ru',
+    assignedBy: 'user-admin',
+    assignedByName: 'Администратор',
+    divisionId: 'div-supply',
+    divisionName: 'Отдел обеспечения продаж',
+    departmentId: 'dept-sales',
+    departmentName: 'Департамент продаж',
+    steps: [
+      { id: 'as6-1', order: 1, required: true,  type: 'document', title: 'Корпоративный кодекс',     description: 'Прочитать и подписать.' },
+      { id: 'as6-2', order: 2, required: true,  type: 'task',     title: 'Заполнить профиль',         description: 'HR-система.' },
+      { id: 'as6-3', order: 3, required: false, type: 'video',    title: 'Видео-экскурсия по офису', description: 'Посмотреть видео.' },
+      { id: 'as6-4', order: 4, required: true,  type: 'meeting',  title: 'Встреча с HR',              description: 'Вопросы и ответы.' },
+    ],
+    dueDate: new Date(Date.now() + 5 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    completedSteps: ['as6-1', 'as6-2'],
+    feedbacks: [
+      { stepId: 'as6-1', text: 'Кодекс прочитан и подписан.', submittedAt: new Date(Date.now() - 4 * 24 * 3600 * 1000).toISOString() },
+      { stepId: 'as6-2', text: 'Профиль заполнен полностью.', submittedAt: new Date(Date.now() - 2 * 24 * 3600 * 1000).toISOString() },
+    ],
+    status: 'in_progress',
+    startedAt: new Date(Date.now() - 5 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    messages: [],
+  },
+
+  {
+    id: 'asgn-7',
+    templateId: 'tmpl-monitoring',
+    templateTitle: 'Онбординг: Департамент мониторинга',
+    employeeId: 'emp-12',
+    employeeName: 'Николай Фёдоров',
+    employeeEmail: 'nikola@corp.ru',
+    assignedBy: 'user-depthead',
+    assignedByName: 'Дмитрий Козлов',
+    divisionId: 'div-dev',
+    divisionName: 'Отдел разработки',
+    departmentId: 'dept-marketing',
+    departmentName: 'Департамент маркетинга',
+    steps: [
+      { id: 'as7-1', order: 1, required: true,  type: 'document', title: 'Регламент разработки', description: 'Ознакомиться с процессами.' },
+      { id: 'as7-2', order: 2, required: true,  type: 'course',   title: 'Курс «React»',          description: 'Пройти курс по React.', courseId: '2' },
+      { id: 'as7-3', order: 3, required: true,  type: 'meeting',  title: 'Встреча с тимлидом',    description: 'Знакомство с командой.' },
+      { id: 'as7-4', order: 4, required: false, type: 'task',     title: 'Первый PR',              description: 'Сделать первый pull request.' },
+    ],
+    dueDate: new Date(Date.now() + 14 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    completedSteps: [],
+    feedbacks: [],
+    status: 'in_progress',
+    startedAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString().split('T')[0],
+    messages: [
+      { id: 'msg-6', senderId: 'user-depthead', senderName: 'Дмитрий Козлов', text: 'Николай, добро пожаловать в отдел! Начни с регламента.', sentAt: new Date(Date.now() - 1 * 24 * 3600 * 1000).toISOString() },
+    ],
+  },
 ];
 
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
@@ -225,6 +351,12 @@ export const onboardingApi = {
   },
 
   // ── Назначения ─────────────────────────────────────────────────
+
+  /** Все назначения (для администраторов / менеджеров) */
+  async getAllAssignments(): Promise<OnboardingAssignment[]> {
+    await delay(200);
+    return [...mockAssignments];
+  },
 
   /** Назначения, назначенные текущему сотруднику */
   async getMyAssignments(userId: string): Promise<OnboardingAssignment[]> {

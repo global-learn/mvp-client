@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import {
   UserPlus, X, Send, CheckCircle2, MessageSquare, ClipboardList,
-  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen, LayoutTemplate,
+  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen, LayoutTemplate, Search,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
 import { useCourses } from '@entities/course/model/CoursesContext';
@@ -500,7 +500,20 @@ const DIVISIONS = [
   { id: 'div-supply',  name: 'Отдел обеспечения продаж',    deptId: 'dept-sales',      deptName: 'Департамент продаж' },
   { id: 'div-meat',    name: 'Отдел мясной промышленности', deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
   { id: 'div-retail',  name: 'Отдел сетевого ретейла',      deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
+  { id: 'div-dev',     name: 'Отдел разработки',             deptId: 'dept-marketing',  deptName: 'Департамент маркетинга' },
 ];
+
+const DEPARTMENTS = [
+  { id: 'dept-sales',      name: 'Департамент продаж' },
+  { id: 'dept-monitoring', name: 'Департамент мониторинга' },
+  { id: 'dept-marketing',  name: 'Департамент маркетинга' },
+];
+
+const DEPT_DIVISIONS: Record<string, { id: string; name: string }[]> = {
+  'dept-sales':      [{ id: 'div-sales', name: 'Отдел продаж' }, { id: 'div-supply', name: 'Отдел обеспечения продаж' }],
+  'dept-monitoring': [{ id: 'div-meat',  name: 'Отдел мясной промышленности' }, { id: 'div-retail', name: 'Отдел сетевого ретейла' }],
+  'dept-marketing':  [{ id: 'div-dev',   name: 'Отдел разработки' }],
+};
 
 function TemplateModal({ initial, onClose }: TemplateModalProps) {
   const { createTemplate, updateTemplate } = useOnboarding();
@@ -683,16 +696,213 @@ function TemplatesTab() {
   );
 }
 
+// ── Вкладка «Назначения» ─────────────────────────────────────────
+function AssignmentsTab() {
+  const { allAssignments } = useOnboarding();
+  const [selected, setSelected]         = useState<string | null>(null);
+  const [assignOpen, setAssignOpen]     = useState(false);
+  const [searchQuery, setSearchQuery]   = useState('');
+  const [filterDeptId, setFilterDeptId] = useState('');
+  const [filterDivId, setFilterDivId]   = useState('');
+
+  // Сбрасываем отдел при смене департамента
+  const handleDeptChange = (deptId: string) => {
+    setFilterDeptId(deptId);
+    setFilterDivId('');
+    setSelected(null);
+  };
+  const handleDivChange = (divId: string) => {
+    setFilterDivId(divId);
+    setSelected(null);
+  };
+
+  const availableDivs = filterDeptId ? (DEPT_DIVISIONS[filterDeptId] ?? []) : [];
+
+  // Фильтрация назначений
+  const filtered = allAssignments
+    .filter(a => {
+      if (filterDivId)  return a.divisionId   === filterDivId;
+      if (filterDeptId) return a.departmentId === filterDeptId;
+      return true;
+    })
+    .filter(a => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        a.employeeName.toLowerCase().includes(q) ||
+        a.employeeEmail.toLowerCase().includes(q) ||
+        a.templateTitle.toLowerCase().includes(q) ||
+        a.divisionName.toLowerCase().includes(q)
+      );
+    });
+
+  // Статистика по выбранному департаменту / отделу
+  const scopeAssignments = filterDivId
+    ? allAssignments.filter(a => a.divisionId   === filterDivId)
+    : filterDeptId
+    ? allAssignments.filter(a => a.departmentId === filterDeptId)
+    : [];
+  const showStats    = !!(filterDeptId || filterDivId);
+  const statsTotal   = scopeAssignments.length;
+  const statsDone    = scopeAssignments.filter(a => a.status === 'completed').length;
+  const statsActive  = scopeAssignments.filter(a => a.status === 'in_progress').length;
+  const statsAvg     = statsTotal > 0
+    ? Math.round(scopeAssignments.reduce((s, a) => s + calcOnboardingProgress(a), 0) / statsTotal)
+    : 0;
+
+  const active = allAssignments.find(a => a.id === selected) ?? null;
+
+  const scopeLabel = filterDivId
+    ? (availableDivs.find(d => d.id === filterDivId)?.name ?? '')
+    : (DEPARTMENTS.find(d => d.id === filterDeptId)?.name ?? '');
+
+  return (
+    <div>
+      {/* ── Панель фильтров ── */}
+      <div className={styles.filterBar}>
+        <div className={styles.filterSearchWrap}>
+          <Search size={14} className={styles.filterSearchIcon} />
+          <input
+            className={styles.filterSearchInput}
+            placeholder="Поиск по сотруднику, шаблону..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        <select
+          className={styles.filterSelect}
+          value={filterDeptId}
+          onChange={e => handleDeptChange(e.target.value)}
+        >
+          <option value="">Все департаменты</option>
+          {DEPARTMENTS.map(d => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </select>
+
+        <select
+          className={styles.filterSelect}
+          value={filterDivId}
+          onChange={e => handleDivChange(e.target.value)}
+          disabled={!filterDeptId}
+        >
+          <option value="">Все отделы</option>
+          {availableDivs.map(d => (
+            <option key={d.id} value={d.id}>{d.name}</option>
+          ))}
+        </select>
+
+        <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
+          <UserPlus size={15} /> Назначить
+        </button>
+      </div>
+
+      {/* ── Статистика выбранного департамента / отдела ── */}
+      {showStats && (
+        <div className={styles.deptStats}>
+          <div className={styles.deptStatsLabel}>
+            Статистика: <strong>{scopeLabel}</strong>
+          </div>
+          <div className={styles.deptStatsCards}>
+            <div className={styles.deptStatCard}>
+              <span className={styles.deptStatNum}>{statsTotal}</span>
+              <span className={styles.deptStatName}>Всего назначений</span>
+            </div>
+            <div className={`${styles.deptStatCard} ${styles.deptStatCardGreen}`}>
+              <span className={styles.deptStatNum}>{statsDone}</span>
+              <span className={styles.deptStatName}>Завершено</span>
+            </div>
+            <div className={`${styles.deptStatCard} ${styles.deptStatCardYellow}`}>
+              <span className={styles.deptStatNum}>{statsActive}</span>
+              <span className={styles.deptStatName}>В процессе</span>
+            </div>
+            <div className={`${styles.deptStatCard} ${styles.deptStatCardBlue}`}>
+              <span className={styles.deptStatNum}>{statsAvg}%</span>
+              <span className={styles.deptStatName}>Средний прогресс</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Основная сетка: список + детали ── */}
+      <div className={styles.layout}>
+        <div className={styles.list}>
+          {filtered.length === 0 ? (
+            <div className={styles.listEmpty}>
+              <ClipboardList size={36} style={{ opacity: 0.3, display: 'block', margin: '0 auto 0.75rem' }} />
+              {allAssignments.length === 0 ? 'Нет назначенных онбордингов' : 'Ничего не найдено'}
+            </div>
+          ) : (
+            filtered.map(a => {
+              const progress = calcOnboardingProgress(a);
+              const isDone   = a.status === 'completed';
+              return (
+                <div
+                  key={a.id}
+                  className={`${styles.empCard} ${selected === a.id ? styles.empCardActive : ''}`}
+                  onClick={() => setSelected(a.id)}
+                >
+                  <div className={styles.empRow}>
+                    <div className={styles.empAvatar}>
+                      {(a.employeeName || a.employeeEmail)[0].toUpperCase()}
+                    </div>
+                    <div className={styles.empInfo}>
+                      <div className={styles.empName}>{a.employeeName}</div>
+                      <div className={styles.empDiv}>{a.divisionName}</div>
+                    </div>
+                    <span className={`${styles.statusBadge} ${isDone ? styles.statusDone : styles.statusInProgress}`}>
+                      {isDone ? 'Завершён' : 'В процессе'}
+                    </span>
+                  </div>
+
+                  <div className={styles.empTemplate}>{a.templateTitle}</div>
+
+                  <div>
+                    <div className={styles.miniBar}>
+                      <div
+                        className={`${styles.miniFill} ${isDone ? styles.miniFillDone : ''}`}
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                    <div className={styles.miniMeta}>
+                      <span>{a.completedSteps.length}/{a.steps.length} шагов</span>
+                      <span>{progress}%</span>
+                    </div>
+                  </div>
+
+                  {a.messages.length > 0 && (
+                    <div className={styles.empChatHint}>
+                      <MessageSquare size={12} />
+                      {a.messages.length} сообщ. · {fmtDate(a.messages[a.messages.length - 1].sentAt)}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {active ? (
+          <DetailPanel assignment={active} />
+        ) : (
+          <div className={styles.detailPlaceholder}>
+            Выберите сотрудника слева, чтобы увидеть прогресс и открыть чат
+          </div>
+        )}
+      </div>
+
+      {assignOpen && <AssignModal onClose={() => setAssignOpen(false)} />}
+    </div>
+  );
+}
+
 // ── Главная страница ─────────────────────────────────────────────
 type PageTab = 'assignments' | 'templates';
 
 export function OnboardingManagePage() {
-  const { managedAssignments, isLoading } = useOnboarding();
-  const [selected, setSelected] = useState<string | null>(null);
-  const [assignOpen, setAssignOpen] = useState(false);
+  const { isLoading } = useOnboarding();
   const [pageTab, setPageTab] = useState<PageTab>('assignments');
-
-  const active = managedAssignments.find(a => a.id === selected) ?? null;
 
   if (isLoading) return <div style={{ padding: '3rem', color: 'var(--muted-foreground)' }}>Загрузка...</div>;
 
@@ -707,11 +917,6 @@ export function OnboardingManagePage() {
             Прогресс сотрудников, их отзывы по шагам и чат — всё на одном экране.
           </p>
         </div>
-        {pageTab === 'assignments' && (
-          <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
-            <UserPlus size={16} /> Назначить онбординг
-          </button>
-        )}
       </div>
 
       {/* Вкладки страницы */}
@@ -732,78 +937,7 @@ export function OnboardingManagePage() {
         </button>
       </div>
 
-      {pageTab === 'templates' ? (
-        <TemplatesTab />
-      ) : (
-        <div className={styles.layout}>
-          {/* Список сотрудников */}
-          <div className={styles.list}>
-            {managedAssignments.length === 0 ? (
-              <div className={styles.listEmpty}>
-                <ClipboardList size={36} style={{ opacity: 0.3, display: 'block', margin: '0 auto 0.75rem' }} />
-                Нет назначенных онбордингов
-              </div>
-            ) : (
-              managedAssignments.map(a => {
-                const progress = calcOnboardingProgress(a);
-                const isDone = a.status === 'completed';
-
-                return (
-                  <div
-                    key={a.id}
-                    className={`${styles.empCard} ${selected === a.id ? styles.empCardActive : ''}`}
-                    onClick={() => setSelected(a.id)}
-                  >
-                    <div className={styles.empRow}>
-                      <div className={styles.empAvatar}>
-                        {(a.employeeName || a.employeeEmail)[0].toUpperCase()}
-                      </div>
-                      <div className={styles.empInfo}>
-                        <div className={styles.empName}>{a.employeeName}</div>
-                        <div className={styles.empDiv}>{a.divisionName}</div>
-                      </div>
-                      <span className={`${styles.statusBadge} ${isDone ? styles.statusDone : styles.statusInProgress}`}>
-                        {isDone ? 'Завершён' : 'В процессе'}
-                      </span>
-                    </div>
-
-                    <div>
-                      <div className={styles.miniBar}>
-                        <div
-                          className={`${styles.miniFill} ${isDone ? styles.miniFillDone : ''}`}
-                          style={{ width: `${progress}%` }}
-                        />
-                      </div>
-                      <div className={styles.miniMeta}>
-                        <span>{a.completedSteps.length}/{a.steps.length} шагов</span>
-                        <span>{progress}%</span>
-                      </div>
-                    </div>
-
-                    {a.messages.length > 0 && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
-                        <MessageSquare size={12} />
-                        {a.messages.length} сообщений · последнее {fmtDate(a.messages[a.messages.length - 1].sentAt)}
-                      </div>
-                    )}
-                  </div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Детальная панель */}
-          {active ? (
-            <DetailPanel assignment={active} />
-          ) : (
-            <div className={styles.detailPlaceholder}>
-              Выберите сотрудника слева, чтобы увидеть прогресс и открыть чат
-            </div>
-          )}
-        </div>
-      )}
-
-      {assignOpen && <AssignModal onClose={() => setAssignOpen(false)} />}
+      {pageTab === 'templates' ? <TemplatesTab /> : <AssignmentsTab />}
     </div>
   );
 }

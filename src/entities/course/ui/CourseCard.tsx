@@ -9,9 +9,11 @@ interface CourseCardProps {
   enrollment?: Enrollment;
 }
 
-const enrollLabels: Record<string, string> = {
-  in_progress: 'В процессе',
-  completed:   'Завершён',
+const STATUS_LABELS: Record<string, string> = {
+  in_progress:      'В процессе',
+  completed:        'Завершён',
+  pending_approval: 'Ожидает одобрения',
+  rejected:         'Заявка отклонена',
 };
 
 export function CourseCard({ course, enrollment }: CourseCardProps) {
@@ -24,8 +26,8 @@ export function CourseCard({ course, enrollment }: CourseCardProps) {
       <div className={styles.header}>
         <h3 className={styles.title}>{course.title}</h3>
         {enrollStatus && (
-          <span className={`${styles.status} ${styles[enrollStatus]}`}>
-            {enrollLabels[enrollStatus]}
+          <span className={`${styles.status} ${styles[enrollStatus] ?? ''}`}>
+            {STATUS_LABELS[enrollStatus] ?? enrollStatus}
           </span>
         )}
       </div>

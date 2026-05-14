@@ -190,7 +190,7 @@ export function CourseBuilder() {
     const si = mod.steps.findIndex(s => s.id === stepId);
     const step = mod.steps[si];
     const steps = [...mod.steps];
-    steps[si] = { ...step, items: step.items.map(i => i.id === itemId ? { ...i, ...updates } : i) };
+    steps[si] = { ...step, items: step.items.map(i => i.id === itemId ? { ...i, ...updates } as StepItem : i) };
     const mods = [...course.modules];
     mods[mi] = { ...mod, steps };
     setCourse({ ...course, modules: mods });

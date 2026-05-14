@@ -1,5 +1,5 @@
 import type { Course, Enrollment, CreateCourseDto, EnrollmentRequest } from '../model/types';
-import { getAllItems, calcProgress } from '../model/types';
+import { calcProgress } from '../model/types';
 
 // ================================================================
 // API СЛОЙ — интерфейс к бэкенду

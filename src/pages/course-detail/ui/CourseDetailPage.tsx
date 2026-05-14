@@ -5,7 +5,7 @@ import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
 import { MOCK_USER_INFO } from '@entities/course/api/courseApi';
-import type { Course, StepItem, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
+import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal';

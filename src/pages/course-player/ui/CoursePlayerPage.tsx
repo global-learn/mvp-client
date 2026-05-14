@@ -16,21 +16,21 @@ export function CoursePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { courses, getEnrollment, getCourseWithModules, completeStep, enroll } = useCourses();
+  const { courses, getEnrollment, enroll, getCourseWithModules, completeStep } = useCourses();
 
   const [fullCourse, setFullCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
 
   const course = courses.find(c => c.id === id);
   const enrollment = course ? getEnrollment(course.id) : undefined;
-  const completedStepIds = enrollment?.completedStepIds ?? [];
+  const completedStepIds = enrollment?.completedItems ?? [];
 
   // Загружаем модули
   useEffect(() => {
     if (!id) return;
     setLoading(true);
     getCourseWithModules(id)
-      .then(c => setFullCourse(c ?? null))
+      .then((c: Course | null) => setFullCourse(c ?? null))
       .finally(() => setLoading(false));
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 

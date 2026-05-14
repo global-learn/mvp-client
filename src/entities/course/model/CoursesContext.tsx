@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import type { Course, Enrollment, Certificate, CreateCourseDto, EnrollmentRequest } from './types';
+import type { Course, Enrollment, Certificate, CreateCourseDto, EnrollmentRequest, EmployeeForAssignment } from './types';
 import { courseApi } from '../api/courseApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, isAdmin, type User } from '@entities/user/model/types';
@@ -90,6 +90,12 @@ interface CoursesContextValue {
   getEnrollment: (courseId: string) => Enrollment | undefined;
   // Возвращает обновлённый Enrollment — компонент проверяет status === 'completed'
   markItemComplete: (courseId: string, itemId: string) => Promise<Enrollment>;
+  /** Загрузить курс со всеми модулями (для плеера) */
+  getCourseWithModules: (courseId: string) => Promise<Course | null>;
+  /** Отметить шаг пройденным (плеер использует step.id как ключ) */
+  completeStep: (courseId: string, stepId: string) => Promise<void>;
+  /** Список сотрудников для назначения курса */
+  getAssignableEmployees: () => Promise<EmployeeForAssignment[]>;
 }
 
 const CoursesContext = createContext<CoursesContextValue | undefined>(undefined);
@@ -227,6 +233,19 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     return updated;
   };
 
+  const getCourseWithModules = async (courseId: string): Promise<Course | null> => {
+    const found = await courseApi.getCourseById(courseId);
+    return found ?? null;
+  };
+
+  const completeStep = async (courseId: string, stepId: string): Promise<void> => {
+    await markItemComplete(courseId, stepId);
+  };
+
+  const getAssignableEmployees = async (): Promise<EmployeeForAssignment[]> => {
+    return courseApi.getAssignableEmployees();
+  };
+
   return (
     <CoursesContext.Provider
       value={{
@@ -246,6 +265,9 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         rejectCourse,
         getEnrollment,
         markItemComplete,
+        getCourseWithModules,
+        completeStep,
+        getAssignableEmployees,
       }}
     >
       {children}

@@ -105,6 +105,15 @@ export function calcProgress(course: Course, completedItems: string[]): number {
 
 export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;
 
+// ── Сотрудник для назначения курса ──────────────────────────────
+export interface EmployeeForAssignment {
+  userId: string;
+  fullname: string;
+  email: string;
+  department: { id: string; name: string };
+  role: { name: string };
+}
+
 // ── Заявка на прохождение курса (требует одобрения) ──────────────
 export interface EnrollmentRequest {
   id: string;

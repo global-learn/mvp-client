@@ -1,4 +1,4 @@
-import type { Course, Enrollment, CreateCourseDto, EnrollmentRequest } from '../model/types';
+import type { Course, Enrollment, CreateCourseDto, EnrollmentRequest, EmployeeForAssignment } from '../model/types';
 import { calcProgress } from '../model/types';
 
 // ================================================================
@@ -793,6 +793,20 @@ export const courseApi = {
     mockEnrollments = [...mockEnrollments.slice(0, idx), updated, ...mockEnrollments.slice(idx + 1)];
     mockRequests = mockRequests.filter(r => !(r.courseId === courseId && r.userId === userId));
     return updated;
+  },
+
+  /** Список сотрудников, которым можно назначить курс */
+  async getAssignableEmployees(): Promise<EmployeeForAssignment[]> {
+    await delay(200);
+    return [
+      { userId: 'emp-2',  fullname: 'Мария Иванова',     email: 'user@test.com',  department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
+      { userId: 'emp-3',  fullname: 'Сергей Волков',      email: 'serg@corp.ru',   department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
+      { userId: 'emp-8',  fullname: 'Артём Лебедев',      email: 'artem@corp.ru',  department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
+      { userId: 'emp-9',  fullname: 'Ольга Рыбакова',     email: 'olga.r@corp.ru', department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
+      { userId: 'emp-10', fullname: 'Павел Зайцев',       email: 'pavel@corp.ru',  department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, role: { name: 'Менеджер' } },
+      { userId: 'emp-11', fullname: 'Екатерина Морозова', email: 'kate@corp.ru',   department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, role: { name: 'Менеджер' } },
+      { userId: 'emp-12', fullname: 'Николай Фёдоров',    email: 'nikola@corp.ru', department: { id: 'dept-marketing',  name: 'Департамент маркетинга' },  role: { name: 'Разработчик' } },
+    ];
   },
 
   /** Пометить элемент курса (урок или тест) как пройденный и пересчитать прогресс */

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { UserPlus, X, Check } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { canAssignCourses } from '@entities/user/model/types';
+import { canAssignCourse } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import type { EmployeeForAssignment } from '@entities/course/model/types';
 import styles from './AssignCourse.module.css';
@@ -21,7 +21,7 @@ export function AssignCourseButton({ courseId, courseTitle }: AssignCourseButton
   const [assigned, setAssigned] = useState<Set<string>>(new Set());
   const [pending, setPending] = useState<string | null>(null);
 
-  if (!canAssignCourses(user)) return null;
+  if (!canAssignCourse(user)) return null;
 
   const open = async () => {
     setIsOpen(true);

@@ -578,7 +578,7 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
           <label className={styles.label}>
             Подразделение (необязательно)
             <select className={styles.select} value={divisionId} onChange={e => setDivisionId(e.target.value)}>
-              <option value="">Для всех подразделений</option>
+              <option value="">Для всех отделов</option>
               {DIVISIONS.map(d => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}

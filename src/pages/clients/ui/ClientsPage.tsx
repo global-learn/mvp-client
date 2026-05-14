@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Plus, X, User, UserPlus } from 'lucide-react';
-import type { Company, CompanyClient } from '@entities/company/model/types';
+import type { Company } from '@entities/company/model/types';
 import type { ClientInvite, InviteStatus } from '@entities/invite/model/types';
 import { makeExpiresAt } from '@entities/invite/model/types';
 import { useUser } from '@entities/user/model/UserContext';

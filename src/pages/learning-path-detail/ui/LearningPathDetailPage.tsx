@@ -6,7 +6,6 @@ import {
 import { useLearningPaths } from '@entities/learning-path/model/LearningPathContext';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin } from '@entities/user/model/types';
 import type { LearningPathStepWithStatus } from '@entities/learning-path/model/types';
 import { computeStepStatuses, calcPathProgress, PATH_TARGET_LABELS } from '@entities/learning-path/model/types';
 import styles from './LearningPathDetail.module.css';

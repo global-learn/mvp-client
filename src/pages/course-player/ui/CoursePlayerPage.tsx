@@ -3,7 +3,7 @@ import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown';
 import { ChevronLeft, ChevronRight, CheckCircle2, Circle, BookOpen, ClipboardList } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
-import type { Course, Step, StepItem, LessonContent, TestContent, TestQuestion } from '@entities/course/model/types';
+import type { Course, Step, LessonContent, TestContent, TestQuestion } from '@entities/course/model/types';
 import styles from './CoursePlayer.module.css';
 
 // ================================================================

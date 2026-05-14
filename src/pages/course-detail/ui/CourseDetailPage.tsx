@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target } from 'lucide-react';
+import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2 } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
@@ -428,7 +428,7 @@ export function CourseDetailPage() {
           </div>
 
           <div className={styles.metaRow}>
-            <span className={styles.meta}>{course.lessonsCount} уроков · Добавлен {course.createdAt}</span>
+            <span className={styles.meta}>{course.lessonsCount} уроков · {course.createdAt}</span>
             <span className={styles.courseTypeBadge}>{COURSE_TYPE_LABELS[course.courseType]}</span>
             {course.targetDepartmentName && (
               <span className={styles.targetBadge}>
@@ -442,10 +442,36 @@ export function CourseDetailPage() {
             )}
           </div>
 
-          {/* Описание */}
+          {/* Описание + автор */}
           <div className={styles.descriptionCard}>
-            <h2 className={styles.descriptionTitle}>О курсе</h2>
-            <p className={styles.descriptionText}>{course.description}</p>
+            <div className={styles.descriptionCardInner}>
+              <div className={styles.descriptionBody}>
+                <h2 className={styles.descriptionTitle}>О курсе</h2>
+                <p className={styles.descriptionText}>{course.description}</p>
+              </div>
+              <div className={styles.authorBlock}>
+                {(() => {
+                  const authorInfo = MOCK_USER_INFO[course.authorId];
+                  const authorName = authorInfo?.name ?? course.authorId;
+                  const authorDiv  = authorInfo?.division;
+                  const initials   = authorName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                  return (
+                    <>
+                      <div className={styles.authorLabel}>
+                        <UserCircle2 size={13} /> Автор курса
+                      </div>
+                      <div className={styles.authorChip}>
+                        <div className={styles.authorAvatar}>{initials}</div>
+                        <div className={styles.authorInfo}>
+                          <span className={styles.authorName}>{authorName}</span>
+                          {authorDiv && <span className={styles.authorDiv}>{authorDiv}</span>}
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
 
           {/* Статистика прохождения (для canControl) */}

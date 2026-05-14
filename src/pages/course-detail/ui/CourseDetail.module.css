@@ -100,6 +100,17 @@
   margin-bottom: 1.75rem;
 }
 
+.descriptionCardInner {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.descriptionBody {
+  flex: 1;
+  min-width: 0;
+}
+
 .descriptionTitle {
   margin: 0 0 0.75rem;
   font-size: 1.125rem;
@@ -112,6 +123,72 @@
   line-height: 1.7;
   color: var(--secondary-foreground);
   font-size: 0.9375rem;
+}
+
+/* ── Автор курса ───────────────────────────────────────── */
+.authorBlock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--border);
+  min-width: 160px;
+}
+
+.authorLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.authorChip {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.authorAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.authorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.authorName {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.authorDiv {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .progressSection {

@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { CheckCircle2, XCircle, Clock, BookOpen, TrendingUp } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, BookOpen, TrendingUp, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, isServiceDivision } from '@entities/user/model/types';
+import { isAdmin, isServiceDivision, canControl, isManager } from '@entities/user/model/types';
 import type { CourseType } from '@entities/course/model/types';
 import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import styles from './CourseList.module.css';
@@ -14,34 +14,52 @@ type TabFilter = 'all_types' | CourseType;
 export function CourseList() {
   const { courses, enrollments, getEnrollment, approveCourse, rejectCourse, isLoading } = useCourses();
   const { user } = useUser();
-  const admin = isAdmin(user);
-  const isClient = user.type === 'CLIENT';
+  const admin        = isAdmin(user);
+  const isClient     = user.type === 'CLIENT';
+  const isRegularMgr = isManager(user);          // только роль manager
+  const isController = canControl(user);          // admin/dept_head/div_head/senior_manager
   const canSeeClientCourses = admin || isServiceDivision(user);
 
-  const [approving, setApproving] = useState<string | null>(null);
-  const [rejecting, setRejecting]  = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabFilter>('all_types');
+  const [approving, setApproving]   = useState<string | null>(null);
+  const [rejecting, setRejecting]   = useState<string | null>(null);
+  const [activeTab, setActiveTab]   = useState<TabFilter>('all_types');
   const [filterDeptId, setFilterDeptId] = useState('');
-  const [filterDivId, setFilterDivId] = useState('');
+  const [filterDivId,  setFilterDivId]  = useState('');
+  const [searchQuery,  setSearchQuery]  = useState('');
 
-  // Контекст уже вернул только видимые пользователю курсы.
-  // Для отображения фильтруем только published (pending — в отдельной секции).
+  const allPublished  = useMemo(() => courses.filter(c => c.status === 'published'), [courses]);
+  const pendingCourses = courses.filter(c => c.status === 'pending');
+
+  // ── Фильтрованные опубликованные (для canControl-вида) ────────
   const publishedCourses = useMemo(() => {
-    const base = courses.filter(c => c.status === 'published');
-    return base.filter(c => {
+    return allPublished.filter(c => {
       if (activeTab !== 'all_types' && c.courseType !== activeTab) return false;
       if (activeTab === 'employee') {
         if (filterDeptId && c.targetDepartmentId !== filterDeptId) return false;
-        if (filterDivId && c.targetDivisionId !== filterDivId) return false;
+        if (filterDivId  && c.targetDivisionId  !== filterDivId)  return false;
       }
       return true;
     });
-  }, [courses, activeTab, filterDeptId, filterDivId]);
+  }, [allPublished, activeTab, filterDeptId, filterDivId]);
 
-  const pendingCourses = courses.filter(c => c.status === 'pending');
+  // ── Мои курсы (любой enrollement в published-курсе) ──────────
+  const myEnrolledCourses = useMemo(() =>
+    allPublished.filter(c => enrollments.some(e => e.courseId === c.id)),
+  [allPublished, enrollments]);
 
-  // Уникальные департаменты/отделы для dropdown-фильтров
-  const allPublished = courses.filter(c => c.status === 'published');
+  // ── Для менеджера: "Назначенные" vs "Доступные" ───────────────
+  const assignedCourses  = myEnrolledCourses; // все, где есть enrollment
+  const availableCourses = useMemo(() => {
+    const notEnrolled = allPublished.filter(c => !enrollments.some(e => e.courseId === c.id));
+    if (!searchQuery.trim()) return notEnrolled;
+    const q = searchQuery.toLowerCase();
+    return notEnrolled.filter(c =>
+      c.title.toLowerCase().includes(q) ||
+      c.description.toLowerCase().includes(q),
+    );
+  }, [allPublished, enrollments, searchQuery]);
+
+  // ── Dropdown-фильтры (для canControl) ───────────────────────
   const depts = useMemo(() => {
     const map = new Map<string, string>();
     allPublished.forEach(c => {
@@ -76,14 +94,14 @@ export function CourseList() {
 
   if (isLoading) return <div className={styles.empty}>Загрузка курсов...</div>;
 
-  // ── Вид для клиента ───────────────────────────────────────────
+  // ════════════════════════════════════════════════════════════════
+  // ВИД ДЛЯ КЛИЕНТА
+  // ════════════════════════════════════════════════════════════════
   if (isClient) {
-    const myEnrolledCourses = publishedCourses.filter(c =>
-      enrollments.some(e => e.courseId === c.id),
-    );
+    const clientCourses = allPublished.filter(c => enrollments.some(e => e.courseId === c.id));
     return (
       <div>
-        {myEnrolledCourses.length === 0 ? (
+        {clientCourses.length === 0 ? (
           <div className={styles.empty}>
             <BookOpen size={40} style={{ opacity: 0.25, marginBottom: '1rem' }} />
             <p>Вам пока не назначено ни одного курса.</p>
@@ -91,7 +109,7 @@ export function CourseList() {
           </div>
         ) : (
           <div className={styles.grid}>
-            {myEnrolledCourses.map(course => (
+            {clientCourses.map(course => (
               <CourseCard key={course.id} course={course} enrollment={getEnrollment(course.id)} />
             ))}
           </div>
@@ -100,7 +118,97 @@ export function CourseList() {
     );
   }
 
-  // ── Вкладки: зависят от роли ─────────────────────────────────
+  // ════════════════════════════════════════════════════════════════
+  // ВИД ДЛЯ ОБЫЧНОГО МЕНЕДЖЕРА (роль manager)
+  // ════════════════════════════════════════════════════════════════
+  if (isRegularMgr) {
+    return (
+      <div>
+        {/* Назначенные курсы */}
+        {assignedCourses.length > 0 ? (
+          <section className={styles.myCoursesSection}>
+            <div className={styles.myCoursesHeader}>
+              <TrendingUp size={16} className={styles.myCoursesIcon} />
+              <h2 className={styles.myCoursesTitle}>Назначенные курсы</h2>
+              <span className={styles.sectionCount}>{assignedCourses.length}</span>
+            </div>
+            <div className={styles.myCoursesList}>
+              {assignedCourses.map(course => {
+                const enrollment = getEnrollment(course.id);
+                const progress   = enrollment?.progress ?? 0;
+                const isDone     = enrollment?.status === 'completed';
+                const isPending  = enrollment?.status === 'pending_approval';
+                return (
+                  <Link key={course.id} to={`/courses/${course.id}`} className={styles.myCourseCard}>
+                    <div className={styles.myCourseInfo}>
+                      <span className={styles.myCourseName}>{course.title}</span>
+                      <span className={styles.myCourseMeta}>
+                        {course.lessonsCount} уроков
+                        {isDone && <span className={styles.myCourseCompletedBadge}>✓ Завершён</span>}
+                        {isPending && <span className={styles.myCoursePendingBadge}>⏳ Ожидает одобрения</span>}
+                      </span>
+                    </div>
+                    {!isPending && (
+                      <div className={styles.myCourseProgress}>
+                        <div className={styles.myCourseProgressBar}>
+                          <div
+                            className={isDone ? styles.myCourseProgressFillDone : styles.myCourseProgressFill}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className={styles.myCourseProgressPct}>{progress}%</span>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        ) : (
+          <div className={styles.noAssigned}>
+            <BookOpen size={32} style={{ opacity: 0.2, marginBottom: '0.75rem' }} />
+            <p>Вам пока не назначено ни одного курса.</p>
+            <p style={{ fontSize: '0.8125rem', color: 'var(--muted-foreground)', margin: '0.25rem 0 0' }}>
+              Обратитесь к руководителю или запишитесь самостоятельно ниже.
+            </p>
+          </div>
+        )}
+
+        {/* Доступные для записи */}
+        <div className={styles.availableSection}>
+          <div className={styles.availableHeader}>
+            <h2 className={styles.availableTitle}>Доступно для записи</h2>
+            <div className={styles.searchWrap}>
+              <Search size={15} className={styles.searchIcon} />
+              <input
+                className={styles.searchInput}
+                type="text"
+                placeholder="Поиск курсов..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {availableCourses.length === 0 ? (
+            <div className={styles.empty} style={{ padding: '2rem 0' }}>
+              {searchQuery ? 'Ничего не найдено. Попробуйте другой запрос.' : 'Все доступные курсы уже у вас.'}
+            </div>
+          ) : (
+            <div className={styles.grid}>
+              {availableCourses.map(course => (
+                <CourseCard key={course.id} course={course} enrollment={getEnrollment(course.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ════════════════════════════════════════════════════════════════
+  // ВИД ДЛЯ КОНТРОЛИРУЮЩИХ РОЛЕЙ (admin, dept_head, div_head, senior_manager)
+  // ════════════════════════════════════════════════════════════════
   const tabs: { key: TabFilter; label: string }[] = [
     { key: 'all_types', label: 'Все' },
     { key: 'all',       label: COURSE_TYPE_LABELS.all },
@@ -109,11 +217,6 @@ export function CourseList() {
       ? [{ key: 'client' as TabFilter, label: COURSE_TYPE_LABELS.client }]
       : []),
   ];
-
-  // Курсы, на которые записан текущий пользователь
-  const myEnrolledCourses = useMemo(() =>
-    publishedCourses.filter(c => enrollments.some(e => e.courseId === c.id)),
-  [publishedCourses, enrollments]);
 
   return (
     <div>
@@ -184,6 +287,7 @@ export function CourseList() {
           <div className={styles.myCoursesHeader}>
             <TrendingUp size={16} className={styles.myCoursesIcon} />
             <h2 className={styles.myCoursesTitle}>Мои курсы</h2>
+            <span className={styles.sectionCount}>{myEnrolledCourses.length}</span>
           </div>
           <div className={styles.myCoursesList}>
             {myEnrolledCourses.map(course => {
@@ -191,11 +295,7 @@ export function CourseList() {
               const progress = enrollment?.progress ?? 0;
               const isDone   = enrollment?.status === 'completed';
               return (
-                <Link
-                  key={course.id}
-                  to={`/courses/${course.id}`}
-                  className={styles.myCourseCard}
-                >
+                <Link key={course.id} to={`/courses/${course.id}`} className={styles.myCourseCard}>
                   <div className={styles.myCourseInfo}>
                     <span className={styles.myCourseName}>{course.title}</span>
                     <span className={styles.myCourseMeta}>
@@ -219,7 +319,7 @@ export function CourseList() {
         </section>
       )}
 
-      {/* ── Фильтры ── */}
+      {/* ── Фильтры + поиск ── */}
       <div className={styles.filterBar}>
         <div className={styles.typeTabs}>
           {tabs.map(t => (
@@ -236,43 +336,57 @@ export function CourseList() {
         {activeTab === 'employee' && (depts.length > 0 || divs.length > 0) && (
           <div className={styles.filterSelects}>
             {depts.length > 0 && (
-              <select
-                className={styles.filterSelect}
-                value={filterDeptId}
-                onChange={e => setFilterDeptId(e.target.value)}
-              >
+              <select className={styles.filterSelect} value={filterDeptId}
+                onChange={e => setFilterDeptId(e.target.value)}>
                 <option value="">Все департаменты</option>
                 {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
             {divs.length > 0 && (
-              <select
-                className={styles.filterSelect}
-                value={filterDivId}
-                onChange={e => setFilterDivId(e.target.value)}
-              >
+              <select className={styles.filterSelect} value={filterDivId}
+                onChange={e => setFilterDivId(e.target.value)}>
                 <option value="">Все отделы</option>
                 {divs.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
           </div>
         )}
+
+        {/* Поиск (для canControl) */}
+        <div className={styles.searchWrap} style={{ marginLeft: 'auto' }}>
+          <Search size={15} className={styles.searchIcon} />
+          <input
+            className={styles.searchInput}
+            type="text"
+            placeholder="Поиск..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* ── Опубликованные курсы ── */}
-      {publishedCourses.length === 0 ? (
-        <div className={styles.empty}>
-          {allPublished.length === 0
-            ? 'Курсов пока нет. Создайте первый!'
-            : 'Нет курсов по выбранным фильтрам.'}
-        </div>
-      ) : (
-        <div className={styles.grid}>
-          {publishedCourses.map(course => (
-            <CourseCard key={course.id} course={course} enrollment={getEnrollment(course.id)} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        const filtered = searchQuery.trim()
+          ? publishedCourses.filter(c =>
+              c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.description.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
+          : publishedCourses;
+        return filtered.length === 0 ? (
+          <div className={styles.empty}>
+            {allPublished.length === 0
+              ? 'Курсов пока нет. Создайте первый!'
+              : 'Нет курсов по выбранным фильтрам.'}
+          </div>
+        ) : (
+          <div className={styles.grid}>
+            {filtered.map(course => (
+              <CourseCard key={course.id} course={course} enrollment={getEnrollment(course.id)} />
+            ))}
+          </div>
+        );
+      })()}
     </div>
   );
 }

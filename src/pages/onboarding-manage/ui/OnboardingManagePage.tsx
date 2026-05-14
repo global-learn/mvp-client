@@ -1,12 +1,12 @@
 import { useRef, useState, useEffect } from 'react';
 import {
   UserPlus, X, Send, CheckCircle2, MessageSquare, ClipboardList,
-  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen,
+  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen, LayoutTemplate,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
-import type { OnboardingAssignment, OnboardingStep, OnboardingStepType } from '@entities/onboarding/model/types';
+import type { OnboardingAssignment, OnboardingStep, OnboardingStepType, OnboardingTemplate } from '@entities/onboarding/model/types';
 import { STEP_TYPE_LABELS, calcOnboardingProgress } from '@entities/onboarding/model/types';
 import styles from './OnboardingManage.module.css';
 
@@ -524,11 +524,203 @@ function AssignModal({ onClose }: AssignModalProps) {
   );
 }
 
+// ── Модальное окно создания/редактирования шаблона ──────────────
+interface TemplateModalProps {
+  initial?: OnboardingTemplate | null;
+  onClose: () => void;
+}
+
+const DIVISIONS = [
+  { id: 'div-sales',   name: 'Отдел продаж',                 deptId: 'dept-sales',      deptName: 'Департамент продаж' },
+  { id: 'div-supply',  name: 'Отдел обеспечения продаж',    deptId: 'dept-sales',      deptName: 'Департамент продаж' },
+  { id: 'div-meat',    name: 'Отдел мясной промышленности', deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
+  { id: 'div-retail',  name: 'Отдел сетевого ретейла',      deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
+];
+
+function TemplateModal({ initial, onClose }: TemplateModalProps) {
+  const { createTemplate, updateTemplate } = useOnboarding();
+  const { user } = useUser();
+  const isEditing = !!initial;
+
+  const [title, setTitle] = useState(initial?.title ?? '');
+  const [description, setDescription] = useState(initial?.description ?? '');
+  const [divisionId, setDivisionId] = useState(initial?.targetDivisionId ?? '');
+  const [status, setStatus] = useState<'draft' | 'active'>(initial?.status ?? 'draft');
+  const [steps, setSteps] = useState<OnboardingStep[]>(initial?.steps ?? []);
+  const [submitting, setSubmitting] = useState(false);
+
+  const selectedDiv = DIVISIONS.find(d => d.id === divisionId);
+
+  const handleSubmit = async () => {
+    if (!title.trim() || steps.length === 0) return;
+    setSubmitting(true);
+    const dto: Omit<OnboardingTemplate, 'id' | 'createdAt'> = {
+      title: title.trim(),
+      description: description.trim(),
+      targetDivisionId: selectedDiv?.id ?? null,
+      targetDivisionName: selectedDiv?.name ?? null,
+      targetDepartmentId: selectedDiv?.deptId ?? null,
+      targetDepartmentName: selectedDiv?.deptName ?? null,
+      targetRole: null,
+      steps,
+      createdBy: user.id,
+      status,
+    };
+    if (isEditing && initial) {
+      await updateTemplate(initial.id, dto);
+    } else {
+      await createTemplate(dto);
+    }
+    setSubmitting(false);
+    onClose();
+  };
+
+  return (
+    <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>
+            {isEditing ? 'Редактировать шаблон' : 'Создать шаблон онбординга'}
+          </h2>
+          <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <label className={styles.label}>
+          Название шаблона *
+          <input
+            className={styles.select}
+            placeholder="Например: Онбординг отдела продаж"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+          />
+        </label>
+
+        <label className={styles.label}>
+          Описание
+          <textarea
+            className={styles.select}
+            placeholder="Краткое описание шаблона..."
+            rows={2}
+            value={description}
+            style={{ resize: 'vertical', fontFamily: 'inherit' }}
+            onChange={e => setDescription(e.target.value)}
+          />
+        </label>
+
+        <label className={styles.label}>
+          Подразделение (необязательно)
+          <select className={styles.select} value={divisionId} onChange={e => setDivisionId(e.target.value)}>
+            <option value="">Для всех подразделений</option>
+            {DIVISIONS.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className={styles.label}>
+          Статус
+          <select className={styles.select} value={status} onChange={e => setStatus(e.target.value as 'draft' | 'active')}>
+            <option value="draft">Черновик</option>
+            <option value="active">Активный</option>
+          </select>
+        </label>
+
+        <StepEditor steps={steps} onChange={setSteps} />
+
+        <div className={styles.modalActions}>
+          <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
+          <button
+            className={styles.submitBtn}
+            onClick={() => void handleSubmit()}
+            disabled={!title.trim() || steps.length === 0 || submitting}
+          >
+            {submitting
+              ? (isEditing ? 'Сохраняем...' : 'Создаём...')
+              : (isEditing ? 'Сохранить' : 'Создать шаблон')}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Вкладка «Шаблоны» ───────────────────────────────────────────
+function TemplatesTab() {
+  const { templates } = useOnboarding();
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<OnboardingTemplate | null>(null);
+
+  return (
+    <div>
+      <div className={styles.templatesHeader}>
+        <span style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+          {templates.length} шаблонов
+        </span>
+        <button className={styles.createTmplBtn} onClick={() => setCreateOpen(true)}>
+          <Plus size={15} /> Создать шаблон
+        </button>
+      </div>
+
+      {templates.length === 0 ? (
+        <div className={styles.listEmpty} style={{ border: '1px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '2rem', textAlign: 'center' }}>
+          <LayoutTemplate size={36} style={{ opacity: 0.25, display: 'block', margin: '0 auto 0.75rem' }} />
+          Шаблонов пока нет — создайте первый
+        </div>
+      ) : (
+        <div className={styles.templatesGrid}>
+          {templates.map(tmpl => {
+            const activeCount = tmpl.steps.filter(s => s.required).length;
+            return (
+              <div key={tmpl.id} className={styles.tmplCard}>
+                <div className={styles.tmplCardHeader}>
+                  <span className={styles.tmplTitle}>{tmpl.title}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span className={`${styles.tmplStatusBadge} ${tmpl.status === 'active' ? styles.tmplStatusActive : styles.tmplStatusDraft}`}>
+                      {tmpl.status === 'active' ? 'Активный' : 'Черновик'}
+                    </span>
+                    <button
+                      className={styles.stepEditBtn}
+                      title="Редактировать шаблон"
+                      onClick={() => setEditTarget(tmpl)}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                  </div>
+                </div>
+                {tmpl.description && (
+                  <span className={styles.tmplDesc}>{tmpl.description}</span>
+                )}
+                <div className={styles.tmplMeta}>
+                  {tmpl.targetDivisionName && (
+                    <span className={styles.tmplTargetBadge}>{tmpl.targetDivisionName}</span>
+                  )}
+                  {tmpl.targetDepartmentName && !tmpl.targetDivisionName && (
+                    <span className={styles.tmplTargetBadge}>{tmpl.targetDepartmentName}</span>
+                  )}
+                  <span className={styles.tmplStepsCount}>
+                    {tmpl.steps.length} шагов · {activeCount} обязательных
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {createOpen && <TemplateModal onClose={() => setCreateOpen(false)} />}
+      {editTarget && <TemplateModal initial={editTarget} onClose={() => setEditTarget(null)} />}
+    </div>
+  );
+}
+
 // ── Главная страница ─────────────────────────────────────────────
+type PageTab = 'assignments' | 'templates';
+
 export function OnboardingManagePage() {
   const { managedAssignments, isLoading } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(null);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [pageTab, setPageTab] = useState<PageTab>('assignments');
 
   const active = managedAssignments.find(a => a.id === selected) ?? null;
 
@@ -545,77 +737,101 @@ export function OnboardingManagePage() {
             Прогресс сотрудников, их отзывы по шагам и чат — всё на одном экране.
           </p>
         </div>
-        <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
-          <UserPlus size={16} /> Назначить онбординг
+        {pageTab === 'assignments' && (
+          <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
+            <UserPlus size={16} /> Назначить онбординг
+          </button>
+        )}
+      </div>
+
+      {/* Вкладки страницы */}
+      <div className={styles.pageTabs}>
+        <button
+          className={`${styles.pageTab} ${pageTab === 'assignments' ? styles.pageTabActive : ''}`}
+          onClick={() => setPageTab('assignments')}
+        >
+          <ClipboardList size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.375rem' }} />
+          Назначения
+        </button>
+        <button
+          className={`${styles.pageTab} ${pageTab === 'templates' ? styles.pageTabActive : ''}`}
+          onClick={() => setPageTab('templates')}
+        >
+          <LayoutTemplate size={14} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '0.375rem' }} />
+          Шаблоны
         </button>
       </div>
 
-      <div className={styles.layout}>
-        {/* Список сотрудников */}
-        <div className={styles.list}>
-          {managedAssignments.length === 0 ? (
-            <div className={styles.listEmpty}>
-              <ClipboardList size={36} style={{ opacity: 0.3, display: 'block', margin: '0 auto 0.75rem' }} />
-              Нет назначенных онбордингов
-            </div>
+      {pageTab === 'templates' ? (
+        <TemplatesTab />
+      ) : (
+        <div className={styles.layout}>
+          {/* Список сотрудников */}
+          <div className={styles.list}>
+            {managedAssignments.length === 0 ? (
+              <div className={styles.listEmpty}>
+                <ClipboardList size={36} style={{ opacity: 0.3, display: 'block', margin: '0 auto 0.75rem' }} />
+                Нет назначенных онбордингов
+              </div>
+            ) : (
+              managedAssignments.map(a => {
+                const progress = calcOnboardingProgress(a);
+                const isDone = a.status === 'completed';
+
+                return (
+                  <div
+                    key={a.id}
+                    className={`${styles.empCard} ${selected === a.id ? styles.empCardActive : ''}`}
+                    onClick={() => setSelected(a.id)}
+                  >
+                    <div className={styles.empRow}>
+                      <div className={styles.empAvatar}>
+                        {(a.employeeName || a.employeeEmail)[0].toUpperCase()}
+                      </div>
+                      <div className={styles.empInfo}>
+                        <div className={styles.empName}>{a.employeeName}</div>
+                        <div className={styles.empDiv}>{a.divisionName}</div>
+                      </div>
+                      <span className={`${styles.statusBadge} ${isDone ? styles.statusDone : styles.statusInProgress}`}>
+                        {isDone ? 'Завершён' : 'В процессе'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div className={styles.miniBar}>
+                        <div
+                          className={`${styles.miniFill} ${isDone ? styles.miniFillDone : ''}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                      <div className={styles.miniMeta}>
+                        <span>{a.completedSteps.length}/{a.steps.length} шагов</span>
+                        <span>{progress}%</span>
+                      </div>
+                    </div>
+
+                    {a.messages.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
+                        <MessageSquare size={12} />
+                        {a.messages.length} сообщений · последнее {fmtDate(a.messages[a.messages.length - 1].sentAt)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Детальная панель */}
+          {active ? (
+            <DetailPanel assignment={active} />
           ) : (
-            managedAssignments.map(a => {
-              const progress = calcOnboardingProgress(a);
-              const isDone = a.status === 'completed';
-
-              return (
-                <div
-                  key={a.id}
-                  className={`${styles.empCard} ${selected === a.id ? styles.empCardActive : ''}`}
-                  onClick={() => setSelected(a.id)}
-                >
-                  <div className={styles.empRow}>
-                    <div className={styles.empAvatar}>
-                      {(a.employeeName || a.employeeEmail)[0].toUpperCase()}
-                    </div>
-                    <div className={styles.empInfo}>
-                      <div className={styles.empName}>{a.employeeName}</div>
-                      <div className={styles.empDiv}>{a.divisionName}</div>
-                    </div>
-                    <span className={`${styles.statusBadge} ${isDone ? styles.statusDone : styles.statusInProgress}`}>
-                      {isDone ? 'Завершён' : 'В процессе'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className={styles.miniBar}>
-                      <div
-                        className={`${styles.miniFill} ${isDone ? styles.miniFillDone : ''}`}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <div className={styles.miniMeta}>
-                      <span>{a.completedSteps.length}/{a.steps.length} шагов</span>
-                      <span>{progress}%</span>
-                    </div>
-                  </div>
-
-                  {a.messages.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
-                      <MessageSquare size={12} />
-                      {a.messages.length} сообщений · последнее {fmtDate(a.messages[a.messages.length - 1].sentAt)}
-                    </div>
-                  )}
-                </div>
-              );
-            })
+            <div className={styles.detailPlaceholder}>
+              Выберите сотрудника слева, чтобы увидеть прогресс и открыть чат
+            </div>
           )}
         </div>
-
-        {/* Детальная панель */}
-        {active ? (
-          <DetailPanel assignment={active} />
-        ) : (
-          <div className={styles.detailPlaceholder}>
-            Выберите сотрудника слева, чтобы увидеть прогресс и открыть чат
-          </div>
-        )}
-      </div>
+      )}
 
       {assignOpen && <AssignModal onClose={() => setAssignOpen(false)} />}
     </div>

@@ -43,6 +43,10 @@ interface OnboardingContextValue {
   ) => Promise<OnboardingAssignment>;
   /** Обновить шаги конкретного назначения */
   updateSteps: (assignmentId: string, steps: OnboardingStep[]) => Promise<void>;
+  /** Создать новый шаблон онбординга */
+  createTemplate: (dto: Omit<OnboardingTemplate, 'id' | 'createdAt'>) => Promise<OnboardingTemplate>;
+  /** Обновить существующий шаблон */
+  updateTemplate: (id: string, patch: Partial<OnboardingTemplate>) => Promise<OnboardingTemplate>;
 
   reload: () => Promise<void>;
 }
@@ -131,6 +135,18 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     patchAssignment(updated);
   };
 
+  const createTemplate = async (dto: Omit<OnboardingTemplate, 'id' | 'createdAt'>): Promise<OnboardingTemplate> => {
+    const created = await onboardingApi.createTemplate(dto);
+    setTemplates(prev => [...prev, created]);
+    return created;
+  };
+
+  const updateTemplate = async (id: string, patch: Partial<OnboardingTemplate>): Promise<OnboardingTemplate> => {
+    const updated = await onboardingApi.updateTemplate(id, patch);
+    setTemplates(prev => prev.map(t => t.id === id ? updated : t));
+    return updated;
+  };
+
   return (
     <OnboardingContext.Provider
       value={{
@@ -142,6 +158,8 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         sendMessage,
         assign,
         updateSteps,
+        createTemplate,
+        updateTemplate,
         reload: load,
       }}
     >

@@ -636,16 +636,18 @@ export const MOCK_USER_INFO: Record<string, { name: string; division: string }> 
 // ── Сидированные записи на курсы (для демо статистики) ──────────
 let mockEnrollments: Enrollment[] = [
   // Курс 1 — «Основы JavaScript»
-  { courseId: '1', userId: 'emp-3',  status: 'completed',  progress: 100, completedItems: ['c1-l1','c1-t1','c1-l2','c1-t2','c1-l3','c1-t3'], enrolledAt: '2024-02-01', assignedBy: 'user-admin' },
-  { courseId: '1', userId: 'emp-8',  status: 'in_progress', progress: 33, completedItems: ['c1-l1','c1-t1'], enrolledAt: '2024-02-05', assignedBy: 'user-admin' },
-  { courseId: '1', userId: 'emp-10', status: 'in_progress', progress: 67, completedItems: ['c1-l1','c1-t1','c1-l2','c1-t2'], enrolledAt: '2024-02-10', assignedBy: 'user-admin' },
-  { courseId: '1', userId: 'emp-11', status: 'pending_approval', progress: 0, completedItems: [], enrolledAt: '2024-03-01' },
+  { courseId: '1', userId: 'emp-3',    status: 'completed',        progress: 100, completedItems: ['c1-l1','c1-t1','c1-l2','c1-t2','c1-l3','c1-t3'], enrolledAt: '2024-02-01', assignedBy: 'user-admin' },
+  { courseId: '1', userId: 'emp-8',    status: 'in_progress',      progress: 33,  completedItems: ['c1-l1','c1-t1'],                                  enrolledAt: '2024-02-05', assignedBy: 'user-admin' },
+  { courseId: '1', userId: 'emp-10',   status: 'in_progress',      progress: 67,  completedItems: ['c1-l1','c1-t1','c1-l2','c1-t2'],                  enrolledAt: '2024-02-10', assignedBy: 'user-admin' },
+  { courseId: '1', userId: 'emp-11',   status: 'pending_approval', progress: 0,   completedItems: [],                                                  enrolledAt: '2024-03-01' },
+  // Мария Иванова (user-emp / менеджер) — активные курсы
+  { courseId: '1', userId: 'user-emp', status: 'in_progress',      progress: 50,  completedItems: ['c1-l1','c1-t1','c1-l2'],                           enrolledAt: new Date(Date.now() - 7  * 86400000).toISOString().split('T')[0], assignedBy: 'user-admin' },
+  { courseId: '3', userId: 'user-emp', status: 'completed',        progress: 100, completedItems: ['c3-l1','c3-t1','c3-l2','c3-t2'],                   enrolledAt: new Date(Date.now() - 21 * 86400000).toISOString().split('T')[0] },
   // Курс 2 — «React для начинающих»
-  { courseId: '2', userId: 'emp-10', status: 'in_progress', progress: 40, completedItems: ['c2-l1','c2-t1'], enrolledAt: '2024-03-15', assignedBy: 'user-admin' },
-  { courseId: '2', userId: 'emp-12', status: 'completed',  progress: 100, completedItems: ['c2-l1','c2-t1','c2-l2','c2-t2','c2-l3'], enrolledAt: '2024-03-20', assignedBy: 'user-depthead' },
+  { courseId: '2', userId: 'emp-10',   status: 'in_progress',      progress: 40,  completedItems: ['c2-l1','c2-t1'],                                   enrolledAt: '2024-03-15', assignedBy: 'user-admin' },
+  { courseId: '2', userId: 'emp-12',   status: 'completed',        progress: 100, completedItems: ['c2-l1','c2-t1','c2-l2','c2-t2','c2-l3'],           enrolledAt: '2024-03-20', assignedBy: 'user-depthead' },
   // Курс 3 — «Git и командная разработка» (all)
-  { courseId: '3', userId: 'emp-2',  status: 'in_progress', progress: 25, completedItems: ['c3-l1'], enrolledAt: '2024-04-01' },
-  { courseId: '3', userId: 'emp-5',  status: 'completed',  progress: 100, completedItems: ['c3-l1','c3-t1','c3-l2','c3-t2'], enrolledAt: '2024-04-02', assignedBy: 'user-admin' },
+  { courseId: '3', userId: 'emp-5',    status: 'completed',        progress: 100, completedItems: ['c3-l1','c3-t1','c3-l2','c3-t2'],                   enrolledAt: '2024-04-02', assignedBy: 'user-admin' },
 ];
 
 let mockRequests: EnrollmentRequest[] = [];

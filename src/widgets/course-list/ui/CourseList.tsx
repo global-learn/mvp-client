@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, isServiceDivision, canControl, isManager } from '@entities/user/model/types';
+import { isAdmin, isServiceDivision, isManager } from '@entities/user/model/types';
 import type { CourseType } from '@entities/course/model/types';
 import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import styles from './CourseList.module.css';
@@ -17,7 +17,6 @@ export function CourseList() {
   const admin        = isAdmin(user);
   const isClient     = user.type === 'CLIENT';
   const isRegularMgr = isManager(user);          // только роль manager
-  const _isController = canControl(user);          // admin/dept_head/div_head/senior_manager
   const canSeeClientCourses = admin || isServiceDivision(user);
 
   const [approving, setApproving]   = useState<string | null>(null);

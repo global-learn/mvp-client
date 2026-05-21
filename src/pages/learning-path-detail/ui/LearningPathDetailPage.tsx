@@ -109,59 +109,59 @@ function StepAction({
 }
 
 // ── Шаг пути ─────────────────────────────────────────────────────
-function _PathStep({
-  step,
-  order,
-}: {
-  step: LearningPathStepWithStatus;
-  order: number;
-}) {
-  const { requestEnrollment } = useCourses();
-  const [pending, setPending] = useState(false);
-
-  const isActive = step.status === 'in_progress' || step.status === 'not_enrolled';
-  const isDone   = step.status === 'completed';
-  const isLocked = step.status === 'locked';
-
-  const handleRequest = async () => {
-    setPending(true);
-    await requestEnrollment(step.courseId);
-    setPending(false);
-  };
-
-  const cardCls = [
-    styles.stepCard,
-    isActive ? styles.stepCardActive : '',
-    isDone   ? styles.stepCardDone   : '',
-    isLocked ? styles.stepCardLocked : '',
-  ].filter(Boolean).join(' ');
-
-  return (
-    <div className={styles.step}>
-      <StepIndicator step={step} order={order} />
-
-      <div className={cardCls}>
-        <div className={styles.stepCardBody}>
-          <div className={styles.stepCardTop}>
-            <h3 className={`${styles.stepCardTitle} ${isDone ? styles.stepCardTitleDone : ''}`}>
-              {step.courseTitle}
-            </h3>
-            <StatusBadge status={step.status} />
-          </div>
-          <p className={styles.stepCardDesc}>{step.courseDescription}</p>
-        </div>
-
-        <div className={styles.stepCardFooter}>
-          <span className={styles.stepCardFooterNote}>
-            <BookOpen size={13} />
-            Курс {order} из {/* filled by parent */}...
-          </span>
-          <StepAction step={step} pending={pending} onRequest={handleRequest} />
-        </div>
-      </div>
-    </div>
-  );
-}
+// function _PathStep({
+//   step,
+//   order,
+// }: {
+//   step: LearningPathStepWithStatus;
+//   order: number;
+// }) {
+//   const { requestEnrollment } = useCourses();
+//   const [pending, setPending] = useState(false);
+//
+//   const isActive = step.status === 'in_progress' || step.status === 'not_enrolled';
+//   const isDone   = step.status === 'completed';
+//   const isLocked = step.status === 'locked';
+//
+//   const handleRequest = async () => {
+//     setPending(true);
+//     await requestEnrollment(step.courseId);
+//     setPending(false);
+//   };
+//
+//   const cardCls = [
+//     styles.stepCard,
+//     isActive ? styles.stepCardActive : '',
+//     isDone   ? styles.stepCardDone   : '',
+//     isLocked ? styles.stepCardLocked : '',
+//   ].filter(Boolean).join(' ');
+//
+//   return (
+//     <div className={styles.step}>
+//       <StepIndicator step={step} order={order} />
+//
+//       <div className={cardCls}>
+//         <div className={styles.stepCardBody}>
+//           <div className={styles.stepCardTop}>
+//             <h3 className={`${styles.stepCardTitle} ${isDone ? styles.stepCardTitleDone : ''}`}>
+//               {step.courseTitle}
+//             </h3>
+//             <StatusBadge status={step.status} />
+//           </div>
+//           <p className={styles.stepCardDesc}>{step.courseDescription}</p>
+//         </div>
+//
+//         <div className={styles.stepCardFooter}>
+//           <span className={styles.stepCardFooterNote}>
+//             <BookOpen size={13} />
+//             Курс {order} из {/* filled by parent */}...
+//           </span>
+//           <StepAction step={step} pending={pending} onRequest={handleRequest} />
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
 
 // ── Шаг с правильным "N из M" ─────────────────────────────────────
 function PathStepFull({

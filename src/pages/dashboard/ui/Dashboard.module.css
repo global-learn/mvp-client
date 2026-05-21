@@ -272,6 +272,44 @@
   text-align: right;
 }
 
+/* No-course placeholder */
+.noCourseCard {
+  background: var(--card);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.75rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.noCourseIcon { color: var(--muted-foreground); flex-shrink: 0; }
+
+.noCourseTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 0.1875rem;
+}
+
+.noCourseText {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+/* Panel empty state */
+.panelEmpty {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+/* Completed fill */
+.miniFillDone { background: #16a34a; }
+
 /* Activity */
 .actRow {
   display: flex;
@@ -293,9 +331,10 @@
   flex-shrink: 0;
 }
 
-.actDotTest {
-  background: var(--success);
-}
+.actDotTest      { background: var(--success); }
+.actDotDone      { background: #16a34a; }
+.actDotOnboarding{ background: #7c3aed; }
+.actDotEnrolled  { background: #0071e3; }
 
 .actInfo {
   flex: 1;

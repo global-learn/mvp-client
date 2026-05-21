@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
-  CheckCircle2, Lock, Clock, Play, XCircle, BookOpen, RotateCcw, Users, Building2,
+  CheckCircle2, Lock, Clock, Play, XCircle, BookOpen, RotateCcw, Users, Building2, Award,
 } from 'lucide-react';
 import { useLearningPaths } from '@entities/learning-path/model/LearningPathContext';
 import { useCourses } from '@entities/course/model/CoursesContext';
-
-
-import type { LearningPathStepWithStatus } from '@entities/learning-path/model/types';
+import { useUser } from '@entities/user/model/UserContext';
+import type { LearningPath, LearningPathStepWithStatus } from '@entities/learning-path/model/types';
+import type { Enrollment } from '@entities/course/model/types';
 import { computeStepStatuses, calcPathProgress, PATH_TARGET_LABELS } from '@entities/learning-path/model/types';
+import { TrackCompletionModal } from '@features/track-completion/ui/TrackCompletionModal';
+import { TrackCertificateModal } from '@features/track-completion/ui/TrackCertificateModal';
 import styles from './LearningPathDetail.module.css';
 
 // ── Метка статуса ────────────────────────────────────────────────
@@ -108,61 +110,6 @@ function StepAction({
   }
 }
 
-// ── Шаг пути ─────────────────────────────────────────────────────
-// function _PathStep({
-//   step,
-//   order,
-// }: {
-//   step: LearningPathStepWithStatus;
-//   order: number;
-// }) {
-//   const { requestEnrollment } = useCourses();
-//   const [pending, setPending] = useState(false);
-//
-//   const isActive = step.status === 'in_progress' || step.status === 'not_enrolled';
-//   const isDone   = step.status === 'completed';
-//   const isLocked = step.status === 'locked';
-//
-//   const handleRequest = async () => {
-//     setPending(true);
-//     await requestEnrollment(step.courseId);
-//     setPending(false);
-//   };
-//
-//   const cardCls = [
-//     styles.stepCard,
-//     isActive ? styles.stepCardActive : '',
-//     isDone   ? styles.stepCardDone   : '',
-//     isLocked ? styles.stepCardLocked : '',
-//   ].filter(Boolean).join(' ');
-//
-//   return (
-//     <div className={styles.step}>
-//       <StepIndicator step={step} order={order} />
-//
-//       <div className={cardCls}>
-//         <div className={styles.stepCardBody}>
-//           <div className={styles.stepCardTop}>
-//             <h3 className={`${styles.stepCardTitle} ${isDone ? styles.stepCardTitleDone : ''}`}>
-//               {step.courseTitle}
-//             </h3>
-//             <StatusBadge status={step.status} />
-//           </div>
-//           <p className={styles.stepCardDesc}>{step.courseDescription}</p>
-//         </div>
-//
-//         <div className={styles.stepCardFooter}>
-//           <span className={styles.stepCardFooterNote}>
-//             <BookOpen size={13} />
-//             Курс {order} из {/* filled by parent */}...
-//           </span>
-//           <StepAction step={step} pending={pending} onRequest={handleRequest} />
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }
-
 // ── Шаг с правильным "N из M" ─────────────────────────────────────
 function PathStepFull({
   step,
@@ -220,28 +167,36 @@ function PathStepFull({
   );
 }
 
-// ── Главная страница ─────────────────────────────────────────────
-export function LearningPathDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const { paths, isLoading } = useLearningPaths();
-  const { enrollments } = useCourses();
-
-  if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
-
-  const path = paths.find(p => p.id === id);
-  if (!path) {
-    return (
-      <div className={styles.notFound}>
-        <p>Трек не найден</p>
-        <Link to="/learning-paths" className={styles.backLink}>← Все треки</Link>
-      </div>
-    );
-  }
+// ── Контент страницы (все хуки здесь — path гарантированно есть) ─
+function LearningPathDetailContent({
+  path,
+  enrollments,
+}: {
+  path: LearningPath;
+  enrollments: Enrollment[];
+}) {
+  const { trackCertificates, issueTrackCertificate } = useLearningPaths();
+  const { user } = useUser();
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showCertModal, setShowCertModal] = useState(false);
 
   const steps = computeStepStatuses(path, enrollments);
   const progress = calcPathProgress(steps);
   const isDone = progress === 100;
 
+  useEffect(() => {
+    if (!isDone) return;
+    issueTrackCertificate(path);
+    const key = `track-modal-shown-${path.id}-${user.id}`;
+    if (!localStorage.getItem(key)) {
+      setShowCompletionModal(true);
+      localStorage.setItem(key, '1');
+    }
+  // issueTrackCertificate is stable per render cycle; path.id and user.id are primitives
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDone, path.id, user.id]);
+
+  const trackCert = trackCertificates.find(c => c.pathId === path.id && c.userId === user.id);
   const targetLabel = PATH_TARGET_LABELS[path.targetType];
   const targetSub = path.targetDepartmentName ?? path.targetDivisionName ?? null;
 
@@ -274,6 +229,12 @@ export function LearningPathDetailPage() {
         <div className={styles.completedBanner}>
           <CheckCircle2 size={20} />
           Трек полностью завершён! Отличная работа 🎉
+          {trackCert && (
+            <button className={styles.openDiplomaBtn} onClick={() => setShowCertModal(true)}>
+              <Award size={14} />
+              Открыть диплом
+            </button>
+          )}
         </div>
       ) : (
         <div className={styles.overallProgress}>
@@ -294,6 +255,45 @@ export function LearningPathDetailPage() {
           <PathStepFull key={step.id} step={step} order={i + 1} total={steps.length} />
         ))}
       </div>
+
+      {/* Completion celebration modal (shown once per user per track) */}
+      {showCompletionModal && trackCert && (
+        <TrackCompletionModal
+          pathTitle={path.title}
+          stepCount={path.steps.length}
+          certificate={trackCert}
+          onClose={() => setShowCompletionModal(false)}
+        />
+      )}
+
+      {/* Diploma modal (opened manually via banner button) */}
+      {showCertModal && trackCert && (
+        <TrackCertificateModal
+          certificate={trackCert}
+          onClose={() => setShowCertModal(false)}
+        />
+      )}
     </div>
   );
+}
+
+// ── Главная страница (routing + guard) ──────────────────────────
+export function LearningPathDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const { paths, isLoading } = useLearningPaths();
+  const { enrollments } = useCourses();
+
+  if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
+
+  const path = paths.find(p => p.id === id);
+  if (!path) {
+    return (
+      <div className={styles.notFound}>
+        <p>Трек не найден</p>
+        <Link to="/learning-paths" className={styles.backLink}>← Все треки</Link>
+      </div>
+    );
+  }
+
+  return <LearningPathDetailContent path={path} enrollments={enrollments} />;
 }

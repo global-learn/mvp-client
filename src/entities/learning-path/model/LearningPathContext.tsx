@@ -1,7 +1,7 @@
 import {
   createContext, useContext, useState, useEffect, useCallback, type ReactNode,
 } from 'react';
-import type { LearningPath, LearningPathStep, PathTargetType } from './types';
+import type { LearningPath, LearningPathStep, PathTargetType, TrackCertificate } from './types';
 import { learningPathApi } from '../api/learningPathApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, isDepartmentHead, isDivisionHead, isSeniorManager, displayName } from '@entities/user/model/types';
@@ -26,6 +26,8 @@ interface LearningPathContextValue {
   myPaths: LearningPath[];
   isLoading: boolean;
   canCreate: boolean;
+  trackCertificates: TrackCertificate[];
+  issueTrackCertificate: (path: LearningPath) => TrackCertificate;
   createPath: (dto: CreatePathDto) => Promise<LearningPath>;
   publishPath: (id: string) => Promise<void>;
   deletePath: (id: string) => Promise<void>;
@@ -64,6 +66,7 @@ export function LearningPathProvider({ children }: { children: ReactNode }) {
   const { user } = useUser();
   const [paths, setPaths] = useState<LearningPath[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [trackCertificates, setTrackCertificates] = useState<TrackCertificate[]>([]);
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -82,6 +85,25 @@ export function LearningPathProvider({ children }: { children: ReactNode }) {
 
   const visiblePaths = paths.filter(p => isPathVisibleTo(p, user));
   const myPaths = paths.filter(p => p.createdBy === user.id || p.createdBy === 'user-admin');
+
+  const issueTrackCertificate = useCallback((path: LearningPath): TrackCertificate => {
+    const existing = trackCertificates.find(
+      c => c.pathId === path.id && c.userId === user.id,
+    );
+    if (existing) return existing;
+
+    const cert: TrackCertificate = {
+      id: `track-cert-${path.id}-${user.id}`,
+      userId: user.id,
+      pathId: path.id,
+      pathTitle: path.title,
+      userName: displayName(user),
+      stepCount: path.steps.length,
+      issuedAt: new Date().toISOString(),
+    };
+    setTrackCertificates(prev => [...prev, cert]);
+    return cert;
+  }, [trackCertificates, user]);
 
   const createPath = async (dto: CreatePathDto): Promise<LearningPath> => {
     const path = await learningPathApi.createPath({
@@ -115,6 +137,8 @@ export function LearningPathProvider({ children }: { children: ReactNode }) {
       myPaths,
       isLoading,
       canCreate,
+      trackCertificates,
+      issueTrackCertificate,
       createPath,
       publishPath,
       deletePath,

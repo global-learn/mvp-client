@@ -220,3 +220,24 @@
   text-align: center;
   padding: 1rem 0;
 }
+
+.trackCertCard {
+  border-color: color-mix(in srgb, #7c3aed 25%, transparent);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #7c3aed 4%, var(--card)),
+    color-mix(in srgb, #2563eb 3%, var(--card))
+  );
+}
+.trackCertCard:hover {
+  border-color: #7c3aed;
+  box-shadow: 0 2px 12px rgba(124, 58, 237, 0.15);
+}
+.trackCertCard:hover .certOpenIcon {
+  color: #7c3aed;
+}
+
+.trackCertIcon {
+  background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(37,99,235,0.12));
+  color: #7c3aed;
+}

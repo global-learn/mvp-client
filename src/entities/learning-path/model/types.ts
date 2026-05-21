@@ -109,3 +109,14 @@ export const PATH_CREATOR_ROLES: EmployeeRole[] = [
   'division_head',
   'senior_manager',
 ];
+
+// ── Диплом о завершении трека ────────────────────────────────────
+export interface TrackCertificate {
+  id: string;
+  userId: string;
+  pathId: string;
+  pathTitle: string;
+  userName: string;
+  stepCount: number;
+  issuedAt: string;
+}

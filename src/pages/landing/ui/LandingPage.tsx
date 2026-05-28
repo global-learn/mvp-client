@@ -543,6 +543,7 @@ export function LandingPage() {
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="rounded-lg bg-slate-100 text-slate-500 shrink-0 mt-0.5 px-8 sm:px-12 py-14 text-center relative overflow-hidden"
         >
+          <div className="absolute right-0 top-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute left-0 bottom-0 w-60 h-60 bg-white/5 rounded-full blur-2xl pointer-events-none" />
 
           <div className="relative z-10">

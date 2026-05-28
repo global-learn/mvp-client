@@ -1,0 +1,8 @@
+{
+  "name": "[Real] Global Learn Client",
+  "description": "High-end corporate LMS platform landing page for Global Learn (OOO GM Trade).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

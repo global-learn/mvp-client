@@ -12,7 +12,7 @@ export function AppLayout() {
         <LearningPathProvider>
           <div className={styles.layout}>
             <Sidebar />
-            <div className={styles.contentArea}>
+            <div className={`${styles.contentArea} subtle-dot-grid`}>
               <main className={styles.main}>
                 <Outlet />
               </main>

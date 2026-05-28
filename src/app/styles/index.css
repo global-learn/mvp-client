@@ -98,11 +98,11 @@ input, textarea, button, select { font-family: inherit; }
 }
 
 .subtle-dot-grid {
-  background-image: radial-gradient(#e2e8f0 1.2px, transparent 0);
+  background-image: radial-gradient(#e2e8f0 1.5px, transparent 0);
   background-size: 24px 24px;
 }
 
 .subtle-dot-grid-dark {
-  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.2px, transparent 0);
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1.5px, transparent 0);
   background-size: 24px 24px;
 }

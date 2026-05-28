@@ -15,15 +15,8 @@ import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin } from '@entities/user/model/types';
 import styles from './CourseBuilder.module.css';
 
-// Изменения относительно оригинала (Next.js → React):
-//   - убран "use client" (не нужен в Vite)
-//   - import из "@/types/course" → "@entities/course/model/types"
-//   - React.DragEvent → import type { DragEvent } from 'react'
-//   - добавлены useCourses + useNavigate для кнопки "Сохранить"
-
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
-// Локальный тип для состояния билдера — без id, authorId, createdAt
 type BuilderCourse = {
   title: string;
   description: string;

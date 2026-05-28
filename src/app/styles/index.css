@@ -1,3 +1,4 @@
+@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 /* ================================================================
@@ -94,4 +95,9 @@ input, textarea, button, select { font-family: inherit; }
   outline: 2px solid var(--primary);
   outline-offset: 2px;
   border-radius: var(--radius);
+}
+
+.subtle-dot-grid {
+  background-image: radial-gradient(#e2e8f0 1.2px, transparent 0);
+  background-size: 24px 24px;
 }

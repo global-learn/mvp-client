@@ -3,7 +3,12 @@
     "allow": [
       "Bash(npx tsc *)",
       "Bash(npx vite *)",
-      "Bash(not exist *)"
+      "Bash(not exist *)",
+      "Bash(grep -E '\\\\.\\(tsx|ts|js|jsx\\)$')",
+      "Bash(grep -E '\\\\.\\(tsx|ts|css\\)$')",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(npm install *)"
     ]
   }
 }

@@ -19,11 +19,13 @@ import { LoginPage }                    from '@pages/login/ui/LoginPage';
 import { RegisterPage }                from '@pages/register/ui/RegisterPage';
 import { VerifyEmailPage }             from '@pages/verify-email/ui/VerifyEmailPage';
 import { CompleteRegistrationPage }    from '@pages/complete-registration/ui/CompleteRegistrationPage';
+import { LandingPage }                 from '@pages/landing/ui/LandingPage';
 
 export function AppRouter() {
   return (
     <Routes>
       {/* Публичные маршруты (без AppLayout и авторизации) */}
+      <Route path="/"                        element={<LandingPage />} />
       <Route path="/login"                   element={<LoginPage />} />
       <Route path="/register"                element={<RegisterPage />} />
       <Route path="/verify-email"            element={<VerifyEmailPage />} />
@@ -32,7 +34,6 @@ export function AppRouter() {
       {/* Защищённые маршруты */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
-          <Route path="/"                  element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard"         element={<DashboardPage />} />
           <Route path="/courses"           element={<CoursesListPage />} />
           <Route path="/courses/create"    element={<CourseCreatePage />} />

@@ -15,7 +15,11 @@ import {
 import {useAuth} from '@entities/user/model/UserContext';
 
 /* reusable fade-up on scroll */
-function FadeUp({children, delay = 0, className = ''}: {children: React.ReactNode; delay?: number; className?: string}) {
+function FadeUp({children, delay = 0, className = ''}: {
+  children: React.ReactNode;
+  delay?: number;
+  className?: string
+}) {
   return (
     <motion.div
       initial={{opacity: 0, y: 36}}
@@ -66,7 +70,8 @@ export function LandingPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/60">
         <div className="max-w-6xl mx-auto px-8 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-600/30">
+            <div
+              className="w-8 h-8 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-sm shadow-blue-600/30">
               <GraduationCap className="w-4 h-4"/>
             </div>
             <span className="text-[15px] font-bold tracking-tight text-slate-900">Global Learn</span>
@@ -77,53 +82,51 @@ export function LandingPage() {
             <a href="#faq" className="hover:text-slate-900 transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <Link to="/login" className="hidden sm:flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 transition-colors">
+            <Link to="/login"
+                  className="hidden sm:flex items-center gap-2 px-4 py-2 text-[13px] font-medium text-slate-600 hover:text-slate-900 transition-colors">
               <LogIn className="w-3.5 h-3.5"/> Войти
             </Link>
-            <Link to="/login" className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-600/25">
+            <Link to="/login"
+                  className="flex items-center gap-2 px-4 py-2 text-[13px] font-semibold !text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-sm shadow-blue-600/25">
               Начать <ArrowRight className="w-3.5 h-3.5"/>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* ══════════════════════════════════════
-          SECTION 1 — HERO
-      ══════════════════════════════════════ */}
+      {/* ══════════════════════════════════════ SECTION 1 — HERO ══════════════════════════════════════ */}
       <section className="min-h-screen flex items-center justify-center text-center px-8 pt-16">
         <motion.div style={{y: heroY}} className="w-full max-w-4xl mx-auto">
           <motion.div
             initial={{opacity: 0, y: 24}}
             animate={{opacity: 1, y: 0}}
             transition={{duration: 0.7, ease: [0.16, 1, 0.3, 1]}}
+            className="flex flex-col items-center gap-8"
           >
             <h1
-              className="font-extrabold text-slate-900 tracking-tight mb-7 mx-auto"
-              style={{fontSize: 'clamp(52px, 7vw, 88px)', lineHeight: 1.03, letterSpacing: '-0.045em'}}
-            >
+              className="font-extrabold text-slate-900 text-[clamp(52px,7vw,88px)] leading-[1.1] tracking-[-0.045em] mx-auto">
               Обучение команды,{' '}
               <span className="text-blue-600">которое</span>{' '}
               даёт результат
             </h1>
 
-            <p
-              className="text-slate-500 mx-auto mb-12 mt-24 leading-relaxed"
-              style={{fontSize: 'clamp(16px, 1.6vw, 20px)', lineHeight: 1.7}}
-            >
+            <p className="text-slate-500 text-[clamp(16px,1.6vw,20px)] leading-[1.7] max-w-2xl mx-auto">
               Курсы, треки развития, онбординг и контроль успеваемости — полный цикл корпоративного обучения в одной
               системе.
             </p>
 
-            <div className="flex items-center justify-center gap-4 mb-24">
-              <Link to="/login" className="inline-flex items-center gap-2.5 px-8 py-4 bg-blue-600 text-white font-semibold text-[14px] rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <Link to="/login"
+                    className="inline-flex items-center gap-2.5 px-8 py-4 bg-blue-600 !text-white font-semibold text-[14px] rounded-xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20">
                 Войти в систему <ArrowRight className="w-4 h-4"/>
               </Link>
-              <a href="#demo" className="inline-flex items-center gap-2 px-8 py-4 text-[14px] font-medium text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:text-slate-900 rounded-xl transition-all shadow-sm">
+              <a href="#demo"
+                 className="inline-flex items-center gap-2 px-8 py-4 text-[14px] font-medium text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:text-slate-900 rounded-xl transition-all shadow-sm">
                 Посмотреть демо
               </a>
             </div>
 
-            <div className="flex items-center justify-center gap-12 pt-8 border-t border-slate-200/80">
+            <div className="w-full flex items-center justify-center gap-12 pt-8 border-t border-slate-200/80">
               {[
                 {val: '5', label: 'ролей доступа'},
                 {val: 'Авто', label: 'сертификаты'},
@@ -139,20 +142,23 @@ export function LandingPage() {
         </motion.div>
       </section>
 
-      {/* ══════════════════════════════════════
-          SECTION 2 — DEMO CARD
-      ══════════════════════════════════════ */}
+      {/* ══════════════════════════════════════ SECTION 2 — DEMO CARD ══════════════════════════════════════ */}
       <section id="demo" className="min-h-screen flex items-center px-8 py-24">
-        <div className="max-w-6xl mx-auto w-full">
-          <FadeUp className="mb-12 text-center">
-            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-3">Интерфейс платформы</p>
-            <h2 className="font-extrabold text-slate-900 tracking-tight" style={{fontSize: 'clamp(28px, 3vw, 40px)', letterSpacing: '-0.03em'}}>
-              Кабинет сотрудника
-            </h2>
+        <div className="max-w-6xl mx-auto w-full flex flex-col gap-12">
+          <FadeUp className="text-center">
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest">
+                Интерфейс платформы
+              </p>
+              <h2 className="font-extrabold text-slate-900 text-[clamp(28px,3vw,40px)] tracking-[-0.03em]">
+                Кабинет сотрудника
+              </h2>
+            </div>
           </FadeUp>
 
           <FadeUp delay={0.1}>
-            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_8px_48px_rgba(0,0,0,0.08)] overflow-hidden">
+            <div
+              className="bg-white rounded-2xl border border-slate-200/80 shadow-[0_8px_48px_rgba(0,0,0,0.08)] overflow-hidden">
               {/* Browser chrome */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/60">
                 <div className="flex items-center gap-4">
@@ -161,23 +167,27 @@ export function LandingPage() {
                     <span className="w-3 h-3 rounded-full bg-slate-200"/>
                     <span className="w-3 h-3 rounded-full bg-slate-200"/>
                   </div>
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-slate-200/60 shadow-xs">
-                    <span className="w-3 h-3 rounded-sm bg-blue-600 flex items-center justify-center shrink-0">
-                      <span className="text-white" style={{fontSize: '6px', fontWeight: 900}}>G</span>
-                    </span>
+                  <div
+                    className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border border-slate-200/60 shadow-xs">
+              <span className="w-3 h-3 rounded-sm bg-blue-600 flex items-center justify-center shrink-0">
+                <span className="text-white text-[6px] font-black">G</span>
+              </span>
                     <span className="text-[11px] text-slate-400 font-medium">globallearn.app / dashboard</span>
                   </div>
                 </div>
                 <div className="flex items-center bg-white p-1 rounded-xl border border-slate-100 shadow-xs gap-0.5">
                   {(['courses', 'track', 'stats'] as const).map((tab) => (
-                    <button key={tab} onClick={() => setActiveTab(tab)} className="relative px-3 py-1.5 text-[12px] rounded-lg cursor-pointer select-none">
-                      <span className={`relative z-10 font-medium ${activeTab === tab ? 'text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
-                        {tab === 'courses' && 'Мои курсы'}
-                        {tab === 'track' && 'Трек'}
-                        {tab === 'stats' && 'Статистика'}
-                      </span>
+                    <button key={tab} onClick={() => setActiveTab(tab)}
+                            className="relative px-3 py-1.5 text-[12px] rounded-lg cursor-pointer select-none">
+                <span
+                  className={`relative z-10 font-medium ${activeTab === tab ? 'text-slate-900' : 'text-slate-400 hover:text-slate-700'}`}>
+                  {tab === 'courses' && 'Мои курсы'}
+                  {tab === 'track' && 'Трек'}
+                  {tab === 'stats' && 'Статистика'}
+                </span>
                       {activeTab === tab && (
-                        <motion.div layoutId="demoTab" className="absolute inset-0 bg-slate-100 rounded-lg z-0" transition={{type: 'spring', stiffness: 500, damping: 35}}/>
+                        <motion.div layoutId="demoTab" className="absolute inset-0 bg-slate-100 rounded-lg z-0"
+                                    transition={{type: 'spring', stiffness: 500, damping: 35}}/>
                       )}
                     </button>
                   ))}
@@ -187,18 +197,22 @@ export function LandingPage() {
               <div className="p-8 min-h-[300px] flex flex-col justify-between">
                 <AnimatePresence mode="wait">
                   {activeTab === 'courses' && (
-                    <motion.div key="c" initial={{opacity: 0, y: 4}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -4}} transition={{duration: 0.16}}>
+                    <motion.div key="c" initial={{opacity: 0, y: 4}} animate={{opacity: 1, y: 0}}
+                                exit={{opacity: 0, y: -4}} transition={{duration: 0.16}}>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="md:col-span-2 p-5 border border-blue-100 bg-blue-50/40 rounded-xl">
                           <div className="flex items-start justify-between gap-4 mb-4">
                             <div>
-                              <p className="text-[11px] text-blue-600 font-semibold uppercase tracking-widest mb-1">В процессе</p>
-                              <h4 className="text-[15px] font-semibold text-slate-900 leading-snug">Корпоративные стандарты и ценности</h4>
+                              <p className="text-[11px] text-blue-600 font-semibold uppercase tracking-widest mb-1">В
+                                процессе</p>
+                              <h4 className="text-[15px] font-semibold text-slate-900 leading-snug">Корпоративные
+                                стандарты и ценности</h4>
                             </div>
-                            <span className="text-[11px] text-slate-400 font-medium shrink-0 mt-0.5 bg-white px-2 py-1 rounded-lg border border-slate-100">Модуль 3 / 4</span>
+                            <span
+                              className="text-[11px] text-slate-400 font-medium shrink-0 mt-0.5 bg-white px-2 py-1 rounded-lg border border-slate-100">Модуль 3 / 4</span>
                           </div>
                           <div className="w-full bg-blue-100 h-1.5 rounded-full mb-2">
-                            <div className="bg-blue-600 h-full rounded-full" style={{width: '75%'}}/>
+                            <div className="bg-blue-600 h-full rounded-full w-[75%]"/>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-[11px] text-slate-400">Прогресс</span>
@@ -207,7 +221,8 @@ export function LandingPage() {
                         </div>
                         <div className="flex flex-col gap-3">
                           <div className="flex items-center gap-3 p-4 border border-slate-100 rounded-xl bg-white">
-                            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                            <div
+                              className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
                               <Check className="w-3.5 h-3.5 text-slate-500"/>
                             </div>
                             <div>
@@ -216,11 +231,13 @@ export function LandingPage() {
                             </div>
                           </div>
                           <div className="flex items-center gap-3 p-4 border border-dashed border-slate-100 rounded-xl">
-                            <div className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center shrink-0">
+                            <div
+                              className="w-7 h-7 rounded-full border border-slate-200 flex items-center justify-center shrink-0">
                               <Play className="w-3 h-3 text-slate-300"/>
                             </div>
                             <div>
-                              <p className="text-[12px] font-medium text-slate-300 leading-snug">Управление проектами</p>
+                              <p className="text-[12px] font-medium text-slate-300 leading-snug">Управление
+                                проектами</p>
                               <p className="text-[10px] text-slate-200 mt-0.5">Не начат</p>
                             </div>
                           </div>
@@ -229,13 +246,16 @@ export function LandingPage() {
                     </motion.div>
                   )}
                   {activeTab === 'track' && (
-                    <motion.div key="t" initial={{opacity: 0, y: 4}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -4}} transition={{duration: 0.16}}>
+                    <motion.div key="t" initial={{opacity: 0, y: 4}} animate={{opacity: 1, y: 0}}
+                                exit={{opacity: 0, y: -4}} transition={{duration: 0.16}}>
                       <div className="flex items-center justify-between mb-6">
                         <div>
-                          <p className="text-[11px] text-slate-400 font-medium uppercase tracking-widest mb-1">Трек обучения</p>
+                          <p className="text-[11px] text-slate-400 font-medium uppercase tracking-widest mb-1">Трек
+                            обучения</p>
                           <h4 className="text-[16px] font-semibold text-slate-900">Развитие менеджера</h4>
                         </div>
-                        <p className="text-[22px] font-bold text-slate-900 leading-none">2 <span className="text-[14px] text-slate-300 font-normal">/ 4</span></p>
+                        <p className="text-[22px] font-bold text-slate-900 leading-none">2 <span
+                          className="text-[14px] text-slate-300 font-normal">/ 4</span></p>
                       </div>
                       <div className="space-y-2.5">
                         {[
@@ -244,19 +264,24 @@ export function LandingPage() {
                           {t: 'Аналитика и KPI', s: 'active'},
                           {t: 'Стратегическое мышление', s: 'locked'},
                         ].map((step, i) => (
-                          <div key={i} className={`flex items-center gap-4 px-4 py-3 rounded-xl border ${step.s === 'active' ? 'border-blue-100 bg-blue-50/50' : step.s === 'done' ? 'border-slate-100 bg-white' : 'border-dashed border-slate-100'}`}>
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border shrink-0 ${step.s === 'done' ? 'bg-slate-900 text-white border-slate-900' : step.s === 'active' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-300 border-slate-200'}`}>
+                          <div key={i}
+                               className={`flex items-center gap-4 px-4 py-3 rounded-xl border ${step.s === 'active' ? 'border-blue-100 bg-blue-50/50' : step.s === 'done' ? 'border-slate-100 bg-white' : 'border-dashed border-slate-100'}`}>
+                            <div
+                              className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border shrink-0 ${step.s === 'done' ? 'bg-slate-900 text-white border-slate-900' : step.s === 'active' ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-300 border-slate-200'}`}>
                               {step.s === 'done' ? '✓' : i + 1}
                             </div>
-                            <span className={`text-[13.5px] flex-1 ${step.s === 'locked' ? 'text-slate-300' : step.s === 'active' ? 'text-slate-900 font-medium' : 'text-slate-500'}`}>{step.t}</span>
-                            {step.s === 'active' && <span className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest">сейчас</span>}
+                            <span
+                              className={`text-[13.5px] flex-1 ${step.s === 'locked' ? 'text-slate-300' : step.s === 'active' ? 'text-slate-900 font-medium' : 'text-slate-500'}`}>{step.t}</span>
+                            {step.s === 'active' && <span
+                              className="text-[10px] font-semibold text-blue-600 uppercase tracking-widest">сейчас</span>}
                           </div>
                         ))}
                       </div>
                     </motion.div>
                   )}
                   {activeTab === 'stats' && (
-                    <motion.div key="s" initial={{opacity: 0, y: 4}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: -4}} transition={{duration: 0.16}}>
+                    <motion.div key="s" initial={{opacity: 0, y: 4}} animate={{opacity: 1, y: 0}}
+                                exit={{opacity: 0, y: -4}} transition={{duration: 0.16}}>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
                         {[
                           {l: 'Завершено', v: '12', sub: 'курсов'},
@@ -266,7 +291,8 @@ export function LandingPage() {
                         ].map((s, i) => (
                           <div key={i} className="p-4 border border-slate-100 rounded-xl bg-white">
                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide mb-2">{s.l}</p>
-                            <p className="text-[26px] font-extrabold text-slate-900 leading-none tracking-tight">{s.v}</p>
+                            <p
+                              className="text-[26px] font-extrabold text-slate-900 leading-none tracking-tight">{s.v}</p>
                             <p className="text-[11px] text-slate-300 mt-1">{s.sub}</p>
                           </div>
                         ))}
@@ -274,7 +300,8 @@ export function LandingPage() {
                       <div className="flex items-end gap-1.5 h-14 p-4 border border-slate-100 rounded-xl bg-white">
                         {[30, 50, 42, 68, 80, 92, 75, 100].map((v, i) => (
                           <div key={i} className="flex-1 bg-slate-100 rounded overflow-hidden h-full relative">
-                            <div style={{height: `${v}%`}} className="absolute bottom-0 inset-x-0 bg-blue-600/25 rounded"/>
+                            <div className="absolute bottom-0 inset-x-0 bg-blue-600/25 rounded"
+                                 style={{height: `${v}%`}}/>
                           </div>
                         ))}
                       </div>
@@ -282,11 +309,12 @@ export function LandingPage() {
                   )}
                 </AnimatePresence>
                 <div className="flex items-center justify-between pt-5 mt-6 border-t border-slate-50">
-                  <span className="flex items-center gap-2 text-[11px] text-slate-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/>
-                    Синхронизировано
-                  </span>
-                  <Link to="/login" className="flex items-center gap-1 text-[11.5px] font-medium text-slate-400 hover:text-blue-600 transition-colors">
+            <span className="flex items-center gap-2 text-[11px] text-slate-300">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"/>
+              Синхронизировано
+            </span>
+                  <Link to="/login"
+                        className="flex items-center gap-1 text-[11.5px] font-medium text-slate-400 hover:text-blue-600 transition-colors">
                     Открыть в системе <ChevronRight className="w-3.5 h-3.5"/>
                   </Link>
                 </div>
@@ -303,20 +331,38 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto w-full">
           <FadeUp className="mb-16">
             <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-4">Возможности</p>
-            <h2 className="font-extrabold text-slate-900 tracking-tight" style={{fontSize: 'clamp(32px, 3.5vw, 48px)', letterSpacing: '-0.035em'}}>
+            <h2 className="font-extrabold text-slate-900 tracking-tight"
+                style={{fontSize: 'clamp(32px, 3.5vw, 48px)', letterSpacing: '-0.035em'}}>
               Что умеет платформа
             </h2>
           </FadeUp>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              {num: '01', title: 'Курсы', desc: 'Модули, уроки в Markdown, тесты с порогом прохождения. Автоматические сертификаты.'},
-              {num: '02', title: 'Треки', desc: 'Упорядоченные программы развития. Каждый следующий курс — после завершения предыдущего.'},
-              {num: '03', title: 'Онбординг', desc: 'Шаги адаптации: задачи, документы, встречи, курсы. Встроенный чат с куратором.'},
-              {num: '04', title: 'Контроль', desc: 'Статистика по отделам и сотрудникам. Просмотр по курсу или по человеку.'},
+              {
+                num: '01',
+                title: 'Курсы',
+                desc: 'Модули, уроки в Markdown, тесты с порогом прохождения. Автоматические сертификаты.'
+              },
+              {
+                num: '02',
+                title: 'Треки',
+                desc: 'Упорядоченные программы развития. Каждый следующий курс — после завершения предыдущего.'
+              },
+              {
+                num: '03',
+                title: 'Онбординг',
+                desc: 'Шаги адаптации: задачи, документы, встречи, курсы. Встроенный чат с куратором.'
+              },
+              {
+                num: '04',
+                title: 'Контроль',
+                desc: 'Статистика по отделам и сотрудникам. Просмотр по курсу или по человеку.'
+              },
             ].map((f, i) => (
               <FadeUp key={i} delay={i * 0.08}>
-                <div className="p-8 border border-slate-200 rounded-2xl bg-white hover:border-blue-200 hover:shadow-md transition-all duration-300 h-full">
+                <div
+                  className="p-8 border border-slate-200 rounded-2xl bg-white hover:border-blue-200 hover:shadow-md transition-all duration-300 h-full">
                   <p className="text-[11px] font-bold text-slate-200 tracking-widest mb-5 uppercase">{f.num}</p>
                   <h4 className="text-[17px] font-semibold text-slate-900 mb-3">{f.title}</h4>
                   <p className="text-[13.5px] text-slate-400 leading-relaxed">{f.desc}</p>
@@ -334,7 +380,8 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
           <FadeUp className="lg:col-span-4">
             <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-4">Роли и права</p>
-            <h2 className="font-extrabold text-slate-900 tracking-tight leading-tight mb-5" style={{fontSize: 'clamp(32px, 3.5vw, 48px)', letterSpacing: '-0.035em'}}>
+            <h2 className="font-extrabold text-slate-900 tracking-tight leading-tight mb-5"
+                style={{fontSize: 'clamp(32px, 3.5vw, 48px)', letterSpacing: '-0.035em'}}>
               Каждый видит только своё
             </h2>
             <p className="text-[16px] text-slate-400 leading-relaxed">
@@ -344,8 +391,16 @@ export function LandingPage() {
 
           <div className="lg:col-span-8 divide-y divide-slate-100">
             {[
-              {role: 'Администратор', desc: 'Полный доступ: курсы, клиенты, статистика, компания', badge: 'Полный доступ'},
-              {role: 'Руководитель департамента', desc: 'Создаёт курсы, видит статистику своего департамента', badge: null},
+              {
+                role: 'Администратор',
+                desc: 'Полный доступ: курсы, клиенты, статистика, компания',
+                badge: 'Полный доступ'
+              },
+              {
+                role: 'Руководитель департамента',
+                desc: 'Создаёт курсы, видит статистику своего департамента',
+                badge: null
+              },
               {role: 'Руководитель отдела', desc: 'Управляет обучением внутри своего отдела', badge: null},
               {role: 'Старший менеджер', desc: 'Назначает курсы, отслеживает прогресс подчинённых', badge: null},
               {role: 'Клиент', desc: 'Видит только клиентские курсы — по инвайту', badge: 'Внешний'},
@@ -353,13 +408,15 @@ export function LandingPage() {
               <FadeUp key={i} delay={i * 0.06}>
                 <div className="flex items-center justify-between py-6 gap-8">
                   <div className="flex items-center gap-5">
-                    <span className="text-[13px] font-bold text-slate-200 tabular-nums w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                    <span
+                      className="text-[13px] font-bold text-slate-200 tabular-nums w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
                     <div>
                       <p className="text-[15px] font-semibold text-slate-800">{r.role}</p>
                       <p className="text-[13px] text-slate-400 mt-0.5">{r.desc}</p>
                     </div>
                   </div>
-                  {r.badge && <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg shrink-0">{r.badge}</span>}
+                  {r.badge && <span
+                    className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg shrink-0">{r.badge}</span>}
                 </div>
               </FadeUp>
             ))}
@@ -374,27 +431,44 @@ export function LandingPage() {
         <div className="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-16">
           <FadeUp className="lg:col-span-4">
             <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-widest mb-4">FAQ</p>
-            <h2 className="font-extrabold text-slate-900 tracking-tight" style={{fontSize: 'clamp(32px, 3.5vw, 48px)', letterSpacing: '-0.035em'}}>
+            <h2 className="font-extrabold text-slate-900 tracking-tight"
+                style={{fontSize: 'clamp(32px, 3.5vw, 48px)', letterSpacing: '-0.035em'}}>
               Частые вопросы
             </h2>
           </FadeUp>
 
           <div className="lg:col-span-8 divide-y divide-slate-100">
             {[
-              {q: 'Как получить доступ?', a: 'Администратор создаёт аккаунт и отправляет данные на корпоративный email. Клиенты — по инвайт-ссылке от менеджера.'},
-              {q: 'Как работают треки обучения?', a: 'Трек — последовательность курсов. Каждый следующий открывается только после завершения предыдущего. По завершении трека выдаётся диплом.'},
-              {q: 'Как выдаются сертификаты и дипломы?', a: 'Автоматически при 100% прохождении курса. Диплом за трек — после всех курсов. Всё доступно в профиле.'},
-              {q: 'Что видит руководитель в контроле?', a: 'Зависит от роли. Администратор — всех. Руководитель департамента — свой департамент. Руководитель отдела — свой отдел.'},
+              {
+                q: 'Как получить доступ?',
+                a: 'Администратор создаёт аккаунт и отправляет данные на корпоративный email. Клиенты — по инвайт-ссылке от менеджера.'
+              },
+              {
+                q: 'Как работают треки обучения?',
+                a: 'Трек — последовательность курсов. Каждый следующий открывается только после завершения предыдущего. По завершении трека выдаётся диплом.'
+              },
+              {
+                q: 'Как выдаются сертификаты и дипломы?',
+                a: 'Автоматически при 100% прохождении курса. Диплом за трек — после всех курсов. Всё доступно в профиле.'
+              },
+              {
+                q: 'Что видит руководитель в контроле?',
+                a: 'Зависит от роли. Администратор — всех. Руководитель департамента — свой департамент. Руководитель отдела — свой отдел.'
+              },
             ].map((item, i) => {
               const isOpen = openFaq === i;
               return (
                 <FadeUp key={i} delay={i * 0.07}>
                   <div>
-                    <button onClick={() => setOpenFaq(isOpen ? null : i)} className="w-full py-6 text-left flex items-start justify-between gap-8 cursor-pointer select-none group">
-                      <span className="text-[15.5px] font-medium text-slate-800 group-hover:text-slate-900 transition-colors leading-snug">{item.q}</span>
-                      <ChevronDown className={`w-4 h-4 text-slate-300 transition-transform duration-200 shrink-0 mt-1 ${isOpen ? 'rotate-180 text-blue-600' : ''}`}/>
+                    <button onClick={() => setOpenFaq(isOpen ? null : i)}
+                            className="w-full py-6 text-left flex items-start justify-between gap-8 cursor-pointer select-none group">
+                      <span
+                        className="text-[15.5px] font-medium text-slate-800 group-hover:text-slate-900 transition-colors leading-snug">{item.q}</span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-300 transition-transform duration-200 shrink-0 mt-1 ${isOpen ? 'rotate-180 text-blue-600' : ''}`}/>
                     </button>
-                    <div className={`overflow-hidden transition-all duration-250 ${isOpen ? 'max-h-60 pb-6' : 'max-h-0'}`}>
+                    <div
+                      className={`overflow-hidden transition-all duration-250 ${isOpen ? 'max-h-60 pb-6' : 'max-h-0'}`}>
                       <p className="text-[14.5px] text-slate-400 leading-relaxed">{item.a}</p>
                     </div>
                   </div>
@@ -408,7 +482,8 @@ export function LandingPage() {
       {/* ══════════════════════════════════════
           SECTION 6 — CTA (ХАОС)
       ══════════════════════════════════════ */}
-      <section className="min-h-screen relative overflow-hidden bg-slate-950 subtle-dot-grid-dark flex items-center justify-center">
+      <section
+        className="min-h-screen relative overflow-hidden bg-slate-950 subtle-dot-grid-dark flex items-center justify-center">
 
         {/* ── разбросанные элементы ── */}
 
@@ -426,7 +501,8 @@ export function LandingPage() {
             </div>
             <span className="text-[10px] font-semibold text-white/40 uppercase tracking-wide">Курс</span>
           </div>
-          <p className="text-[12px] font-semibold text-white/60 leading-snug mb-3">Корпоративные стандарты и ценности</p>
+          <p className="text-[12px] font-semibold text-white/60 leading-snug mb-3">Корпоративные стандарты и
+            ценности</p>
           <div className="w-full bg-white/10 h-1 rounded-full">
             <div className="bg-blue-500/60 h-full rounded-full w-[72%]"/>
           </div>
@@ -485,7 +561,8 @@ export function LandingPage() {
           <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mb-2.5">Онбординг · Шаг 2</p>
           {['Читать регламент', 'Встреча с ментором', 'Пройти тест'].map((t, i) => (
             <div key={i} className="flex items-center gap-2 mb-1.5">
-              <div className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${i < 2 ? 'border-white/20 bg-white/10' : 'border-white/10'}`}>
+              <div
+                className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${i < 2 ? 'border-white/20 bg-white/10' : 'border-white/10'}`}>
                 {i < 2 && <Check className="w-2 h-2 text-white/40"/>}
               </div>
               <span className={`text-[11px] ${i < 2 ? 'text-white/35 line-through' : 'text-white/55'}`}>{t}</span>
@@ -503,46 +580,39 @@ export function LandingPage() {
         >
           {['Введение', 'Практика', 'Итог'].map((s, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div className={`px-2.5 py-1 rounded-lg border text-[10px] font-medium ${i === 0 ? 'border-blue-500/30 text-blue-400/60 bg-blue-500/10' : 'border-white/10 text-white/25'}`}>{s}</div>
+              <div
+                className={`px-2.5 py-1 rounded-lg border text-[10px] font-medium ${i === 0 ? 'border-blue-500/30 text-blue-400/60 bg-blue-500/10' : 'border-white/10 text-white/25'}`}>{s}</div>
               {i < 2 && <div className="w-4 h-px bg-white/10"/>}
             </div>
           ))}
         </motion.div>
 
-        {/* Прогресс-бар — снизу по центру */}
-        <motion.div
-          initial={{opacity: 0, y: 20}}
-          whileInView={{opacity: 1, y: 0}}
-          viewport={{once: false}}
-          transition={{duration: 0.8, delay: 0.25, ease: [0.16, 1, 0.3, 1]}}
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 w-48"
-        >
-          <div className="flex justify-between text-[9px] text-white/25 mb-1.5">
-            <span>Прогресс команды</span><span>89%</span>
-          </div>
-          <div className="w-full bg-white/10 h-1 rounded-full">
-            <div className="bg-blue-500/50 h-full rounded-full w-[89%]"/>
-          </div>
-        </motion.div>
-
         {/* ── основной CTA текст ── */}
         <FadeUp className="relative z-10 text-center px-8 max-w-3xl">
-          <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-widest mb-8">Готовы начать?</p>
-          <h2
-            className="font-extrabold text-white tracking-tight mb-7"
-            style={{fontSize: 'clamp(42px, 5.5vw, 68px)', lineHeight: 1.07, letterSpacing: '-0.04em'}}
-          >
-            Начните обучать команду сегодня
-          </h2>
-          <p className="text-[16px] text-slate-500 mb-12 max-w-sm mx-auto leading-relaxed">
-            Войдите с корпоративным аккаунтом и откройте полный доступ.
-          </p>
-          <Link
-            to="/login"
-            className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 text-white font-semibold text-[15px] rounded-xl hover:bg-blue-500 transition-all duration-150 shadow-2xl shadow-blue-600/30"
-          >
-            Войти в систему <ArrowRight className="w-4 h-4"/>
-          </Link>
+          <div className="flex flex-col items-center gap-6">
+
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+              Готовы начать?
+            </p>
+
+            <h2 className="font-extrabold text-white text-[clamp(42px,5.5vw,68px)] leading-[1.1] tracking-[-0.04em]">
+              Начните сегодня!
+            </h2>
+
+            <p className="text-[16px] text-slate-400 max-w-md mx-auto leading-relaxed">
+              Войдите с корпоративным аккаунтом и откройте полный доступ.
+            </p>
+
+            <div className="pt-4">
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 !text-white font-semibold text-[15px] rounded-xl hover:bg-blue-500 transition-all duration-150 shadow-2xl shadow-blue-600/30"
+              >
+                Войти в систему <ArrowRight className="w-4 h-4"/>
+              </Link>
+            </div>
+
+          </div>
         </FadeUp>
       </section>
 

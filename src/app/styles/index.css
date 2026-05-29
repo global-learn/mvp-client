@@ -1,8 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
 /* ================================================================
-   Design Tokens
+   Design Tokens (Ваши оригинальные токены, ничего не сломают)
    ================================================================ */
 :root {
   --background:   #f2f2f7;
@@ -63,12 +63,14 @@ html { scroll-behavior: smooth; }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Принудительно ставим Geist главным шрифтом для всего сайта */
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-size: 15px;
   line-height: 1.6;
   background: var(--background);
   color: var(--foreground);
   -webkit-font-smoothing: antialiased;
+  /* Включаем крутые фичи шрифта Geist (красивые цифры и буквы) */
   font-feature-settings: 'cv11', 'ss01';
 }
 

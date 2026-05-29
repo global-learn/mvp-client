@@ -56,7 +56,6 @@ export function LandingPage() {
   return (
     <div
       className="bg-[#f8fafc] text-slate-900 antialiased overflow-x-hidden subtle-dot-grid"
-      style={{fontFamily: "'Inter', system-ui, -apple-system, sans-serif"}}
     >
       {/* ── CURSOR SPOTLIGHT ── */}
       <div

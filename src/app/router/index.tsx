@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '@app/layouts/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardPage }        from '@pages/dashboard/ui/DashboardPage';
@@ -12,9 +12,6 @@ import { ControlPage }          from '@pages/control/ui/ControlPage';
 import { ChatPage }             from '@pages/chat/ui/ChatPage';
 import { OnboardingPage }           from '@pages/onboarding/ui/OnboardingPage';
 import { OnboardingManagePage }     from '@pages/onboarding-manage/ui/OnboardingManagePage';
-import { LearningPathsPage }        from '@pages/learning-paths/ui/LearningPathsPage';
-import { LearningPathDetailPage }   from '@pages/learning-path-detail/ui/LearningPathDetailPage';
-import { LearningPathsManagePage }  from '@pages/learning-paths-manage/ui/LearningPathsManagePage';
 import { LoginPage }                    from '@pages/login/ui/LoginPage';
 import { RegisterPage }                from '@pages/register/ui/RegisterPage';
 import { VerifyEmailPage }             from '@pages/verify-email/ui/VerifyEmailPage';
@@ -45,9 +42,6 @@ export function AppRouter() {
           <Route path="/chat"              element={<ChatPage />} />
           <Route path="/onboarding"               element={<OnboardingPage />} />
           <Route path="/onboarding/manage"        element={<OnboardingManagePage />} />
-          <Route path="/learning-paths"           element={<LearningPathsPage />} />
-          <Route path="/learning-paths/manage"    element={<LearningPathsManagePage />} />
-          <Route path="/learning-paths/:id"       element={<LearningPathDetailPage />} />
         </Route>
       </Route>
     </Routes>

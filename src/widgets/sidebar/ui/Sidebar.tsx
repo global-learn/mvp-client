@@ -42,7 +42,6 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Управление',
     items: [
       { to: '/onboarding/manage',     label: 'Онбординг',  icon: ClipboardList, visible: canControl },
-      { to: '/learning-paths/manage', label: 'Треки',       icon: MapPin,        visible: canControl },
       { to: '/clients',               label: 'Клиенты',     icon: Users,         visible: canManageClients },
       { to: '/company',               label: 'Компания',    icon: Building2,     visible: canCreateCourse },
       { to: '/control',               label: 'Контроль',    icon: BarChart2,     visible: canControl },

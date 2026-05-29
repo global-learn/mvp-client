@@ -7,7 +7,6 @@ import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canCreateCourse, canManageClients, displayName, type User } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
-import { useLearningPaths } from '@entities/learning-path/model/LearningPathContext';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
 import styles from './Sidebar.module.css';
 
@@ -34,7 +33,6 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Обучение',
     items: [
-      { to: '/learning-paths', label: 'Learning Paths', icon: MapPin,        visible: u => u.type === 'EMPLOYEE' },
       { to: '/onboarding',     label: 'Мой онбординг',  icon: ClipboardList, visible: u => u.type === 'EMPLOYEE' },
     ],
   },
@@ -69,7 +67,6 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { courses } = useCourses();
   const { myAssignments, managedAssignments } = useOnboarding();
-  const { visiblePaths } = useLearningPaths();
 
   const userIsAdmin = isAdmin(user);
   const pendingCount = userIsAdmin ? courses.filter(c => c.status === 'pending').length : 0;
@@ -107,7 +104,6 @@ export function Sidebar() {
                   item.to === '/courses' && pendingCount > 0 ? pendingCount
                   : item.to === '/onboarding' && myOnboardingBadge > 0 ? myOnboardingBadge
                   : item.to === '/onboarding/manage' && managedBadge > 0 ? managedBadge
-                  : item.to === '/learning-paths' && visiblePaths.length > 0 ? visiblePaths.length
                   : 0;
                 return (
                   <Link

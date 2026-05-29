@@ -4,12 +4,9 @@ import { useUser } from '@entities/user/model/UserContext';
 import { displayName, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import type { Certificate } from '@entities/course/model/types';
-import { useLearningPaths } from '@entities/learning-path/model/LearningPathContext';
-import type { TrackCertificate } from '@entities/learning-path/model/types';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
 import { AvatarPicker } from '@widgets/avatar-picker/ui/AvatarPicker';
 import { CertificateModal } from '@features/certificate/ui/CertificateModal';
-import { TrackCertificateModal } from '@features/track-completion/ui/TrackCertificateModal';
 import styles from './Profile.module.css';
 
 function formatDate(iso: string): string {
@@ -23,12 +20,8 @@ function formatDate(iso: string): string {
 export function ProfilePage() {
   const { user } = useUser();
   const { enrollments, certificates } = useCourses();
-  const { trackCertificates } = useLearningPaths();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [openCert, setOpenCert] = useState<Certificate | null>(null);
-  const [openTrackCert, setOpenTrackCert] = useState<TrackCertificate | null>(null);
-
-  const myTrackCerts = trackCertificates.filter(c => c.userId === user.id);
 
   const completed = enrollments.filter(e => e.status === 'completed').length;
   const inProgress = enrollments.filter(e => e.status === 'in_progress').length;
@@ -85,11 +78,6 @@ export function ProfilePage() {
             <Award size={20} style={{ color: '#9f7aea' }} />
             <span className={styles.statValue}>{certificates.length}</span>
             <span className={styles.statLabel}>Сертификатов</span>
-          </div>
-          <div className={styles.statItem}>
-            <GraduationCap size={20} style={{ color: '#7c3aed' }} />
-            <span className={styles.statValue}>{myTrackCerts.length}</span>
-            <span className={styles.statLabel}>Дипломов</span>
           </div>
         </div>
       </div>
@@ -169,46 +157,11 @@ export function ProfilePage() {
         )}
       </div>
 
-      {/* Дипломы о треках */}
-      {myTrackCerts.length > 0 && (
-        <div className={styles.card}>
-          <h3 className={styles.sectionTitle}>Дипломы о треках</h3>
-          <div className={styles.certsGrid}>
-            {myTrackCerts.map(cert => (
-              <button
-                key={cert.id}
-                className={`${styles.certCard} ${styles.trackCertCard}`}
-                onClick={() => setOpenTrackCert(cert)}
-                title="Открыть диплом"
-              >
-                <div className={`${styles.certIcon} ${styles.trackCertIcon}`}>
-                  <GraduationCap size={18} />
-                </div>
-                <div className={styles.certInfo}>
-                  <div className={styles.certTitle}>{cert.pathTitle}</div>
-                  <div className={styles.certDate}>
-                    {cert.stepCount} курсов · Выдан {new Date(cert.issuedAt).toLocaleDateString('ru-RU', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })}
-                  </div>
-                </div>
-                <ExternalLink size={14} className={styles.certOpenIcon} />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Модалка выбора аватара */}
       {pickerOpen && <AvatarPicker onClose={() => setPickerOpen(false)} />}
 
       {/* Просмотр сертификата курса */}
       {openCert && <CertificateModal certificate={openCert} onClose={() => setOpenCert(null)} />}
-
-      {/* Просмотр диплома трека */}
-      {openTrackCert && (
-        <TrackCertificateModal certificate={openTrackCert} onClose={() => setOpenTrackCert(null)} />
-      )}
     </div>
   );
 }

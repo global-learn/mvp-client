@@ -1,167 +1,156 @@
-import { useState } from 'react';
-import { BookOpen, CheckCircle2, Clock, Edit2, Award, ExternalLink, GraduationCap } from 'lucide-react';
-import { useUser } from '@entities/user/model/UserContext';
-import { displayName, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
-import { useCourses } from '@entities/course/model/CoursesContext';
-import type { Certificate } from '@entities/course/model/types';
-import { UserAvatar } from '@entities/user/ui/UserAvatar';
-import { AvatarPicker } from '@widgets/avatar-picker/ui/AvatarPicker';
-import { CertificateModal } from '@features/certificate/ui/CertificateModal';
+import {useState} from 'react';
+import {Award, ExternalLink, Edit2} from 'lucide-react';
+import {useUser} from '@entities/user/model/UserContext';
+import {displayName, ROLE_LABELS, type EmployeeRole} from '@entities/user/model/types';
+import {useCourses} from '@entities/course/model/CoursesContext';
+import type {Certificate} from '@entities/course/model/types';
+import {UserAvatar} from '@entities/user/ui/UserAvatar';
+import {AvatarPicker} from '@widgets/avatar-picker/ui/AvatarPicker';
+import {CertificateModal} from '@features/certificate/ui/CertificateModal';
 import styles from './Profile.module.css';
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+  return new Date(iso).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'});
+}
+
+function tenure(iso: string): string {
+  const months = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+  const y = Math.floor(months / 12);
+  const m = months % 12;
+  if (y === 0) return `${m} мес.`;
+  if (m === 0) return `${y} ${y === 1 ? 'год' : y < 5 ? 'года' : 'лет'}`;
+  return `${y} ${y === 1 ? 'год' : y < 5 ? 'года' : 'лет'} ${m} мес.`;
 }
 
 export function ProfilePage() {
-  const { user } = useUser();
-  const { enrollments, certificates } = useCourses();
+  const {user} = useUser();
+  const {enrollments, certificates} = useCourses();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [openCert, setOpenCert] = useState<Certificate | null>(null);
 
-  const completed = enrollments.filter(e => e.status === 'completed').length;
-  const inProgress = enrollments.filter(e => e.status === 'in_progress').length;
-  const totalEnrolled = enrollments.length;
+  const completed   = enrollments.filter(e => e.status === 'completed').length;
+  const inProgress  = enrollments.filter(e => e.status === 'in_progress').length;
+  const total       = enrollments.length;
 
-  const emp = user.employee;
-  const roleLabel = emp ? (ROLE_LABELS[emp.role.name as EmployeeRole] ?? emp.role.name) : user.type.toLowerCase();
+  const emp       = user.employee;
+  const roleLabel = emp ? (ROLE_LABELS[emp.role.name as EmployeeRole] ?? emp.role.name) : null;
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.pageTitle}>Профиль</h1>
 
-      {/* Основная карточка */}
-      <div className={styles.card}>
-        {/* Аватар + имя */}
-        <div className={styles.avatarSection}>
-          <div className={styles.avatarWrapper}>
-            <UserAvatar user={user} size={80} />
-            <button
-              className={styles.editAvatarBtn}
-              onClick={() => setPickerOpen(true)}
-              title="Изменить аватар"
-            >
-              <Edit2 size={14} />
-            </button>
-          </div>
-          <div>
-            <h2 className={styles.fullname}>{displayName(user)}</h2>
-            <p className={styles.email}>{user.email}</p>
-            <span className={styles.typeBadge}>
-              {user.type === 'EMPLOYEE' ? 'Сотрудник' : 'Клиент'}
-            </span>
-          </div>
+      {/* ── Sidebar ─────────────────────────────────────────── */}
+      <aside className={styles.sidebar}>
+
+        {/* Avatar */}
+        <div className={styles.avatarWrap}>
+          <UserAvatar user={user} size={88}/>
+          <button
+            className={styles.editBtn}
+            onClick={() => setPickerOpen(true)}
+            title="Изменить аватар"
+          >
+            <Edit2 size={12}/>
+          </button>
         </div>
 
-        {/* Статистика курсов */}
-        <div className={styles.stats}>
-          <div className={styles.statItem}>
-            <CheckCircle2 size={20} className={styles.statIconGreen} />
-            <span className={styles.statValue}>{completed}</span>
-            <span className={styles.statLabel}>Пройдено</span>
-          </div>
-          <div className={styles.statItem}>
-            <BookOpen size={20} className={styles.statIconBlue} />
-            <span className={styles.statValue}>{inProgress}</span>
-            <span className={styles.statLabel}>В процессе</span>
-          </div>
-          <div className={styles.statItem}>
-            <Clock size={20} className={styles.statIconOrange} />
-            <span className={styles.statValue}>{totalEnrolled}</span>
-            <span className={styles.statLabel}>Всего записей</span>
-          </div>
-          <div className={styles.statItem}>
-            <Award size={20} style={{ color: '#9f7aea' }} />
-            <span className={styles.statValue}>{certificates.length}</span>
-            <span className={styles.statLabel}>Сертификатов</span>
-          </div>
-        </div>
-      </div>
+        <h1 className={styles.name}>{displayName(user)}</h1>
+        <p className={styles.email}>{user.email}</p>
 
-      {/* Информация о пользователе */}
-      <div className={styles.card}>
-        <h3 className={styles.sectionTitle}>Личные данные</h3>
-        <dl className={styles.infoGrid}>
-          <dt className={styles.infoLabel}>Email</dt>
-          <dd className={styles.infoValue}>{user.email}</dd>
-
-          <dt className={styles.infoLabel}>Имя</dt>
-          <dd className={styles.infoValue}>{user.fullname ?? '—'}</dd>
-
-          <dt className={styles.infoLabel}>Тип аккаунта</dt>
-          <dd className={styles.infoValue}>
+        <div className={styles.badges}>
+          <span className={styles.typeBadge}>
             {user.type === 'EMPLOYEE' ? 'Сотрудник' : 'Клиент'}
-          </dd>
+          </span>
+          {roleLabel && <span className={styles.roleBadge}>{roleLabel}</span>}
+        </div>
 
-          {emp && (
-            <>
-              <dt className={styles.infoLabel}>Роль</dt>
-              <dd className={styles.infoValue}>
-                <span className={styles.roleBadge}>{roleLabel}</span>
-              </dd>
+        {/* Org info */}
+        {emp && (
+          <>
+            <div className={styles.divider}/>
+            <dl className={styles.infoList}>
+              <div className={styles.infoRow}>
+                <dt className={styles.infoKey}>Департамент</dt>
+                <dd className={styles.infoVal}>{emp.department.name}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt className={styles.infoKey}>Отдел</dt>
+                <dd className={styles.infoVal}>{emp.division.name}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt className={styles.infoKey}>Должность</dt>
+                <dd className={styles.infoVal}>{emp.position.name}</dd>
+              </div>
+            </dl>
 
-              <dt className={styles.infoLabel}>Департамент</dt>
-              <dd className={styles.infoValue}>{emp.department.name}</dd>
-
-              <dt className={styles.infoLabel}>Отдел</dt>
-              <dd className={styles.infoValue}>{emp.division.name}</dd>
-
-              <dt className={styles.infoLabel}>Должность</dt>
-              <dd className={styles.infoValue}>{emp.position.name}</dd>
-
-              <dt className={styles.infoLabel}>Дата рождения</dt>
-              <dd className={styles.infoValue}>{formatDate(emp.birthDate)}</dd>
-
-              <dt className={styles.infoLabel}>Принят</dt>
-              <dd className={styles.infoValue}>{formatDate(emp.employmentDate)}</dd>
-            </>
-          )}
-        </dl>
-      </div>
-
-      {/* Сертификаты */}
-      <div className={styles.card}>
-        <h3 className={styles.sectionTitle}>Сертификаты</h3>
-        {certificates.length === 0 ? (
-          <p className={styles.noCerts}>
-            Сертификаты появятся после 100% прохождения курсов
-          </p>
-        ) : (
-          <div className={styles.certsGrid}>
-            {certificates.map(cert => (
-              <button
-                key={cert.id}
-                className={styles.certCard}
-                onClick={() => setOpenCert(cert)}
-                title="Открыть сертификат"
-              >
-                <div className={styles.certIcon}>
-                  <Award size={18} />
-                </div>
-                <div className={styles.certInfo}>
-                  <div className={styles.certTitle}>{cert.courseTitle}</div>
-                  <div className={styles.certDate}>
-                    Выдан {new Date(cert.issuedAt).toLocaleDateString('ru-RU', {
-                      day: 'numeric', month: 'long', year: 'numeric',
-                    })}
-                  </div>
-                </div>
-                <ExternalLink size={14} className={styles.certOpenIcon} />
-              </button>
-            ))}
-          </div>
+            <div className={styles.divider}/>
+            <dl className={styles.infoList}>
+              <div className={styles.infoRow}>
+                <dt className={styles.infoKey}>Дата рождения</dt>
+                <dd className={styles.infoVal}>{formatDate(emp.birthDate)}</dd>
+              </div>
+              <div className={styles.infoRow}>
+                <dt className={styles.infoKey}>В компании</dt>
+                <dd className={styles.infoVal}>
+                  {tenure(emp.employmentDate)}
+                  <span className={styles.sinceDate}>с {new Date(emp.employmentDate).toLocaleDateString('ru-RU', {month: 'short', year: 'numeric'})}</span>
+                </dd>
+              </div>
+            </dl>
+          </>
         )}
-      </div>
+      </aside>
 
-      {/* Модалка выбора аватара */}
-      {pickerOpen && <AvatarPicker onClose={() => setPickerOpen(false)} />}
+      {/* ── Main ────────────────────────────────────────────── */}
+      <main className={styles.main}>
 
-      {/* Просмотр сертификата курса */}
-      {openCert && <CertificateModal certificate={openCert} onClose={() => setOpenCert(null)} />}
+        {/* Stats */}
+        <div className={styles.statsRow}>
+          {[
+            {val: completed,            label: 'Пройдено'},
+            {val: inProgress,           label: 'В процессе'},
+            {val: total,                label: 'Всего записей'},
+            {val: certificates.length,  label: 'Сертификатов'},
+          ].map(s => (
+            <div key={s.label} className={styles.statCell}>
+              <span className={styles.statVal}>{s.val}</span>
+              <span className={styles.statLabel}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Certificates */}
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Сертификаты</h2>
+
+          {certificates.length === 0 ? (
+            <p className={styles.empty}>Появятся после 100% прохождения курса</p>
+          ) : (
+            <div className={styles.certList}>
+              {certificates.map(cert => (
+                <button
+                  key={cert.id}
+                  className={styles.certCard}
+                  onClick={() => setOpenCert(cert)}
+                >
+                  <div className={styles.certAccent}/>
+                  <div className={styles.certBody}>
+                    <span className={styles.certEyebrow}>Сертификат</span>
+                    <span className={styles.certTitle}>{cert.courseTitle}</span>
+                    <span className={styles.certDate}>
+                      Выдан {new Date(cert.issuedAt).toLocaleDateString('ru-RU', {day: 'numeric', month: 'long', year: 'numeric'})}
+                    </span>
+                  </div>
+                  <ExternalLink size={14} className={styles.certArrow}/>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+      </main>
+
+      {pickerOpen && <AvatarPicker onClose={() => setPickerOpen(false)}/>}
+      {openCert   && <CertificateModal certificate={openCert} onClose={() => setOpenCert(null)}/>}
     </div>
   );
 }

@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Users, Building2,
-  LogOut, GraduationCap, BarChart2, MessageSquare, ClipboardList, MapPin,
+  LogOut, GraduationCap, BarChart2, MessageSquare, ClipboardList, Menu, X,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canCreateCourse, canManageClients, displayName, type User } from '@entities/user/model/types';
@@ -67,13 +68,20 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { courses } = useCourses();
   const { myAssignments, managedAssignments } = useOnboarding();
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Close drawer on navigation
+  useEffect(() => { setIsOpen(false); }, [pathname]);
+
+  // Lock body scroll when drawer is open
+  useEffect(() => {
+    document.body.style.overflow = isOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isOpen]);
 
   const userIsAdmin = isAdmin(user);
   const pendingCount = userIsAdmin ? courses.filter(c => c.status === 'pending').length : 0;
-
-  // Незавершённые онбординги текущего сотрудника
   const myOnboardingBadge = myAssignments.filter(a => a.status === 'in_progress').length;
-  // Активные назначения под управлением
   const managedBadge = managedAssignments.filter(a => a.status === 'in_progress').length;
 
   const handleLogout = async () => {
@@ -83,11 +91,15 @@ export function Sidebar() {
 
   const roleName = user.employee?.role.name ?? user.type.toLowerCase();
 
-  return (
-    <aside className={styles.sidebar}>
+  const navContent = (
+    <>
       <div className={styles.logo}>
         <GraduationCap size={22} strokeWidth={2} className={styles.logoIcon} />
         <span className={styles.logoText}>GlobalLearn</span>
+        {/* Close button — only visible on mobile */}
+        <button className={styles.closeBtn} onClick={() => setIsOpen(false)} aria-label="Закрыть меню">
+          <X size={18} />
+        </button>
       </div>
 
       <nav className={styles.nav}>
@@ -135,6 +147,35 @@ export function Sidebar() {
           <span>Выйти</span>
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className={styles.topBar}>
+        <button
+          className={styles.burgerBtn}
+          onClick={() => setIsOpen(true)}
+          aria-label="Открыть меню"
+        >
+          <Menu size={20} />
+        </button>
+        <div className={styles.topBarLogo}>
+          <GraduationCap size={18} strokeWidth={2} className={styles.logoIcon} />
+          <span className={styles.logoText}>GlobalLearn</span>
+        </div>
+      </div>
+
+      {/* Overlay */}
+      {isOpen && (
+        <div className={styles.overlay} onClick={() => setIsOpen(false)} aria-hidden />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`${styles.sidebar} ${isOpen ? styles.open : ''}`}>
+        {navContent}
+      </aside>
+    </>
   );
 }

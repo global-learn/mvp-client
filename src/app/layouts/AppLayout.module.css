@@ -19,3 +19,13 @@
   padding: 2.5rem 2.75rem 4rem;
   min-width: 0;
 }
+
+@media (max-width: 768px) {
+  .layout {
+    flex-direction: column;
+  }
+
+  .main {
+    padding: calc(52px + 1.5rem) 1.25rem 3rem;
+  }
+}

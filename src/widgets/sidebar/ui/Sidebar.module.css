@@ -15,6 +15,21 @@
 .sidebar::-webkit-scrollbar { width: 3px; }
 .sidebar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); }
 
+/* Mobile top bar — hidden on desktop */
+.topBar {
+  display: none;
+}
+
+/* Close button inside sidebar — hidden on desktop */
+.closeBtn {
+  display: none;
+}
+
+/* Overlay — hidden on desktop */
+.overlay {
+  display: none;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -158,4 +173,98 @@
 .logoutBtn:hover {
   background: rgba(255, 59, 48, 0.08);
   color: #ff3b30;
+}
+
+/* ── Mobile ───────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Sidebar becomes a slide-in drawer */
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 300;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 32px rgba(0, 0, 0, 0.14);
+  }
+
+  /* Close (X) button inside sidebar header */
+  .closeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s;
+  }
+
+  .closeBtn:hover {
+    background: var(--sidebar-hover-bg);
+  }
+
+  /* Overlay backdrop */
+  .overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.38);
+    z-index: 250;
+    backdrop-filter: blur(1px);
+  }
+
+  /* Mobile top bar */
+  .topBar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 52px;
+    background: var(--sidebar);
+    border-bottom: 1px solid var(--sidebar-border);
+    padding: 0 1rem;
+    z-index: 200;
+  }
+
+  .burgerBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--foreground);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s;
+    padding: 0;
+  }
+
+  .burgerBtn:hover {
+    background: var(--sidebar-hover-bg);
+  }
+
+  .topBarLogo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
 }

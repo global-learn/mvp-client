@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Home, BookOpen, PlusCircle, Users, Building2,
-  LogOut, GraduationCap, BarChart2, MessageSquare, ClipboardList, Menu, X,
+  Home, BookOpen, PlusCircle, Building2,
+  LogOut, GraduationCap, BarChart2, ClipboardList, Menu, X,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, canControl, canCreateCourse, canManageClients, displayName, type User } from '@entities/user/model/types';
+import { isAdmin, canControl, canCreateCourse, displayName, type User } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
@@ -41,15 +41,8 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Управление',
     items: [
       { to: '/onboarding/manage',     label: 'Онбординг',  icon: ClipboardList, visible: canControl },
-      { to: '/clients',               label: 'Клиенты',     icon: Users,         visible: canManageClients },
       { to: '/company',               label: 'Компания',    icon: Building2,     visible: canCreateCourse },
       { to: '/control',               label: 'Контроль',    icon: BarChart2,     visible: canControl },
-    ],
-  },
-  {
-    label: 'Коммуникации',
-    items: [
-      { to: '/chat', label: 'Чат', icon: MessageSquare, visible: u => u.type === 'EMPLOYEE' },
     ],
   },
 ];

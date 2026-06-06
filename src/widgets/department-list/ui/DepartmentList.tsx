@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronRight, Headset, PlusCircle, UserPlus } from 'lucide-react';
+import { ChevronRight, PlusCircle, UserPlus } from 'lucide-react';
 import type { Department } from '@entities/company/model/types';
 import { ROLE_LABELS } from '@entities/user/model/types';
 import styles from './DepartmentList.module.css';
@@ -137,11 +137,6 @@ export function DepartmentList({ departments, onAddDivision, editableDeptId, onI
                                 className={`${styles.chevron} ${isDivOpen ? styles.open : ''}`}
                               />
                               <span className={styles.divName}>{div.name}</span>
-                              {div.isService && (
-                                <span className={styles.serviceBadge}>
-                                  <Headset size={10} /> сервис
-                                </span>
-                              )}
                             </div>
                           </button>
                           <div className={styles.divActions}>

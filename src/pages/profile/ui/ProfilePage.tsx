@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {Award, ExternalLink, Edit2} from 'lucide-react';
+import {ExternalLink, Edit2} from 'lucide-react';
 import {useUser} from '@entities/user/model/UserContext';
 import {displayName, ROLE_LABELS, type EmployeeRole} from '@entities/user/model/types';
 import {useCourses} from '@entities/course/model/CoursesContext';

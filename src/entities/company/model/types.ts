@@ -4,23 +4,6 @@
 import type { EmployeeRole } from '@entities/user/model/types';
 
 // ================================================================
-// Клиентские компании (страница /clients)
-// ================================================================
-
-export interface CompanyClient {
-  id: string;
-  fullname: string | null;
-  email: string;
-}
-
-export interface Company {
-  id: string;
-  name: string;
-  createdAt: string;
-  clients: CompanyClient[];
-}
-
-// ================================================================
 // Внутренняя структура: Департамент → Отдел → Должность
 // ================================================================
 
@@ -33,8 +16,6 @@ export interface Division {
   id: string;
   name: string;
   departmentId: string;
-  /** Отдел сервиса — сотрудники могут работать с клиентами */
-  isService?: boolean;
   positions: Position[];
   employees: EmployeeListItem[];
 }
@@ -55,7 +36,7 @@ export interface EmployeeListItem {
   email: string;
   role: { id: string; name: EmployeeRole };
   department: { id: string; name: string };
-  division:   { id: string; name: string; isService?: boolean };
+  division:   { id: string; name: string };
   position:   { id: string; name: string };
   birthDate: string;
   employmentDate: string;

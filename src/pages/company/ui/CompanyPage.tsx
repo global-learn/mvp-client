@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, X, Users, PlusCircle, Building2, Copy, CheckCheck } from 'lucide-react';
-import { useUser, useAuth } from '@entities/user/model/UserContext';
+import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canCreateCourse, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import type { Department, EmployeeListItem } from '@entities/company/model/types';
 import type { EmployeeInvite, InviteStatus } from '@entities/invite/model/types';
@@ -39,16 +39,6 @@ const INITIAL_ORG: Department[] = [
         ],
         employees: [
           { id: 'emp-9', fullname: 'Ольга Рыбакова', email: 'olga.r@corp.ru', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-sales', name: 'Департамент продаж' }, division: { id: 'div-supply', name: 'Отдел обеспечения продаж' }, position: { id: 'pos-sp2', name: 'Специалист по обеспечению' }, birthDate: '1993-07-14', employmentDate: '2020-11-01' },
-        ],
-      },
-      {
-        id: 'div-service', name: 'Отдел сервиса', departmentId: 'dept-sales', isService: true,
-        positions: [
-          { id: 'pos-sv1', name: 'Руководитель отдела сервиса' },
-          { id: 'pos-sv2', name: 'Специалист сервиса' },
-        ],
-        employees: [
-          { id: 'emp-service', fullname: 'Виктор Кузнецов', email: 'service@test.com', role: { id: 'r-mgr', name: 'manager' as EmployeeRole }, department: { id: 'dept-sales', name: 'Департамент продаж' }, division: { id: 'div-service', name: 'Отдел сервиса', isService: true }, position: { id: 'pos-sv2', name: 'Специалист сервиса' }, birthDate: '1992-11-08', employmentDate: '2021-05-15' },
         ],
       },
     ],
@@ -156,7 +146,6 @@ function formatDate(iso: string) {
 
 export function CompanyPage() {
   const { user }   = useUser();
-  const { createInviteToken } = useAuth();
   const navigate   = useNavigate();
   const adminUser  = isAdmin(user);
 
@@ -190,7 +179,7 @@ export function CompanyPage() {
     [org]
   );
   const allDivisions = useMemo(
-    () => org.flatMap(d => d.divisions.map(div => ({ id: div.id, name: div.name, deptId: d.id, deptName: d.name, isService: div.isService }))),
+    () => org.flatMap(d => d.divisions.map(div => ({ id: div.id, name: div.name, deptId: d.id, deptName: d.name }))),
     [org]
   );
   const allPositions = useMemo(
@@ -273,8 +262,8 @@ export function CompanyPage() {
       role: { id: form.roleId, name: form.roleId },
       status: 'pending', createdAt: now, expiresAt,
     };
-    // Генерируем токен для invite-ссылки (mock «письмо»)
-    const token = createInviteToken(form.email, form.fullname || null, expiresAt);
+    // Mock-токен для invite-ссылки (без реального бэкенда)
+    const token = `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const link = `${window.location.origin}/register?token=${token}`;
     setInviteLink(link);
     setInvites(prev => [invite, ...prev]);
@@ -528,7 +517,7 @@ export function CompanyPage() {
                     setForm(p => ({ ...p, divisionId: divId, positionId: firstPos?.id ?? '' }));
                   }}>
                   {availableDivisions.map(d => (
-                    <option key={d.id} value={d.id}>{d.name}{d.isService ? ' (сервис)' : ''}</option>
+                    <option key={d.id} value={d.id}>{d.name}</option>
                   ))}
                 </select>
               </label>

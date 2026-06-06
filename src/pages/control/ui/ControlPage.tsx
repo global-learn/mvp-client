@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { canControl, isAdmin, getStatsScope } from '@entities/user/model/types';
+import { canControl, getStatsScope } from '@entities/user/model/types';
 import type { AdminEnrollmentRecord, CourseSummary, PersonSummary } from '@entities/course/model/controlTypes';
 import { buildCourseSummaries, buildPersonSummaries } from '@entities/course/model/controlTypes';
 import { controlApi } from '@entities/course/api/controlApi';
@@ -42,7 +42,6 @@ function initials(name: string): string {
 }
 
 type View = 'byCourse' | 'byPerson';
-type EmpTab = 'employees' | 'clients';
 
 // ══════════════════════════════════════════════════════════
 export function ControlPage() {
@@ -55,85 +54,61 @@ export function ControlPage() {
 
   if (!canControl(user)) return null;
 
-  return <ControlContent adminMode={isAdmin(user)} scope={getStatsScope(user)} deptName={user.employee?.department.name} divisionName={user.employee?.division.name} />;
+  return <ControlContent scope={getStatsScope(user)} deptName={user.employee?.department.name} divisionName={user.employee?.division.name} />;
 }
 
 // ── Основной контент ──────────────────────────────────────
 function ControlContent({
-  adminMode, scope, deptName, divisionName,
+  scope, deptName, divisionName,
 }: {
-  adminMode: boolean;
   scope: 'all' | 'department' | 'division' | 'assigned' | 'self';
   deptName?: string;
   divisionName?: string;
 }) {
-  const [tab, setTab]         = useState<EmpTab>('employees');
   const [view, setView]       = useState<View>('byCourse');
   const [search, setSearch]   = useState('');
-  const [groupFilter, setGroupFilter] = useState(''); // dept or company
+  const [groupFilter, setGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  const [empRecords, setEmpRecords]     = useState<AdminEnrollmentRecord[]>([]);
-  const [clientRecords, setClientRecords] = useState<AdminEnrollmentRecord[]>([]);
-  const [loading, setLoading]           = useState(true);
+  const [records, setRecords] = useState<AdminEnrollmentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
-      const [allEmp, cli] = await Promise.all([
-        controlApi.getEmployeeEnrollments(),
-        adminMode ? controlApi.getClientEnrollments() : Promise.resolve([]),
-      ]);
-      // Скоупинг по роли
-      let emp = allEmp;
+      const all = await controlApi.getEmployeeEnrollments();
+      let emp = all;
       if (scope === 'department') {
-        emp = allEmp.filter(r => r.department === deptName);
+        emp = all.filter(r => r.department === deptName);
       } else if (scope === 'division') {
-        emp = allEmp.filter(r => r.division === divisionName);
+        emp = all.filter(r => r.division === divisionName);
       } else if (scope === 'assigned') {
-        // senior_manager: только сотрудники в своём отделе (упрощённый mock)
-        emp = allEmp.filter(r => r.division === divisionName);
+        emp = all.filter(r => r.division === divisionName);
       }
-      // scope === 'all' → emp = allEmp (без изменений)
-      setEmpRecords(emp);
-      setClientRecords(cli);
+      setRecords(emp);
       setLoading(false);
     })();
-  }, [adminMode, scope, deptName, divisionName]);
+  }, [scope, deptName, divisionName]);
 
-  // Сбрасываем фильтры при смене таба или вида
   useEffect(() => {
     setSearch('');
     setGroupFilter('');
     setStatusFilter('');
     setExpanded(new Set());
-  }, [tab, view]);
+  }, [view]);
 
-  const records = tab === 'employees' ? empRecords : clientRecords;
-
-  // ── Опции фильтра отдела / компании ──────────────────────
+  // ── Опции фильтра отдела ──────────────────────────
   const groupOptions = useMemo(() => {
-    if (tab === 'employees') {
-      const depts = [...new Set(records.map(r => r.department ?? '').filter(Boolean))];
-      return depts.sort();
-    } else {
-      const cos = [...new Set(records.map(r => r.companyName ?? '').filter(Boolean))];
-      return cos.sort();
-    }
-  }, [records, tab]);
+    const depts = [...new Set(records.map(r => r.department ?? '').filter(Boolean))];
+    return depts.sort();
+  }, [records]);
 
   // ── Фильтрация записей ────────────────────────────────────
   const filteredRecords = useMemo(() => {
     let list = records;
-    if (groupFilter) {
-      list = tab === 'employees'
-        ? list.filter(r => r.department === groupFilter)
-        : list.filter(r => r.companyName === groupFilter);
-    }
-    if (statusFilter) {
-      list = list.filter(r => r.status === statusFilter);
-    }
+    if (groupFilter) list = list.filter(r => r.department === groupFilter);
+    if (statusFilter) list = list.filter(r => r.status === statusFilter);
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(r =>
@@ -143,13 +118,13 @@ function ControlContent({
       );
     }
     return list;
-  }, [records, tab, groupFilter, statusFilter, search]);
+  }, [records, groupFilter, statusFilter, search]);
 
   // ── Сводки ───────────────────────────────────────────────
   const courseSummaries  = useMemo(() => buildCourseSummaries(filteredRecords),  [filteredRecords]);
   const personSummaries  = useMemo(() => buildPersonSummaries(filteredRecords),  [filteredRecords]);
 
-  // ── Глобальная статистика (по всем записям таба) ──────────
+  // ── Глобальная статистика ──────────
   const totalRecords    = records.length;
   const totalCompleted  = records.filter(r => r.status === 'completed').length;
   const totalInProgress = records.filter(r => r.status === 'in_progress').length;
@@ -163,18 +138,13 @@ function ControlContent({
       return next;
     });
 
-  const personLabel = tab === 'employees' ? 'сотрудников' : 'клиентов';
-  const groupLabel  = tab === 'employees' ? 'Отдел'       : 'Компания';
-
   return (
     <div className={styles.page}>
-      {/* Заголовок */}
       <div className={styles.header}>
         <h1 className={styles.title}>Контроль обучения</h1>
         <p className={styles.subtitle}>Прогресс прохождения курсов по назначениям</p>
       </div>
 
-      {/* Статистика */}
       <div className={styles.stats}>
         <div className={styles.statCard}>
           <span className={styles.statLabel}>Всего назначений</span>
@@ -198,27 +168,7 @@ function ControlContent({
         </div>
       </div>
 
-      {/* Табы (только если admin — показываем Клиентов) */}
-      {adminMode && (
-        <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${tab === 'employees' ? styles.activeTab : ''}`}
-            onClick={() => setTab('employees')}
-          >
-            Сотрудники
-          </button>
-          <button
-            className={`${styles.tab} ${tab === 'clients' ? styles.activeTab : ''}`}
-            onClick={() => setTab('clients')}
-          >
-            Клиенты
-          </button>
-        </div>
-      )}
-
-      {/* Тулбар */}
       <div className={styles.toolbar}>
-        {/* Переключатель вида */}
         <div className={styles.viewSwitch}>
           <button
             className={`${styles.viewBtn} ${view === 'byCourse' ? styles.activeView : ''}`}
@@ -230,11 +180,10 @@ function ControlContent({
             className={`${styles.viewBtn} ${view === 'byPerson' ? styles.activeView : ''}`}
             onClick={() => setView('byPerson')}
           >
-            По {personLabel}
+            По сотрудникам
           </button>
         </div>
 
-        {/* Поиск */}
         <div className={styles.searchWrapper}>
           <Search size={15} className={styles.searchIcon} />
           <input
@@ -245,15 +194,13 @@ function ControlContent({
           />
         </div>
 
-        {/* Фильтр отдела / компании */}
         {groupOptions.length > 0 && (
           <select className={styles.select} value={groupFilter} onChange={e => setGroupFilter(e.target.value)}>
-            <option value="">Все ({groupLabel})</option>
+            <option value="">Все департаменты</option>
             {groupOptions.map(g => <option key={g} value={g}>{g}</option>)}
           </select>
         )}
 
-        {/* Фильтр статуса */}
         <select className={styles.select} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
           <option value="">Все статусы</option>
           <option value="completed">Завершён</option>
@@ -262,13 +209,12 @@ function ControlContent({
         </select>
       </div>
 
-      {/* Список */}
       {loading ? (
         <p className={styles.empty}>Загрузка...</p>
       ) : view === 'byCourse' ? (
-        <CourseSummaryList summaries={courseSummaries} expanded={expanded} onToggle={toggleExpand} tab={tab} />
+        <CourseSummaryList summaries={courseSummaries} expanded={expanded} onToggle={toggleExpand} />
       ) : (
-        <PersonSummaryList summaries={personSummaries} expanded={expanded} onToggle={toggleExpand} tab={tab} />
+        <PersonSummaryList summaries={personSummaries} expanded={expanded} onToggle={toggleExpand} />
       )}
     </div>
   );
@@ -278,12 +224,11 @@ function ControlContent({
 // Вид «По курсам»
 // ══════════════════════════════════════════════════════════
 function CourseSummaryList({
-  summaries, expanded, onToggle, tab,
+  summaries, expanded, onToggle,
 }: {
   summaries: CourseSummary[];
   expanded: Set<string>;
   onToggle: (id: string) => void;
-  tab: EmpTab;
 }) {
   if (summaries.length === 0) return <p className={styles.empty}>Нет данных</p>;
 
@@ -301,7 +246,6 @@ function CourseSummaryList({
                 </span>
               </div>
 
-              {/* Мини-счётчики */}
               <div className={styles.miniCounts}>
                 <div className={styles.miniCount}>
                   <span className={styles.miniCountVal} style={{ color: '#276749' }}>{cs.completed}</span>
@@ -317,7 +261,6 @@ function CourseSummaryList({
                 </div>
               </div>
 
-              {/* Прогресс-бар завершения */}
               <div className={styles.headerProgress}>
                 <ProgressBar value={cs.completionRate} />
                 <span className={styles.progressPct}>{cs.completionRate}%</span>
@@ -333,13 +276,12 @@ function CourseSummaryList({
               <div className={styles.expandedPanel}>
                 {cs.records.map(r => {
                   const cfg = statusConfig(r.status);
-                  const groupInfo = tab === 'employees' ? r.department : r.companyName;
                   return (
                     <div key={`${r.userId}-${r.courseId}`} className={styles.expandedRow}>
                       <div className={styles.expandedAvatar}>{initials(r.userName)}</div>
                       <div className={styles.expandedInfo}>
                         <span className={styles.expandedName}>{r.userName}</span>
-                        <span className={styles.expandedSub}>{r.userEmail} · {groupInfo}</span>
+                        <span className={styles.expandedSub}>{r.userEmail} · {r.department}</span>
                       </div>
                       <div className={styles.expandedProgress}>
                         <ProgressBar value={r.progress} />
@@ -364,15 +306,14 @@ function CourseSummaryList({
 }
 
 // ══════════════════════════════════════════════════════════
-// Вид «По сотрудникам / клиентам»
+// Вид «По сотрудникам»
 // ══════════════════════════════════════════════════════════
 function PersonSummaryList({
-  summaries, expanded, onToggle, tab,
+  summaries, expanded, onToggle,
 }: {
   summaries: PersonSummary[];
   expanded: Set<string>;
   onToggle: (id: string) => void;
-  tab: EmpTab;
 }) {
   if (summaries.length === 0) return <p className={styles.empty}>Нет данных</p>;
 
@@ -380,7 +321,6 @@ function PersonSummaryList({
     <div className={styles.list}>
       {summaries.map(ps => {
         const isOpen = expanded.has(ps.userId);
-        const groupInfo = tab === 'employees' ? ps.department : ps.companyName;
         return (
           <div key={ps.userId} className={styles.summaryCard}>
             <button className={styles.summaryHeader} onClick={() => onToggle(ps.userId)}>
@@ -389,10 +329,9 @@ function PersonSummaryList({
               </div>
               <div className={styles.summaryLeft}>
                 <span className={styles.summaryName}>{ps.userName}</span>
-                <span className={styles.summaryMeta}>{ps.userEmail} · {groupInfo}</span>
+                <span className={styles.summaryMeta}>{ps.userEmail} · {ps.department}</span>
               </div>
 
-              {/* Мини-счётчики */}
               <div className={styles.miniCounts}>
                 <div className={styles.miniCount}>
                   <span className={styles.miniCountVal} style={{ color: '#276749' }}>{ps.completed}</span>
@@ -408,7 +347,6 @@ function PersonSummaryList({
                 </div>
               </div>
 
-              {/* Средний прогресс */}
               <div className={styles.headerProgress}>
                 <ProgressBar value={ps.avgProgress} />
                 <span className={styles.progressPct}>{ps.avgProgress}%</span>

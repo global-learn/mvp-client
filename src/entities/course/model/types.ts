@@ -53,12 +53,11 @@ export type CourseStatus = 'draft' | 'pending' | 'published' | 'archived';
 export type EnrollmentStatus = 'not_enrolled' | 'pending_approval' | 'in_progress' | 'completed' | 'rejected';
 
 // Кому предназначен курс — используется для фильтрации в списке курсов
-export type CourseType = 'employee' | 'client' | 'all';
+export type CourseType = 'employee' | 'all';
 
 export const COURSE_TYPE_LABELS: Record<CourseType, string> = {
   all:      'Для всех',
   employee: 'Для сотрудников',
-  client:   'Для клиентов',
 };
 
 export interface Course {

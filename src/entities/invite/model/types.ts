@@ -1,34 +1,23 @@
-// Система приглашений — admin создаёт аккаунт, система отправляет ссылку.
-// Пока бэкенда нет — всё в mock состоянии.
+// Приглашение сотрудника — admin создаёт аккаунт, система отправляет ссылку.
+// Mock до бэкенда.
 
 export type InviteStatus =
   | 'active'   // пользователь перешёл по ссылке и вошёл — зелёный
   | 'pending'  // ссылка отправлена, ещё не перешёл — жёлтый
   | 'expired'; // срок ссылки истёк — красный
 
-interface InviteBase {
+export interface EmployeeInvite {
   id: string;
+  type: 'EMPLOYEE';
   email: string;
   fullname: string | null;
-  password: string; // хранит admin при создании; в реальности — хешируется на бэке
+  password: string;
   status: InviteStatus;
   createdAt: string;
-  expiresAt: string; // ISO date — через 7 дней после createdAt
-}
-
-export interface EmployeeInvite extends InviteBase {
-  type: 'EMPLOYEE';
+  expiresAt: string;
   department: { id: string; name: string };
   role: { id: string; name: string };
 }
-
-export interface ClientInvite extends InviteBase {
-  type: 'CLIENT';
-  companyId: string;
-  companyName: string;
-}
-
-export type Invite = EmployeeInvite | ClientInvite;
 
 /** Вычисляет статус по дате истечения (для свежесозданных invite) */
 export function computeStatus(expiresAt: string): InviteStatus {

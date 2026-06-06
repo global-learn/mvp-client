@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, isServiceDivision, isManager } from '@entities/user/model/types';
+import { isAdmin, isManager } from '@entities/user/model/types';
 import type { CourseType } from '@entities/course/model/types';
 import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import styles from './CourseList.module.css';
@@ -15,9 +15,7 @@ export function CourseList() {
   const { courses, enrollments, getEnrollment, approveCourse, rejectCourse, isLoading } = useCourses();
   const { user } = useUser();
   const admin        = isAdmin(user);
-  const isClient     = user.type === 'CLIENT';
   const isRegularMgr = isManager(user);          // только роль manager
-  const canSeeClientCourses = admin || isServiceDivision(user);
 
   const [approving, setApproving]   = useState<string | null>(null);
   const [rejecting, setRejecting]   = useState<string | null>(null);
@@ -92,30 +90,6 @@ export function CourseList() {
   };
 
   if (isLoading) return <div className={styles.empty}>Загрузка курсов...</div>;
-
-  // ════════════════════════════════════════════════════════════════
-  // ВИД ДЛЯ КЛИЕНТА
-  // ════════════════════════════════════════════════════════════════
-  if (isClient) {
-    const clientCourses = allPublished.filter(c => enrollments.some(e => e.courseId === c.id));
-    return (
-      <div>
-        {clientCourses.length === 0 ? (
-          <div className={styles.empty}>
-            <BookOpen size={40} style={{ opacity: 0.25, marginBottom: '1rem' }} />
-            <p>Вам пока не назначено ни одного курса.</p>
-            <p style={{ fontSize: '0.875rem' }}>Обратитесь к вашему менеджеру сервиса.</p>
-          </div>
-        ) : (
-          <div className={styles.grid}>
-            {clientCourses.map(course => (
-              <CourseCard key={course.id} course={course} enrollment={getEnrollment(course.id)} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
 
   // ════════════════════════════════════════════════════════════════
   // ВИД ДЛЯ ОБЫЧНОГО МЕНЕДЖЕРА (роль manager)
@@ -212,9 +186,6 @@ export function CourseList() {
     { key: 'all_types', label: 'Все' },
     { key: 'all',       label: COURSE_TYPE_LABELS.all },
     { key: 'employee',  label: COURSE_TYPE_LABELS.employee },
-    ...(canSeeClientCourses
-      ? [{ key: 'client' as TabFilter, label: COURSE_TYPE_LABELS.client }]
-      : []),
   ];
 
   return (

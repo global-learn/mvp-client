@@ -118,59 +118,19 @@ const MOCK_CREDENTIALS: Record<string, { password: string; user: User }> = {
     },
   },
 
-  'service@test.com': {
-    password: 'test',
-    user: {
-      id: 'user-service',
-      email: 'service@test.com',
-      fullname: 'Виктор Кузнецов',
-      type: 'EMPLOYEE',
-      employee: {
-        id: 'emp-service',
-        department: { id: 'dept-sales', name: 'Департамент продаж' },
-        division:   { id: 'div-service', name: 'Отдел сервиса', departmentId: 'dept-sales', isService: true },
-        position:   { id: 'pos-sv2', name: 'Специалист сервиса' },
-        role:       { id: 'role-mgr2', name: 'manager' },
-        birthDate: '1992-11-08',
-        employmentDate: '2021-05-15',
-      },
-    },
-  },
-
-  'client@test.com': {
-    password: 'client',
-    user: {
-      id: 'user-client',
-      email: 'client@test.com',
-      fullname: 'Алексей Громов',
-      type: 'CLIENT',
-    },
-  },
 };
 
 const SESSION_KEY        = 'gl_auth_user';
 const PENDING_REG_KEY    = 'gl_pending_reg';
 const REGISTERED_KEY     = 'gl_registered_users';
-const INVITE_TOKENS_KEY  = 'gl_invite_tokens';
 
-export interface InviteRecord {
-  email: string;
-  fullname: string | null;
-  expiresAt: string;
-}
-
-// Вспомогательные функции для работы с хранилищем pending/registered пользователей
 function getPendingRegs(): Record<string, { fullname: string; email: string; password: string }> {
   try { return JSON.parse(sessionStorage.getItem(PENDING_REG_KEY) ?? '{}') as Record<string, { fullname: string; email: string; password: string }>; }
   catch { return {}; }
 }
-type RegisteredUser = { fullname: string; password: string; type?: 'EMPLOYEE' | 'CLIENT' };
+type RegisteredUser = { fullname: string; password: string };
 function getRegisteredUsers(): Record<string, RegisteredUser> {
   try { return JSON.parse(sessionStorage.getItem(REGISTERED_KEY) ?? '{}') as Record<string, RegisteredUser>; }
-  catch { return {}; }
-}
-function getInviteTokensStore(): Record<string, InviteRecord> {
-  try { return JSON.parse(sessionStorage.getItem(INVITE_TOKENS_KEY) ?? '{}') as Record<string, InviteRecord>; }
   catch { return {}; }
 }
 
@@ -185,12 +145,6 @@ interface AuthContextValue {
   register: (fullname: string, email: string, password: string) => Promise<string>;
   /** Подтверждение email по токену. Возвращает true при успехе */
   verifyEmail: (token: string) => boolean;
-  /** Создаёт invite-токен (mock "отправить письмо"). Возвращает токен. */
-  createInviteToken: (email: string, fullname: string | null, expiresAt: string) => string;
-  /** Возвращает данные invite по токену, или null если не найден / истёк */
-  getInviteData: (token: string) => InviteRecord | null;
-  /** Завершает регистрацию по invite-токену. Возвращает true при успехе. */
-  completeInvite: (token: string, fullname: string, password: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -221,7 +175,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           id: `user-${normalized.replace(/[@.]/g, '-')}`,
           email: normalized,
           fullname: reg.fullname,
-          type: reg.type ?? 'EMPLOYEE',
+          type: 'EMPLOYEE',
         };
         await new Promise<void>(r => setTimeout(r, 300));
         sessionStorage.setItem(SESSION_KEY, JSON.stringify(syntheticUser));
@@ -269,38 +223,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return true;
   }, []);
 
-  const createInviteToken = useCallback((
-    email: string,
-    fullname: string | null,
-    expiresAt: string,
-  ): string => {
-    const token = `inv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const store = getInviteTokensStore();
-    store[token] = { email: email.toLowerCase(), fullname, expiresAt };
-    sessionStorage.setItem(INVITE_TOKENS_KEY, JSON.stringify(store));
-    return token;
-  }, []);
-
-  const getInviteData = useCallback((token: string): InviteRecord | null => {
-    const store = getInviteTokensStore();
-    return store[token] ?? null;
-  }, []);
-
-  const completeInvite = useCallback((token: string, fullname: string, password: string): boolean => {
-    const store = getInviteTokensStore();
-    const record = store[token];
-    if (!record) return false;
-    if (new Date(record.expiresAt) < new Date()) return false;
-
-    const registered = getRegisteredUsers();
-    registered[record.email] = { fullname, password, type: 'CLIENT' };
-    sessionStorage.setItem(REGISTERED_KEY, JSON.stringify(registered));
-
-    delete store[token];
-    sessionStorage.setItem(INVITE_TOKENS_KEY, JSON.stringify(store));
-    return true;
-  }, []);
-
   const logout = useCallback(async (): Promise<void> => {
     sessionStorage.removeItem(SESSION_KEY);
     setUser(null);
@@ -317,7 +239,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar, register, verifyEmail, createInviteToken, getInviteData, completeInvite }}
+      value={{ user, isAuthenticated: user !== null, isLoading, login, logout, updateAvatar, register, verifyEmail }}
     >
       {children}
     </AuthContext.Provider>

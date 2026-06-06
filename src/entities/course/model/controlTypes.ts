@@ -3,17 +3,15 @@ import type { CourseType, EnrollmentStatus } from './types';
 // ================================================================
 // Типы для страницы контроля прохождения курсов
 // ================================================================
-// Admin / manager видят прогресс не своего, а других пользователей.
-// Бэкенд: GET /admin/enrollments?type=EMPLOYEE|CLIENT
+// Admin / manager видят прогресс не своего, а других сотрудников.
+// Бэкенд: GET /admin/enrollments
 
 export interface AdminEnrollmentRecord {
   userId: string;
   userName: string;        // fullname ?? email
   userEmail: string;
-  userType: 'EMPLOYEE' | 'CLIENT';
-  department?: string;     // только EMPLOYEE
-  division?: string;       // только EMPLOYEE — название отдела
-  companyName?: string;    // только CLIENT
+  department?: string;
+  division?: string;
   courseId: string;
   courseTitle: string;
   courseType: CourseType;
@@ -35,15 +33,13 @@ export interface CourseSummary {
   records: AdminEnrollmentRecord[];
 }
 
-// Сводка по одному пользователю (для вида "По сотрудникам / клиентам")
+// Сводка по одному пользователю (для вида "По сотрудникам")
 export interface PersonSummary {
   userId: string;
   userName: string;
   userEmail: string;
-  userType: 'EMPLOYEE' | 'CLIENT';
   department?: string;
   division?: string;
-  companyName?: string;
   completed: number;
   inProgress: number;
   notStarted: number;
@@ -92,10 +88,8 @@ export function buildPersonSummaries(records: AdminEnrollmentRecord[]): PersonSu
       userId: recs[0].userId,
       userName: recs[0].userName,
       userEmail: recs[0].userEmail,
-      userType: recs[0].userType,
       department: recs[0].department,
       division: recs[0].division,
-      companyName: recs[0].companyName,
       completed, inProgress, notStarted,
       totalCourses: recs.length,
       avgProgress,

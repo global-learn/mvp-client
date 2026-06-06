@@ -1,6 +1,6 @@
 // Типы пользователей — соответствуют schema.prisma
 
-export type UserType = 'EMPLOYEE' | 'CLIENT';
+export type UserType = 'EMPLOYEE';
 
 // ================================================================
 // Роли сотрудников (фиксированные)
@@ -39,7 +39,6 @@ export interface UserDivision {
   id: string;
   name: string;
   departmentId: string;
-  isService?: boolean; // Отдел сервиса
 }
 
 export interface UserPosition {
@@ -75,7 +74,7 @@ export interface User {
   fullname: string | null;
   type: UserType;
   avatar?: UserAvatar;
-  employee?: EmployeeProfile; // только когда type === 'EMPLOYEE'
+  employee?: EmployeeProfile;
 }
 
 // ================================================================
@@ -120,11 +119,6 @@ export function isManager(user: User): boolean {
   return role(user) === 'manager';
 }
 
-/** Отдел сервиса — может работать с клиентами */
-export function isServiceDivision(user: User): boolean {
-  return user.type === 'EMPLOYEE' && (user.employee?.division.isService ?? false);
-}
-
 // ── Права доступа ────────────────────────────────────────────────
 
 /**
@@ -145,21 +139,9 @@ export function canAssignCourse(user: User): boolean {
   return r === 'admin' || r === 'department_head' || r === 'division_head' || r === 'senior_manager';
 }
 
-/**
- * Назначать курсы клиентам: только admin и отдел сервиса.
- */
-export function canAssignToClients(user: User): boolean {
-  return isAdmin(user) || isServiceDivision(user);
-}
-
 /** Страница контроля (видит чью-то статистику) */
 export function canControl(user: User): boolean {
   return canAssignCourse(user);
-}
-
-/** Работа с клиентами: добавление компаний, регистрация, чат */
-export function canManageClients(user: User): boolean {
-  return isAdmin(user) || isServiceDivision(user);
 }
 
 // ── Масштаб статистики ───────────────────────────────────────────
@@ -172,7 +154,7 @@ export type StatsScope = 'all' | 'department' | 'division' | 'assigned' | 'self'
  *   department — department_head: только свой департамент
  *   division   — division_head: только свой отдел
  *   assigned   — senior_manager: только те, кому назначил
- *   self       — manager/client: только своя
+ *   self       — manager: только своя
  */
 export function getStatsScope(user: User): StatsScope {
   const r = role(user);

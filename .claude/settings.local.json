@@ -8,7 +8,9 @@
       "Bash(grep -E '\\\\.\\(tsx|ts|css\\)$')",
       "Bash(npm run *)",
       "Bash(curl -s http://localhost:5173)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm add *)"
     ]
   }
 }

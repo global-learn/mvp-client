@@ -19,11 +19,6 @@ function isCourseVisibleToUser(
 ): boolean {
   const isEnrolled = enrollments.some(e => e.courseId === course.id);
 
-  // CLIENT: видит только курсы, на которые его записали
-  if (user.type === 'CLIENT') {
-    return course.status === 'published' && isEnrolled;
-  }
-
   const emp = user.employee;
   if (!emp) return false;
   const r = emp.role.name;
@@ -36,11 +31,6 @@ function isCourseVisibleToUser(
 
   // Admin: видит всё
   if (r === 'admin') return true;
-
-  // Клиентские курсы: только отдел сервиса
-  if (course.courseType === 'client') {
-    return emp.division.isService === true;
-  }
 
   // Employee/all курсы далее:
 

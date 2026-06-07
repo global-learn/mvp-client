@@ -3,6 +3,7 @@ import {useNavigate, Link} from 'react-router-dom';
 import {GraduationCap, ArrowLeft} from 'lucide-react';
 import {motion} from 'motion/react';
 import {useAuth} from '@entities/user/model/UserContext';
+import {getApiStatus, getApiErrorMessage} from '@shared/api/apiError';
 
 export function LoginPage() {
   const {login, isLoading, isAuthenticated} = useAuth();
@@ -33,8 +34,12 @@ export function LoginPage() {
     try {
       await login(email, password);
       navigate('/dashboard', {replace: true});
-    } catch {
-      setError('Неверный email или пароль');
+    } catch (err) {
+      if (getApiStatus(err) === 401) {
+        setError('Неверный email или пароль');
+      } else {
+        setError(getApiErrorMessage(err, 'Ошибка входа. Попробуйте позже'));
+      }
     } finally {
       setSubmitting(false);
     }

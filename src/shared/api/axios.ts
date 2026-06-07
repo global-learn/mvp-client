@@ -51,8 +51,8 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // /auth/me 401 = not logged in — don't trigger refresh, just propagate
-    if (original.url?.includes('/auth/me')) {
+    // Auth endpoints manage their own session — don't trigger refresh on their 401s
+    if (original.url?.includes('/auth/')) {
       return Promise.reject(error);
     }
 

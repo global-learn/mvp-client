@@ -2,7 +2,7 @@
 
 Документ описывает, как перевести фронт с in-memory mock-данных на реальный бэкенд **без переписывания UI**. Цель — минимизировать риск регрессий и держать рабочее приложение на каждом шаге.
 
-> Last updated: 2026-06-07. Ветка `feat/add-api`.
+> Last updated: 2026-06-07. Ветка `feat/add-api`. Шаг 1 (Auth) — выполнен.
 
 ---
 
@@ -23,6 +23,13 @@
 - ✅ `Providers` обёрнут `QueryClientProvider` с дефолтами + devtools в dev
 - ✅ Скаффолд `shared/lib/query/queryKeys.ts` (центральный реестр ключей)
 - ✅ Скаффолд `shared/api/schemas.ts` (zod-схемы для границы API)
+- ✅ **Шаг 1 — Auth:** `UserContext` переведён на реальный API
+  - `login` → `POST /auth/login` + `refetchQueries(auth.me)`
+  - `logout` → `POST /auth/logout` + `navigate('/login')` + `queryClient.clear()`
+  - Текущий пользователь: `GET /auth/me` → `GET /employees/{id}` → `GET /divisions/{id}` → `GET /departments/{id}` (+ positions)
+  - axios interceptor: `/auth/me` 401 не триггерит refresh (предотвращает редирект-петлю)
+  - Схема `MeResponseDtoSchema` добавлена в `schemas.ts`
+  - `EmployeeProfile.birthDate` и `position` — опциональные (API не возвращает birthDate)
 
 ---
 

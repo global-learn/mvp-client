@@ -5,7 +5,7 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 // к каждому запросу (access token + refresh token).
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api',
+  baseURL: import.meta.env.VITE_API_URL ?? '/api',
   headers: { 'Content-Type': 'application/json' },
   withCredentials: true,
 });
@@ -48,6 +48,11 @@ api.interceptors.response.use(
     const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error);
+    }
+
+    // /auth/me 401 = not logged in — don't trigger refresh, just propagate
+    if (original.url?.includes('/auth/me')) {
       return Promise.reject(error);
     }
 

@@ -76,18 +76,22 @@ export function ProfilePage() {
                 <dt className={styles.infoKey}>Отдел</dt>
                 <dd className={styles.infoVal}>{emp.division.name}</dd>
               </div>
-              <div className={styles.infoRow}>
-                <dt className={styles.infoKey}>Должность</dt>
-                <dd className={styles.infoVal}>{emp.position.name}</dd>
-              </div>
+              {emp.position && (
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoKey}>Должность</dt>
+                  <dd className={styles.infoVal}>{emp.position.name}</dd>
+                </div>
+              )}
             </dl>
 
             <div className={styles.divider}/>
             <dl className={styles.infoList}>
-              <div className={styles.infoRow}>
-                <dt className={styles.infoKey}>Дата рождения</dt>
-                <dd className={styles.infoVal}>{formatDate(emp.birthDate)}</dd>
-              </div>
+              {emp.birthDate && (
+                <div className={styles.infoRow}>
+                  <dt className={styles.infoKey}>Дата рождения</dt>
+                  <dd className={styles.infoVal}>{formatDate(emp.birthDate)}</dd>
+                </div>
+              )}
               <div className={styles.infoRow}>
                 <dt className={styles.infoKey}>В компании</dt>
                 <dd className={styles.infoVal}>

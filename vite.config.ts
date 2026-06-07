@@ -6,6 +6,14 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
+    },
+  },
   resolve: {
     // Алиасы — короткие имена вместо длинных относительных путей.
     // Вместо '../../../entities/course/...' пишем '@entities/course/...'

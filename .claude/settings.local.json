@@ -10,7 +10,8 @@
       "Bash(curl -s http://localhost:5173)",
       "Bash(npm install *)",
       "Bash(pnpm exec *)",
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   }
 }

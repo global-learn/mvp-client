@@ -1,9 +1,9 @@
-import { useState, type DragEvent } from 'react';
+import { useState, useRef, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
   Plus, GripVertical, Trash2, BookOpen, FileQuestion,
-  ChevronDown, ChevronRight, X, Check,
+  ChevronDown, ChevronRight, X, Check, ImagePlus,
 } from 'lucide-react';
 import type {
   Module, Step, StepItem,
@@ -37,12 +37,28 @@ export function CourseBuilder() {
     modules: [],
   });
 
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+
   const [isSaving, setIsSaving] = useState(false);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [draggedModule, setDraggedModule] = useState<string | null>(null);
   const [draggedStep, setDraggedStep] = useState<{ moduleId: string; stepId: string } | null>(null);
+
+  // ---- Cover image ----
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setCoverFile(file);
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setCoverPreview(url);
+    } else {
+      setCoverPreview(null);
+    }
+  };
 
   // ---- Сохранение на сервер ----
   const handleSave = async () => {
@@ -53,15 +69,17 @@ export function CourseBuilder() {
         (acc, m) => acc + m.steps.reduce((acc2, s) => acc2 + s.items.length, 0),
         0,
       );
-      await createCourse({
-        title: course.title,
-        description: course.description,
-        courseType: course.courseType,
-        lessonsCount,
-        modules: course.modules,
-        // Только admin публикует сразу; все остальные отправляют на модерацию
-        status: userIsAdmin ? 'published' : 'pending',
-      });
+      await createCourse(
+        {
+          title:       course.title,
+          description: course.description,
+          courseType:  course.courseType,
+          lessonsCount,
+          modules:     course.modules,
+          status:      userIsAdmin ? 'published' : 'pending',
+        },
+        coverFile ?? undefined,
+      );
       navigate('/courses');
     } finally {
       setIsSaving(false);
@@ -458,6 +476,36 @@ export function CourseBuilder() {
                   <option key={val} value={val}>{label}</option>
                 ))}
               </select>
+            </div>
+            <div className={styles.field}>
+              <label className={styles.label}>Обложка курса</label>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleCoverChange}
+              />
+              {coverPreview ? (
+                <div className={styles.coverPreview}>
+                  <img src={coverPreview} alt="Обложка" className={styles.coverImg} />
+                  <button
+                    type="button"
+                    className={styles.deleteBtnSmall}
+                    onClick={() => { setCoverFile(null); setCoverPreview(null); }}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={styles.addItemBtn}
+                  onClick={() => coverInputRef.current?.click()}
+                >
+                  <ImagePlus size={14} /> Загрузить обложку
+                </button>
+              )}
             </div>
           </div>
 

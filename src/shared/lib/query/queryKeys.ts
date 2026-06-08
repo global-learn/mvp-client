@@ -44,6 +44,7 @@ export const queryKeys = {
     courseEnrollments: (courseId: string) => ['courses', 'enrollments', 'by-course', courseId] as const,
     requests:          (courseId: string) => ['courses', 'requests', courseId] as const,
     assignable:        ['courses', 'assignable-employees'] as const,
+    testDefinition:    (id: string) => ['courses', 'test-definition', id] as const,
   },
 
   control: {

@@ -5,8 +5,11 @@ import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
 import { MOCK_USER_INFO } from '@entities/course/api/courseApi';
+import { employeeApi } from '@entities/user/api/employeeApi';
+import type { EmployeeDto } from '@shared/api/schemas';
 import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
+import { useTestDefinitionQuery } from '@entities/course/api/hooks';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal';
 import styles from './CourseDetail.module.css';
@@ -92,20 +95,26 @@ function TestPlayer({
   isDone: boolean;
   onComplete: () => Promise<void>;
 }) {
+  const needsLoad = item.questions.length === 0 && !!item.testId;
+  const { data: loadedQuestions, isLoading: questionsLoading } = useTestDefinitionQuery(
+    needsLoad ? item.testId : undefined,
+  );
+  const questions = needsLoad ? (loadedQuestions ?? []) : item.questions;
+
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [state, setState] = useState<TestState>(isDone ? 'passed' : 'answering');
   const [score, setScore] = useState(0);
   const [pending, setPending] = useState(false);
 
-  const allAnswered = item.questions.every(q => answers[q.id]);
+  const allAnswered = questions.every(q => answers[q.id]);
 
   const handleSubmit = async () => {
     let correct = 0;
-    item.questions.forEach(q => {
+    questions.forEach(q => {
       const chosen = q.options.find(o => o.id === answers[q.id]);
       if (chosen?.isCorrect) correct++;
     });
-    const pct = Math.round((correct / item.questions.length) * 100);
+    const pct = Math.round((correct / questions.length) * 100);
     setScore(pct);
 
     if (pct >= item.passingPercent) {
@@ -129,11 +138,19 @@ function TestPlayer({
     setState('passed');
   }
 
+  if (questionsLoading) {
+    return <div style={{ padding: '2rem', color: 'var(--muted-foreground)' }}>Загрузка теста...</div>;
+  }
+
   return (
     <>
       <span className={styles.contentTypeBadge}>Тест · минимум {item.passingPercent}% правильных</span>
 
-      {item.questions.map((q, qi) => {
+      {questions.length === 0 && (
+        <p style={{ color: 'var(--muted-foreground)', padding: '1rem 0' }}>Вопросы не найдены.</p>
+      )}
+
+      {questions.map((q, qi) => {
         const isSubmitted = state !== 'answering';
         return (
           <div key={q.id} className={styles.testQuestion}>
@@ -312,6 +329,9 @@ export function CourseDetailPage() {
   } = useCourses();
   const { user } = useUser();
 
+  // Resolve course before hooks so effects can depend on authorId
+  const course = courses.find(c => c.id === id);
+
   const [assignOpen, setAssignOpen] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
@@ -321,10 +341,17 @@ export function CourseDetailPage() {
   const [pendingRequests, setPendingRequests] = useState<EnrollmentRequest[]>([]);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [authorEmployee, setAuthorEmployee] = useState<EmployeeDto | null>(null);
 
   const isController = canControl(user);
 
-  // Загружаем заявки для менеджеров
+  // Fetch author employee info
+  useEffect(() => {
+    if (!course?.authorId) return;
+    void employeeApi.getById(course.authorId).then(setAuthorEmployee).catch(() => {});
+  }, [course?.authorId]);
+
+  // Load pending enrollment requests for managers
   useEffect(() => {
     if (!isController || !id) return;
     void getCourseRequests(id).then(setPendingRequests);
@@ -332,7 +359,6 @@ export function CourseDetailPage() {
 
   if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
 
-  const course = courses.find(c => c.id === id);
   if (!course) {
     return (
       <div className={styles.notFound}>
@@ -342,7 +368,7 @@ export function CourseDetailPage() {
     );
   }
 
-  const enrollment = getEnrollment(course.id);
+  const enrollment  = getEnrollment(course.id);
   const enrollStatus = enrollment?.status ?? 'not_enrolled';
   const isEnrolled   = enrollStatus === 'in_progress' || enrollStatus === 'completed';
   const isPending    = enrollStatus === 'pending_approval';
@@ -451,9 +477,7 @@ export function CourseDetailPage() {
               </div>
               <div className={styles.authorBlock}>
                 {(() => {
-                  const authorInfo = MOCK_USER_INFO[course.authorId];
-                  const authorName = authorInfo?.name ?? course.authorId;
-                  const authorDiv  = authorInfo?.division;
+                  const authorName = authorEmployee?.fullname ?? course.authorId;
                   const initials   = authorName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
                   return (
                     <>
@@ -464,7 +488,6 @@ export function CourseDetailPage() {
                         <div className={styles.authorAvatar}>{initials}</div>
                         <div className={styles.authorInfo}>
                           <span className={styles.authorName}>{authorName}</span>
-                          {authorDiv && <span className={styles.authorDiv}>{authorDiv}</span>}
                         </div>
                       </div>
                     </>

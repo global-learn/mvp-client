@@ -787,3 +787,18 @@
 .addQuestionBtn:hover {
   background: oklch(0.96 0.02 250);
 }
+
+.coverPreview {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.coverImg {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}

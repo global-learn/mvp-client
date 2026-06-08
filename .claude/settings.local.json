@@ -11,7 +11,9 @@
       "Bash(npm install *)",
       "Bash(pnpm exec *)",
       "Bash(pnpm add *)",
-      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 *)"
     ]
   }
 }

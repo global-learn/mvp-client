@@ -236,38 +236,107 @@ export const UserSchema = z.object({
 
 export type ApiUser = z.infer<typeof UserSchema>;
 
-// ── Courses (backend не реализован — схемы-заглушки) ─────────────
+// ── Courses (backend DTOs) ────────────────────────────────────────
+
+export const CourseStepDtoSchema = z.object({
+  id:       z.string(),
+  name:     z.string(),
+  position: z.number(),
+  type:     z.enum(['LESSON', 'TEST']),
+  lessonId: z.string().optional(),
+  testId:   z.string().optional(),
+});
+
+export const CourseModuleDtoSchema = z.object({
+  id:       z.string(),
+  name:     z.string(),
+  position: z.number(),
+  steps:    z.array(CourseStepDtoSchema),
+});
+
+export const CourseDtoSchema = z.object({
+  id:          z.string(),
+  createdAt:   z.string(),
+  updatedAt:   z.string().optional(),
+  name:        z.string(),
+  description: z.string(),
+  authorId:    z.string(),
+  coverId:     z.string().optional(),
+  modules:     z.array(CourseModuleDtoSchema),
+});
+
+export const StepProgressDtoSchema = z.object({
+  id:          z.string(),
+  stepId:      z.string(),
+  createdAt:   z.string(),
+  completedAt: z.string().optional(),
+});
+
+export const EnrollmentDtoSchema = z.object({
+  id:          z.string(),
+  createdAt:   z.string(),
+  updatedAt:   z.string().optional(),
+  courseId:    z.string(),
+  employeeId:  z.string(),
+  status:      z.enum(['IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
+  startedAt:   z.string(),
+  completedAt: z.string().optional(),
+  progress:    z.array(StepProgressDtoSchema),
+});
+
+export type CourseDto      = z.infer<typeof CourseDtoSchema>;
+export type EnrollmentDto  = z.infer<typeof EnrollmentDtoSchema>;
+
+// ── Course applications ───────────────────────────────────────────
+
+export const CourseApplicationDtoSchema = z.object({
+  id:         z.string(),
+  courseId:   z.string(),
+  employeeId: z.string(),
+  createdAt:  z.string(),
+  status:     z.string().optional(),
+});
+
+export type CourseApplicationDto = z.infer<typeof CourseApplicationDtoSchema>;
+
+// ── Test definitions ──────────────────────────────────────────────
+
+export const CourseAnswerDtoSchema = z.object({
+  id:        z.string(),
+  answer:    z.string(),
+  isCorrect: z.boolean(),
+});
+
+export const CourseQuestionDtoSchema = z.object({
+  id:       z.string(),
+  question: z.string(),
+  courseId: z.string(),
+  moduleId: z.string().optional(),
+  answers:  z.array(CourseAnswerDtoSchema),
+});
+
+export const TestDefinitionDtoSchema = z.object({
+  id:        z.string(),
+  createdAt: z.string(),
+  name:      z.string(),
+  questions: z.array(CourseQuestionDtoSchema),
+});
+
+export type TestDefinitionDto = z.infer<typeof TestDefinitionDtoSchema>;
+
+// ── Files ─────────────────────────────────────────────────────────
+
+export const FileResponseDtoSchema = z.object({
+  id:  z.string(),
+  url: z.string(),
+});
+
+export type FileResponseDto = z.infer<typeof FileResponseDtoSchema>;
+
+// ── Courses (frontend-facing schemas, kept for backwards compat) ──
 
 export const CourseStatusSchema     = z.enum(['draft', 'pending', 'published', 'archived']);
 export const CourseTypeSchema       = z.enum(['employee', 'all']);
 export const EnrollmentStatusSchema = z.enum([
   'not_enrolled', 'pending_approval', 'in_progress', 'completed', 'rejected',
 ]);
-
-export const CourseSummarySchema = z.object({
-  id:                   z.string(),
-  title:                z.string(),
-  description:          z.string(),
-  authorId:             z.string(),
-  status:               CourseStatusSchema,
-  courseType:           CourseTypeSchema,
-  createdAt:            z.string(),
-  lessonsCount:         z.number(),
-  targetDepartmentId:   z.string().nullable().optional(),
-  targetDepartmentName: z.string().nullable().optional(),
-  targetDivisionId:     z.string().nullable().optional(),
-  targetDivisionName:   z.string().nullable().optional(),
-});
-
-export const EnrollmentSchema = z.object({
-  courseId:       z.string(),
-  userId:         z.string(),
-  status:         EnrollmentStatusSchema,
-  progress:       z.number().min(0).max(100),
-  completedItems: z.array(z.string()),
-  enrolledAt:     z.string().optional(),
-  assignedBy:     z.string().optional(),
-});
-
-export type ApiCourse     = z.infer<typeof CourseSummarySchema>;
-export type ApiEnrollment = z.infer<typeof EnrollmentSchema>;

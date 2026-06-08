@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { X, Check } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
-import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, isDepartmentHead, isDivisionHead, ROLE_LABELS } from '@entities/user/model/types';
-import { ALL_EMPLOYEES, MOCK_ORG } from '@pages/company/ui/CompanyPage';
+import type { EmployeeForAssignment } from '@entities/course/model/types';
 import styles from './AssignCourseModal.module.css';
 
 interface AssignCourseModalProps {
@@ -13,44 +11,33 @@ interface AssignCourseModalProps {
 }
 
 export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCourseModalProps) {
-  const { assignCourse } = useCourses();
-  const { user } = useUser();
+  const { assignCourse, getAssignableEmployees } = useCourses();
 
-  const [selected, setSelected]     = useState<Set<string>>(new Set());
-  const [deptFilter, setDeptFilter] = useState('');
+  const [employees, setEmployees]     = useState<EmployeeForAssignment[]>([]);
+  const [loadingEmps, setLoadingEmps] = useState(true);
+  const [selected, setSelected]       = useState<Set<string>>(new Set());
+  const [deptFilter, setDeptFilter]   = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDone]               = useState(false);
 
-  // Скоупинг сотрудников по роли текущего пользователя
-  const scopedEmployees = useMemo(() => {
-    let list = ALL_EMPLOYEES;
-    if (isAdmin(user)) {
-      // всё
-    } else if (isDepartmentHead(user)) {
-      list = list.filter(e => e.department.id === user.employee?.department.id);
-    } else if (isDivisionHead(user)) {
-      list = list.filter(e => e.division.id === user.employee?.division.id);
-    } else {
-      // senior_manager: только managers своего отдела
-      list = list.filter(e =>
-        e.division.id === user.employee?.division.id && e.role.name === 'manager'
-      );
-    }
-    return list;
-  }, [user]);
+  useEffect(() => {
+    void getAssignableEmployees().then(emps => {
+      setEmployees(emps);
+      setLoadingEmps(false);
+    });
+  }, [getAssignableEmployees]);
 
   const departments = useMemo(() => {
-    if (isAdmin(user)) return MOCK_ORG.map(d => ({ id: d.id, name: d.name }));
-    if (isDepartmentHead(user)) {
-      const d = MOCK_ORG.find(d => d.id === user.employee?.department.id);
-      return d ? [{ id: d.id, name: d.name }] : [];
-    }
-    return [];
-  }, [user]);
+    const seen = new Map<string, string>();
+    employees.forEach(e => {
+      if (e.department.id) seen.set(e.department.id, e.department.name);
+    });
+    return [...seen.entries()].map(([id, name]) => ({ id, name }));
+  }, [employees]);
 
   const filteredEmployees = deptFilter
-    ? scopedEmployees.filter(e => e.department.id === deptFilter)
-    : scopedEmployees;
+    ? employees.filter(e => e.department.id === deptFilter)
+    : employees;
 
   const toggleId = (id: string) => {
     setSelected(prev => {
@@ -60,7 +47,7 @@ export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCour
     });
   };
 
-  const selectAll = () => setSelected(new Set(filteredEmployees.map(e => e.id)));
+  const selectAll = () => setSelected(new Set(filteredEmployees.map(e => e.userId)));
   const clearAll  = () => setSelected(new Set());
 
   const handleAssign = async () => {
@@ -107,33 +94,35 @@ export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCour
             </div>
 
             <div className={styles.list}>
-              {filteredEmployees.map(emp => {
-                const isSelected = selected.has(emp.id);
-                return (
-                  <button key={emp.id}
-                    className={`${styles.empRow} ${isSelected ? styles.empSelected : ''}`}
-                    onClick={() => toggleId(emp.id)}
-                  >
-                    <div className={`${styles.checkbox} ${isSelected ? styles.checked : ''}`}>
-                      {isSelected && <Check size={12} />}
-                    </div>
-                    <div className={styles.empAvatar}>
-                      {(emp.fullname ?? emp.email)[0]}
-                    </div>
-                    <div className={styles.empInfo}>
-                      <span className={styles.empName}>{emp.fullname ?? emp.email}</span>
-                      <span className={styles.empDept}>
-                        {emp.division.name} · {ROLE_LABELS[emp.role.name]}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-
-              {filteredEmployees.length === 0 && (
+              {loadingEmps ? (
+                <p style={{ textAlign: 'center', color: 'var(--muted-foreground)', padding: '1.5rem 0' }}>
+                  Загрузка...
+                </p>
+              ) : filteredEmployees.length === 0 ? (
                 <p style={{ textAlign: 'center', color: 'var(--muted-foreground)', padding: '1.5rem 0' }}>
                   Нет доступных сотрудников
                 </p>
+              ) : (
+                filteredEmployees.map(emp => {
+                  const isSelected = selected.has(emp.userId);
+                  return (
+                    <button key={emp.userId}
+                      className={`${styles.empRow} ${isSelected ? styles.empSelected : ''}`}
+                      onClick={() => toggleId(emp.userId)}
+                    >
+                      <div className={`${styles.checkbox} ${isSelected ? styles.checked : ''}`}>
+                        {isSelected && <Check size={12} />}
+                      </div>
+                      <div className={styles.empAvatar}>
+                        {(emp.fullname || emp.email || emp.userId)[0]}
+                      </div>
+                      <div className={styles.empInfo}>
+                        <span className={styles.empName}>{emp.fullname || emp.email || emp.userId}</span>
+                        <span className={styles.empDept}>{emp.division.name}</span>
+                      </div>
+                    </button>
+                  );
+                })
               )}
             </div>
 

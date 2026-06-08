@@ -27,6 +27,7 @@ export interface TestContent {
   type: 'test';
   questions: TestQuestion[];
   passingPercent: number; // минимальный % для прохождения
+  testId?: string;        // backend test-definition ID for lazy loading
 }
 
 // Дискриминированное объединение — TypeScript определяет тип по полю `type`
@@ -80,11 +81,12 @@ export interface Course {
 
 // Запись пользователя на курс
 export interface Enrollment {
+  id?: string;              // backend enrollment ID (needed for step mutations)
   courseId: string;
   userId: string;
   status: EnrollmentStatus;
   progress: number;        // 0-100
-  completedItems: string[]; // id пройденных LessonContent / TestContent
+  completedItems: string[]; // id пройденных шагов
   enrolledAt?: string;     // ISO — когда создана запись
   assignedBy?: string;     // userId того, кто назначил (если не сам)
 }
@@ -108,7 +110,8 @@ export type CreateCourseDto = Omit<Course, 'id' | 'createdAt'>;
 export interface EmployeeForAssignment {
   userId: string;
   fullname: string;
-  email: string;
+  email?: string;
+  division:   { id: string; name: string };
   department: { id: string; name: string };
   role: { name: string };
 }

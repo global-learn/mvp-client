@@ -1,4 +1,4 @@
-import { useState, useRef, type DragEvent } from 'react';
+import { useState, useRef, useEffect, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -7,20 +7,25 @@ import {
 } from 'lucide-react';
 import type {
   Module, Step, StepItem,
-  LessonContent, TestContent, TestQuestion, TestOption, CourseType,
+  LessonContent, TestContent, TestQuestion, TestOption,
 } from '@entities/course/model/types';
-import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin } from '@entities/user/model/types';
+import { departmentApi, divisionApi } from '@entities/company/api/companyApi';
+import type { DepartmentDto, DivisionDto } from '@shared/api/schemas';
 import styles from './CourseBuilder.module.css';
 
 const generateId = () => Math.random().toString(36).substring(2, 9);
 
+type CourseScope = 'ALL' | 'DEPARTMENT' | 'DIVISION';
+
 type BuilderCourse = {
   title: string;
   description: string;
-  courseType: CourseType;
+  scope: CourseScope;
+  targetDepartmentId?: string;
+  targetDivisionId?: string;
   modules: Module[];
 };
 
@@ -33,9 +38,17 @@ export function CourseBuilder() {
   const [course, setCourse] = useState<BuilderCourse>({
     title: '',
     description: '',
-    courseType: 'all',
+    scope: 'ALL',
     modules: [],
   });
+
+  const [departments, setDepartments] = useState<DepartmentDto[]>([]);
+  const [divisions, setDivisions] = useState<DivisionDto[]>([]);
+
+  useEffect(() => {
+    void departmentApi.list({ page: 1, limit: 200 }).then(r => setDepartments(r.data)).catch(() => {});
+    void divisionApi.list({ page: 1, limit: 200 }).then(r => setDivisions(r.data)).catch(() => {});
+  }, []);
 
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
@@ -71,12 +84,14 @@ export function CourseBuilder() {
       );
       await createCourse(
         {
-          title:       course.title,
-          description: course.description,
-          courseType:  course.courseType,
+          title:               course.title,
+          description:         course.description,
+          courseType:          course.scope === 'ALL' ? 'all' : 'employee',
+          targetDepartmentId:  course.targetDepartmentId,
+          targetDivisionId:    course.targetDivisionId,
           lessonsCount,
-          modules:     course.modules,
-          status:      userIsAdmin ? 'published' : 'pending',
+          modules:             course.modules,
+          status:              userIsAdmin ? 'published' : 'pending',
         },
         coverFile ?? undefined,
       );
@@ -466,17 +481,52 @@ export function CourseBuilder() {
               />
             </div>
             <div className={styles.field}>
-              <label className={styles.label}>Тип курса</label>
+              <label className={styles.label}>Аудитория курса</label>
               <select
                 className={styles.input}
-                value={course.courseType}
-                onChange={e => setCourse({ ...course, courseType: e.target.value as CourseType })}
+                value={course.scope}
+                onChange={e => setCourse({
+                  ...course,
+                  scope: e.target.value as CourseScope,
+                  targetDepartmentId: undefined,
+                  targetDivisionId: undefined,
+                })}
               >
-                {(Object.entries(COURSE_TYPE_LABELS) as [CourseType, string][]).map(([val, label]) => (
-                  <option key={val} value={val}>{label}</option>
-                ))}
+                <option value="ALL">Для всех сотрудников</option>
+                <option value="DEPARTMENT">Для департамента</option>
+                <option value="DIVISION">Для отдела</option>
               </select>
             </div>
+            {course.scope === 'DEPARTMENT' && (
+              <div className={styles.field}>
+                <label className={styles.label}>Департамент</label>
+                <select
+                  className={styles.input}
+                  value={course.targetDepartmentId ?? ''}
+                  onChange={e => setCourse({ ...course, targetDepartmentId: e.target.value || undefined })}
+                >
+                  <option value="">Выберите департамент</option>
+                  {departments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {course.scope === 'DIVISION' && (
+              <div className={styles.field}>
+                <label className={styles.label}>Отдел</label>
+                <select
+                  className={styles.input}
+                  value={course.targetDivisionId ?? ''}
+                  onChange={e => setCourse({ ...course, targetDivisionId: e.target.value || undefined })}
+                >
+                  <option value="">Выберите отдел</option>
+                  {divisions.map(d => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className={styles.field}>
               <label className={styles.label}>Обложка курса</label>
               <input

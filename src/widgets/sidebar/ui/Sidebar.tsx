@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Building2,
-  LogOut, GraduationCap, BarChart2, ClipboardList, Menu, X,
+  LogOut, GraduationCap, BarChart2, ClipboardList, Menu, X, Bell,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canCreateCourse, displayName, type User } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
+import { notificationApi, type NotificationDto } from '@shared/api/notificationApi';
 import styles from './Sidebar.module.css';
 
 type NavItem = {
@@ -49,6 +50,28 @@ const NAV_GROUPS: NavGroup[] = [
 
 const ALL_ITEMS = NAV_GROUPS.flatMap(g => g.items);
 
+const NOTIF_LABELS: Record<string, string> = {
+  ONBOARDING_ASSIGNED:          'Назначен онбординг',
+  ONBOARDING_COMPLETED:         'Онбординг завершён',
+  COURSE_ENROLLMENT_APPROVED:   'Заявка на курс одобрена',
+  COURSE_ENROLLMENT_REJECTED:   'Заявка на курс отклонена',
+  COURSE_ASSIGNED:              'Курс назначен',
+};
+
+function notifLabel(type: string): string {
+  return NOTIF_LABELS[type] ?? type.replace(/_/g, ' ').toLowerCase();
+}
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 1)  return 'только что';
+  if (m < 60) return `${m} мин. назад`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} ч. назад`;
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+
 function getIsActive(itemTo: string, pathname: string): boolean {
   if (pathname === itemTo) return true;
   if (!pathname.startsWith(itemTo + '/')) return false;
@@ -62,6 +85,8 @@ export function Sidebar() {
   const { courses } = useCourses();
   const { myAssignments, managedAssignments } = useOnboarding();
   const [isOpen, setIsOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
 
   // Close drawer on navigation
   useEffect(() => { setIsOpen(false); }, [pathname]);
@@ -72,10 +97,33 @@ export function Sidebar() {
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
+  // Load notifications on mount
+  const loadNotifications = useCallback(async () => {
+    try {
+      const list = await notificationApi.list();
+      setNotifications(list);
+    } catch { /* silently ignore — non-critical */ }
+  }, []);
+
+  useEffect(() => { void loadNotifications(); }, [loadNotifications]);
+
+  const handleNotifToggle = async () => {
+    const opening = !notifOpen;
+    setNotifOpen(opening);
+    if (opening) {
+      // Mark all as read and refresh list
+      try {
+        await notificationApi.markAllRead();
+        setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
+      } catch { /* ignore */ }
+    }
+  };
+
   const userIsAdmin = isAdmin(user);
   const pendingCount = userIsAdmin ? courses.filter(c => c.status === 'pending').length : 0;
   const myOnboardingBadge = myAssignments.filter(a => a.status === 'in_progress').length;
   const managedBadge = managedAssignments.filter(a => a.status === 'in_progress').length;
+  const unreadCount = notifications.filter(n => !n.readAt).length;
 
   const handleLogout = async () => {
     await logout();
@@ -128,6 +176,30 @@ export function Sidebar() {
       </nav>
 
       <div className={styles.footer}>
+        {/* Notification bell */}
+        <button className={styles.notifBtn} onClick={() => { void handleNotifToggle(); }}>
+          <Bell size={17} />
+          <span className={styles.notifBtnLabel}>Уведомления</span>
+          {unreadCount > 0 && <span className={styles.notifUnreadBadge}>{unreadCount}</span>}
+        </button>
+
+        {/* Notification panel */}
+        {notifOpen && (
+          <div className={styles.notifPanel}>
+            {notifications.length === 0 ? (
+              <p className={styles.notifEmpty}>Нет уведомлений</p>
+            ) : notifications.map(n => (
+              <div
+                key={n.id}
+                className={`${styles.notifItem} ${!n.readAt ? styles.notifItemUnread : ''}`}
+              >
+                <div className={styles.notifType}>{notifLabel(n.type)}</div>
+                <div className={styles.notifTime}>{timeAgo(n.createdAt)}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
         <Link to="/profile" className={styles.profile}>
           <UserAvatar user={user} size={34} />
           <div className={styles.profileInfo}>

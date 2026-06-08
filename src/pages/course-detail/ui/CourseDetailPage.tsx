@@ -8,7 +8,9 @@ import { employeeApi } from '@entities/user/api/employeeApi';
 import type { EmployeeDto } from '@shared/api/schemas';
 import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
-import { useTestDefinitionQuery } from '@entities/course/api/hooks';
+import { useCourseQuery, useCoverUrl, useTestDefinitionQuery } from '@entities/course/api/hooks';
+import { testAttemptApi } from '@entities/course/api/courseRealApi';
+import { toast } from '@shared/lib/toast';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal';
 import styles from './CourseDetail.module.css';
@@ -105,33 +107,58 @@ function TestPlayer({
   const [state, setState] = useState<TestState>(isDone ? 'passed' : 'answering');
   const [score, setScore] = useState(0);
   const [pending, setPending] = useState(false);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
 
   const allAnswered = questions.every(q => answers[q.id]);
 
-  const handleSubmit = async () => {
-    let correct = 0;
-    questions.forEach(q => {
-      const chosen = q.options.find(o => o.id === answers[q.id]);
-      if (chosen?.isCorrect) correct++;
-    });
-    const pct = Math.round((correct / questions.length) * 100);
-    setScore(pct);
+  // Start attempt when test becomes ready (not if already done)
+  useEffect(() => {
+    if (!item.testId || isDone || state !== 'answering') return;
+    testAttemptApi.start(item.testId)
+      .then(id => setAttemptId(id))
+      .catch(() => { /* attempt will be started on retry if this fails */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.testId]);
 
-    if (pct >= passingPercent) {
-      setState('passed');
-      if (!isDone) {
-        setPending(true);
-        await onComplete();
-        setPending(false);
+  const handleSubmit = async () => {
+    if (!attemptId) {
+      toast.error('Не удалось начать тест — попробуйте перезагрузить страницу');
+      return;
+    }
+    setPending(true);
+    try {
+      await Promise.all(
+        questions.map(q => {
+          const chosenId = answers[q.id];
+          const chosenOpt = q.options.find(o => o.id === chosenId);
+          if (!chosenId || !chosenOpt) return Promise.resolve();
+          return testAttemptApi.answer(attemptId, q.id, chosenId, chosenOpt.text);
+        }),
+      );
+
+      const result = await testAttemptApi.finish(attemptId);
+      setScore(result.score);
+
+      if (result.isPassed) {
+        setState('passed');
+        if (!isDone) await onComplete();
+      } else {
+        setState('failed');
       }
-    } else {
-      setState('failed');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отправить ответы');
+    } finally {
+      setPending(false);
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setAnswers({});
     setState('answering');
+    if (item.testId) {
+      const id = await testAttemptApi.start(item.testId).catch(() => null);
+      setAttemptId(id);
+    }
   };
 
   if (isDone && state !== 'passed') {
@@ -206,7 +233,7 @@ function TestPlayer({
       {state === 'failed' && (
         <div className={`${styles.testResult} ${styles.testResultFail}`}>
           ✗ Не пройден — {score}% (нужно {passingPercent}%). Попробуйте ещё раз.
-          <button className={styles.retryBtn} onClick={handleRetry}>Попробовать снова</button>
+          <button className={styles.retryBtn} onClick={() => void handleRetry()}>Попробовать снова</button>
         </div>
       )}
     </>
@@ -346,8 +373,14 @@ export function CourseDetailPage() {
   } = useCourses();
   const { user } = useUser();
 
-  // Resolve course before hooks so effects can depend on authorId
-  const course = courses.find(c => c.id === id);
+  // Full course (with modules) from dedicated query; list course is summary-only
+  const { data: fullCourse, isLoading: courseLoading } = useCourseQuery(id ?? '');
+
+  // Merge: use full course if loaded, fall back to list summary
+  const listCourse = courses.find(c => c.id === id);
+  const course = fullCourse ?? listCourse;
+
+  const { data: coverUrl } = useCoverUrl(course?.coverId);
 
   const [assignOpen, setAssignOpen] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
@@ -374,7 +407,7 @@ export function CourseDetailPage() {
     void getCourseRequests(id).then(setPendingRequests);
   }, [isController, id, getCourseRequests]);
 
-  if (isLoading) return <div className={styles.loading}>Загрузка...</div>;
+  if (isLoading || courseLoading) return <div className={styles.loading}>Загрузка...</div>;
 
   if (!course) {
     return (
@@ -461,6 +494,12 @@ export function CourseDetailPage() {
       {/* ── Шапка курса — скрывается во время просмотра ── */}
       {!isPlaying && (
         <>
+          {coverUrl && (
+            <div className={styles.coverBanner}>
+              <img src={coverUrl} alt={course.title} className={styles.coverBannerImg} />
+            </div>
+          )}
+
           <div className={styles.titleRow}>
             <h1 className={styles.title}>{course.title}</h1>
             {canAssignCourse(user) && (
@@ -471,7 +510,7 @@ export function CourseDetailPage() {
           </div>
 
           <div className={styles.metaRow}>
-            <span className={styles.meta}>{course.lessonsCount} уроков · {course.createdAt}</span>
+            <span className={styles.meta}>{course.lessonsCount} уроков · {new Date(course.createdAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
             <span className={styles.courseTypeBadge}>{COURSE_TYPE_LABELS[course.courseType]}</span>
             {course.targetDepartmentName && (
               <span className={styles.targetBadge}>

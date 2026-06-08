@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, BookOpen } from 'lucide-react';
 import type { Course, Enrollment } from '../model/types';
-import { COURSE_TYPE_LABELS } from '../model/types';
+import { useCoverUrl } from '../api/hooks';
 import styles from './CourseCard.module.css';
 
 interface CourseCardProps {
@@ -16,13 +16,36 @@ const STATUS_LABELS: Record<string, string> = {
   rejected:         'Заявка отклонена',
 };
 
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function courseSizeMeta(course: Course): string {
+  if (course.lessonsCount > 0) return `${course.lessonsCount} уроков`;
+  if (course.moduleCount != null) return `${course.moduleCount} модулей`;
+  return '';
+}
+
 export function CourseCard({ course, enrollment }: CourseCardProps) {
   const enrollStatus = enrollment?.status && enrollment.status !== 'not_enrolled'
     ? enrollment.status
     : null;
 
+  const { data: coverUrl } = useCoverUrl(course.coverId);
+  const sizeMeta = courseSizeMeta(course);
+
   return (
     <div className={styles.card}>
+      <div className={styles.cover}>
+        {coverUrl ? (
+          <img src={coverUrl} alt={course.title} className={styles.coverImg} />
+        ) : (
+          <div className={styles.coverPlaceholder}>
+            <BookOpen size={32} />
+          </div>
+        )}
+      </div>
+
       <div className={styles.header}>
         <h3 className={styles.title}>{course.title}</h3>
         {enrollStatus && (
@@ -33,7 +56,8 @@ export function CourseCard({ course, enrollment }: CourseCardProps) {
       </div>
 
       <p className={styles.meta}>
-        {COURSE_TYPE_LABELS[course.courseType]} &middot; {course.lessonsCount} уроков
+        {sizeMeta && <>{sizeMeta} &middot; </>}
+        Добавлен {formatDate(course.createdAt)}
       </p>
 
       <p className={styles.description}>{course.description}</p>

@@ -1,6 +1,6 @@
 import { api } from '@shared/api/axios';
-import { IdResponseSchema, EmployeeDtoSchema, paginatedSchema } from '@shared/api/schemas';
-import type { EmployeeDto } from '@shared/api/schemas';
+import { IdResponseSchema, EmployeeDtoSchema, RoleDtoSchema, paginatedSchema } from '@shared/api/schemas';
+import type { EmployeeDto, RoleDto } from '@shared/api/schemas';
 
 export const employeeApi = {
   list: async (params: { page: number; limit: number; divisionId?: string }) => {
@@ -46,5 +46,12 @@ export const employeeApi = {
 
   dismiss: async (id: string): Promise<void> => {
     await api.delete(`/employees/${id}`);
+  },
+};
+
+export const roleApi = {
+  list: async (params: { page: number; limit: number }): Promise<{ data: RoleDto[] }> => {
+    const { data } = await api.get('/roles', { params });
+    return paginatedSchema(RoleDtoSchema).parse(data);
   },
 };

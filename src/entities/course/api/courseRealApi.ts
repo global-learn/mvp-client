@@ -1,17 +1,21 @@
 import { api } from '@shared/api/axios';
 import {
   CourseDtoSchema,
+  CourseSummaryDtoSchema,
   CourseApplicationDtoSchema,
   EnrollmentDtoSchema,
   FileResponseDtoSchema,
   IdResponseSchema,
   TestDefinitionDtoSchema,
+  TestAttemptResultSchema,
   paginatedSchema,
   type CourseApplicationDto,
   type CourseDto,
+  type CourseSummaryDto,
   type EnrollmentDto,
   type FileResponseDto,
   type TestDefinitionDto,
+  type TestAttemptResult,
 } from '@shared/api/schemas';
 import type { Course, Enrollment, EnrollmentStatus, Module, Step, StepItem, TestQuestion } from '../model/types';
 
@@ -49,12 +53,16 @@ function mapModule(backendModule: CourseDto['modules'][number]): Module {
   return { id: backendModule.id, title: backendModule.name, steps };
 }
 
+function scopeToType(scope?: string | null): 'all' | 'employee' {
+  return scope === 'ALL' || scope == null ? 'all' : 'employee';
+}
+
 export function mapCourse(dto: CourseDto): Course {
   const modules = [...dto.modules]
     .sort((a, b) => a.position - b.position)
     .map(mapModule);
 
-  const lessonsCount = modules.reduce(
+  const lessonsCount = dto.totalSteps ?? modules.reduce(
     (total, m) => total + m.steps.reduce((s, step) => s + step.items.length, 0),
     0,
   );
@@ -64,11 +72,45 @@ export function mapCourse(dto: CourseDto): Course {
     title:       dto.name,
     description: dto.description,
     authorId:    dto.authorId,
+    coverId:     dto.coverId ?? undefined,
     status:      'published',
-    courseType:  'all',
+    courseType:  scopeToType(dto.scopeInfo?.scope),
     createdAt:   dto.createdAt,
     lessonsCount,
     modules,
+    targetDepartmentId:   dto.scopeInfo?.departmentId,
+    targetDepartmentName: dto.scopeInfo?.departmentName ?? undefined,
+    targetDivisionId:     dto.scopeInfo?.divisionId,
+    targetDivisionName:   dto.scopeInfo?.divisionName ?? undefined,
+  };
+}
+
+export function mapCourseSummary(dto: CourseSummaryDto): Course {
+  const e = dto.enrollment;
+  return {
+    id:          dto.id,
+    title:       dto.name,
+    description: dto.description,
+    authorId:    dto.authorId,
+    coverId:     dto.coverId ?? undefined,
+    status:      'published',
+    courseType:  scopeToType(dto.scopeInfo?.scope),
+    createdAt:   dto.createdAt,
+    lessonsCount: 0,
+    moduleCount:  dto.moduleCount,
+    modules:     [],
+    targetDepartmentId:   dto.scopeInfo?.departmentId,
+    targetDepartmentName: dto.scopeInfo?.departmentName ?? undefined,
+    targetDivisionId:     dto.scopeInfo?.divisionId,
+    targetDivisionName:   dto.scopeInfo?.divisionName ?? undefined,
+    embeddedEnrollment: e ? {
+      enrollmentId:  e.enrollmentId,
+      status:        e.status,
+      progress:      Math.round(e.completionRate),
+      completedSteps: e.completedSteps,
+      totalSteps:    e.totalSteps,
+      completedAt:   e.completedAt,
+    } : undefined,
   };
 }
 
@@ -78,13 +120,16 @@ function mapEnrollmentStatus(status: EnrollmentDto['status']): EnrollmentStatus 
   return 'in_progress';
 }
 
-export function mapEnrollmentDto(dto: EnrollmentDto, totalSteps: number): Enrollment {
+export function mapEnrollmentDto(dto: EnrollmentDto, totalSteps: number, progressOverride?: number): Enrollment {
   const completedItems = dto.progress
     .filter(p => p.completedAt)
     .map(p => p.stepId);
 
+  // progressOverride comes from the course list's embedded enrollment.completionRate (backend-calculated)
   const progress =
-    totalSteps > 0 ? Math.round((completedItems.length / totalSteps) * 100) : 0;
+    progressOverride != null ? progressOverride
+    : totalSteps > 0 ? Math.round((completedItems.length / totalSteps) * 100)
+    : 0;
 
   return {
     id:             dto.id,
@@ -100,13 +145,14 @@ export function mapEnrollmentDto(dto: EnrollmentDto, totalSteps: number): Enroll
 
 // ── API calls ────────────────────────────────────────────────────
 
-const CoursePaginatedSchema    = paginatedSchema(CourseDtoSchema);
-const EnrollmentPaginatedSchema = paginatedSchema(EnrollmentDtoSchema);
+const CourseSummaryPaginatedSchema = paginatedSchema(CourseSummaryDtoSchema);
+const CoursePaginatedSchema        = paginatedSchema(CourseDtoSchema);
+const EnrollmentPaginatedSchema    = paginatedSchema(EnrollmentDtoSchema);
 
 export const courseRealApi = {
   async list(): Promise<Course[]> {
     const { data } = await api.get('/courses', { params: { page: 1, limit: 200 } });
-    return CoursePaginatedSchema.parse(data).data.map(mapCourse);
+    return CourseSummaryPaginatedSchema.parse(data).data.map(mapCourseSummary);
   },
 
   async getById(id: string): Promise<Course> {
@@ -136,17 +182,41 @@ export const fileApi = {
     });
     return FileResponseDtoSchema.parse(data);
   },
+
+  async getUrl(id: string): Promise<string> {
+    const { data } = await api.get(`/files/${id}`);
+    return FileResponseDtoSchema.parse(data).url;
+  },
 };
 
 // ── Course write operations ───────────────────────────────────────
 
 export const courseWriteApi = {
-  async create(dto: { name: string; description: string; coverId?: string }): Promise<string> {
-    const { data } = await api.post('/courses', dto);
+  async create(dto: {
+    name: string;
+    description: string;
+    coverId?: string;
+    scope?: 'ALL' | 'DEPARTMENT' | 'DIVISION';
+    departmentId?: string | null;
+    divisionId?: string | null;
+  }): Promise<string> {
+    const body: Record<string, unknown> = { name: dto.name, description: dto.description };
+    if (dto.scope) body.scope = dto.scope;
+    if (dto.departmentId) body.departmentId = dto.departmentId;
+    if (dto.divisionId) body.divisionId = dto.divisionId;
+    if (dto.coverId) body.coverId = dto.coverId;
+    const { data } = await api.post('/courses', body);
     return IdResponseSchema.parse(data).id;
   },
 
-  async update(id: string, dto: { name?: string; description?: string; coverId?: string | null }): Promise<void> {
+  async update(id: string, dto: {
+    name?: string;
+    description?: string;
+    coverId?: string | null;
+    scope?: 'ALL' | 'DEPARTMENT' | 'DIVISION';
+    departmentId?: string | null;
+    divisionId?: string | null;
+  }): Promise<void> {
     await api.patch(`/courses/${id}`, dto);
   },
 
@@ -250,6 +320,24 @@ export const questionApi = {
   ): Promise<string> {
     const { data } = await api.post(`/courses/${courseId}/questions`, dto);
     return IdResponseSchema.parse(data).id;
+  },
+};
+
+// ── Test attempts ─────────────────────────────────────────────────
+
+export const testAttemptApi = {
+  async start(testId: string): Promise<string> {
+    const { data } = await api.post(`/tests/${testId}/attempts`);
+    return IdResponseSchema.parse(data).id;
+  },
+
+  async answer(attemptId: string, questionId: string, answerId: string, option: string): Promise<void> {
+    await api.post(`/attempts/${attemptId}/answers`, { questionId, answerId, option });
+  },
+
+  async finish(attemptId: string): Promise<TestAttemptResult> {
+    const { data } = await api.post(`/attempts/${attemptId}/finish`);
+    return TestAttemptResultSchema.parse(data);
   },
 };
 

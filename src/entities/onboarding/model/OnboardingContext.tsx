@@ -15,6 +15,7 @@ import type {
 import { onboardingRealApi } from '../api/onboardingRealApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, isAdmin, canControl } from '@entities/user/model/types';
+import { toast } from '@shared/lib/toast';
 
 interface OnboardingContextValue {
   templates: OnboardingTemplate[];
@@ -90,7 +91,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         setAllAssignments(merged.filter(a => seen.has(a.id) ? false : (seen.add(a.id), true)));
       }
     } catch (err) {
-      console.error('Onboarding load failed:', err);
+      toast.apiError(err, 'Не удалось загрузить онбординги');
     } finally {
       setIsLoading(false);
     }
@@ -106,25 +107,36 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const completeStepWithFeedback = async (assignmentId: string, stepId: string, feedbackText: string) => {
-    await onboardingRealApi.completeStep(assignmentId, { stepId, feedbackText, selectedOptionIds: [] });
-    const updated = await onboardingRealApi.getOnboardingById(assignmentId);
-    patchAssignment(updated);
+    try {
+      await onboardingRealApi.completeStep(assignmentId, { stepId, feedbackText, selectedOptionIds: [] });
+      const updated = await onboardingRealApi.getOnboardingById(assignmentId);
+      patchAssignment(updated);
+      toast.success('Шаг отмечен как выполненный');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отметить шаг');
+      throw err;
+    }
   };
 
   const sendMessage = async (assignmentId: string, text: string) => {
-    const msgId = await onboardingRealApi.sendChatMessage(assignmentId, { body: text });
-    const msg: OnboardingMessage = {
-      id:         msgId,
-      senderId:   user.id,
-      senderName: displayName(user),
-      text,
-      sentAt:     new Date().toISOString(),
-    };
-    const patch = (a: OnboardingAssignment) =>
-      a.id === assignmentId ? { ...a, messages: [...a.messages, msg] } : a;
-    setMyAssignments(prev => prev.map(patch));
-    setManagedAssignments(prev => prev.map(patch));
-    setAllAssignments(prev => prev.map(patch));
+    try {
+      const msgId = await onboardingRealApi.sendChatMessage(assignmentId, { body: text });
+      const msg: OnboardingMessage = {
+        id:         msgId,
+        senderId:   user.id,
+        senderName: displayName(user),
+        text,
+        sentAt:     new Date().toISOString(),
+      };
+      const patch = (a: OnboardingAssignment) =>
+        a.id === assignmentId ? { ...a, messages: [...a.messages, msg] } : a;
+      setMyAssignments(prev => prev.map(patch));
+      setManagedAssignments(prev => prev.map(patch));
+      setAllAssignments(prev => prev.map(patch));
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отправить сообщение');
+      throw err;
+    }
   };
 
   const assign = async (
@@ -139,19 +151,24 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     _customSteps?: OnboardingStep[],
     dueDate?: string,
   ): Promise<OnboardingAssignment> => {
-    const startDate = new Date().toISOString();
-    const endDate = dueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const id = await onboardingRealApi.assign({ templateId, assignedToId: employeeId, startDate, endDate });
-    const created = await onboardingRealApi.getOnboardingById(id);
-    // Fill in names from the caller if the API doesn't resolve them
-    const enriched: OnboardingAssignment = {
-      ...created,
-      employeeName:  created.employeeName !== employeeId ? created.employeeName : employeeName,
-      employeeEmail: created.employeeEmail || employeeEmail,
-    };
-    setManagedAssignments(prev => [...prev, enriched]);
-    setAllAssignments(prev => [...prev, enriched]);
-    return enriched;
+    try {
+      const startDate = new Date().toISOString();
+      const endDate = dueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const id = await onboardingRealApi.assign({ templateId, assignedToId: employeeId, startDate, endDate });
+      const created = await onboardingRealApi.getOnboardingById(id);
+      const enriched: OnboardingAssignment = {
+        ...created,
+        employeeName:  created.employeeName !== employeeId ? created.employeeName : employeeName,
+        employeeEmail: created.employeeEmail || employeeEmail,
+      };
+      setManagedAssignments(prev => [...prev, enriched]);
+      setAllAssignments(prev => [...prev, enriched]);
+      toast.success('Онбординг назначен');
+      return enriched;
+    } catch (err) {
+      toast.apiError(err, 'Не удалось назначить онбординг');
+      throw err;
+    }
   };
 
   const updateSteps = async (assignmentId: string, steps: OnboardingStep[]) => {
@@ -164,29 +181,35 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const createTemplate = async (dto: Omit<OnboardingTemplate, 'id' | 'createdAt'>): Promise<OnboardingTemplate> => {
-    const { id } = await onboardingRealApi.createTemplate({
-      name:        dto.title,
-      description: dto.description,
-      positionId:  '00000000-0000-0000-0000-000000000000', // placeholder — UI doesn't provide it yet
-      divisionId:  dto.targetDivisionId ?? '00000000-0000-0000-0000-000000000000',
-      steps:       dto.steps.map((s, i) => ({
-        position:                   i + 1,
-        name:                       s.title,
-        description:                s.description,
-        type:                       s.type === 'course' ? 'COURSE' as const : 'TEXT' as const,
-        courseId:                   s.courseId,
-        recommendedStartOffsetDays: 0,
-        recommendedEndOffsetDays:   7,
-        feedbackOptions:            [],
-      })),
-    });
-    const created: OnboardingTemplate = {
-      ...dto,
-      id,
-      createdAt: new Date().toISOString(),
-    };
-    setTemplates(prev => [...prev, created]);
-    return created;
+    try {
+      const { id } = await onboardingRealApi.createTemplate({
+        name:        dto.title,
+        description: dto.description,
+        positionId:  '00000000-0000-0000-0000-000000000000',
+        divisionId:  dto.targetDivisionId ?? '00000000-0000-0000-0000-000000000000',
+        steps:       dto.steps.map((s, i) => ({
+          position:                   i + 1,
+          name:                       s.title,
+          description:                s.description,
+          type:                       s.type === 'course' ? 'COURSE' as const : 'TEXT' as const,
+          courseId:                   s.courseId,
+          recommendedStartOffsetDays: 0,
+          recommendedEndOffsetDays:   7,
+          feedbackOptions:            [],
+        })),
+      });
+      const created: OnboardingTemplate = {
+        ...dto,
+        id,
+        createdAt: new Date().toISOString(),
+      };
+      setTemplates(prev => [...prev, created]);
+      toast.success('Шаблон онбординга создан');
+      return created;
+    } catch (err) {
+      toast.apiError(err, 'Не удалось создать шаблон');
+      throw err;
+    }
   };
 
   const updateTemplate = async (id: string, patch: Partial<OnboardingTemplate>): Promise<OnboardingTemplate> => {

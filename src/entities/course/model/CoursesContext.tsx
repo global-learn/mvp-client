@@ -25,6 +25,7 @@ import { employeeApi } from '@entities/user/api/employeeApi';
 import { divisionApi } from '@entities/company/api/companyApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, isAdmin, type User } from '@entities/user/model/types';
+import { toast } from '@shared/lib/toast';
 import type { TestContent } from './types';
 
 // ── Видимость курса для конкретного пользователя ─────────────────
@@ -90,7 +91,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
   const employeeId = user.employee?.id;
 
   const { data: rawCourses = [], isLoading: coursesLoading } = useCoursesQuery();
-  const { data: rawEnrollmentDtos = [], isLoading: enrollmentsLoading } = useMyEnrollmentDtosQuery(employeeId);
+  const { data: rawEnrollmentDtos = [], isLoading: enrollmentsLoading } = useMyEnrollmentDtosQuery();
 
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   // Local overrides for optimistic updates (cleared on query re-fetch)
@@ -99,12 +100,13 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
   const isLoading = coursesLoading || enrollmentsLoading;
 
   const serverEnrollments = useMemo(() => {
-    const stepCountByCourse = new Map(
-      rawCourses.map(c => [c.id, getAllItems(c).length]),
-    );
-    return rawEnrollmentDtos.map(dto =>
-      mapEnrollmentDto(dto, stepCountByCourse.get(dto.courseId) ?? 0),
-    );
+    const stepCountByCourse = new Map(rawCourses.map(c => [c.id, getAllItems(c).length]));
+    const courseById        = new Map(rawCourses.map(c => [c.id, c]));
+    return rawEnrollmentDtos.map(dto => {
+      const course         = courseById.get(dto.courseId);
+      const progressOverride = course?.embeddedEnrollment?.progress;
+      return mapEnrollmentDto(dto, stepCountByCourse.get(dto.courseId) ?? 0, progressOverride);
+    });
   }, [rawCourses, rawEnrollmentDtos]);
 
   const enrollments = useMemo(() => {
@@ -122,8 +124,8 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
   const getEnrollment = useCallback(
     (courseId: string): Enrollment | undefined =>
-      enrollments.find(e => e.courseId === courseId && e.userId === (employeeId ?? user.id)),
-    [enrollments, employeeId, user.id],
+      enrollments.find(e => e.courseId === courseId),
+    [enrollments],
   );
 
   // ── Course creation (real API) ────────────────────────────────
@@ -132,10 +134,18 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     dto: Omit<CreateCourseDto, 'authorId'>,
     coverFile?: File,
   ): Promise<Course> => {
+    try {
     // 1. Create course
+    const scope: 'ALL' | 'DEPARTMENT' | 'DIVISION' =
+      dto.targetDivisionId   ? 'DIVISION'
+      : dto.targetDepartmentId ? 'DEPARTMENT'
+      : 'ALL';
     const courseId = await courseWriteApi.create({
-      name:        dto.title,
-      description: dto.description,
+      name:         dto.title,
+      description:  dto.description,
+      scope,
+      departmentId: dto.targetDepartmentId ?? undefined,
+      divisionId:   dto.targetDivisionId   ?? undefined,
     });
 
     // 2. Upload cover if provided, then patch course
@@ -184,18 +194,38 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     // 4. Fetch created course and refresh query cache
     const course = await courseRealApi.getById(courseId);
     await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+    toast.success('Курс создан');
     return course;
+    } catch (err) {
+      toast.apiError(err, 'Не удалось создать курс');
+      throw err;
+    }
   };
 
   // ── Enrollment write (real API) ───────────────────────────────
 
   const enroll = async (courseId: string) => {
-    const eid = employeeId ?? user.id;
-    await courseWriteApi.enrollEmployee(courseId, eid);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(eid) });
+    try {
+      const eid = employeeId ?? user.id;
+      const enrollmentId = await courseWriteApi.enrollEmployee(courseId, eid);
+      // Set optimistic enrollment immediately so the player can open before the refetch completes
+      setEnrollmentOverrides(prev => [
+        ...prev.filter(e => e.courseId !== courseId),
+        { id: enrollmentId, courseId, userId: eid, status: 'in_progress', progress: 0, completedItems: [], enrolledAt: new Date().toISOString() },
+      ]);
+      toast.success('Вы записаны на курс');
+      // Refetch in background; clear optimistic once server data is available
+      void queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') }).then(() => {
+        setEnrollmentOverrides(prev => prev.filter(e => e.courseId !== courseId));
+      });
+    } catch (err) {
+      toast.apiError(err, 'Не удалось записаться на курс');
+      throw err;
+    }
   };
 
   const requestEnrollment = async (courseId: string) => {
+    try {
     await courseWriteApi.applyForCourse(courseId);
     // Optimistic: show pending_approval until next enrollment refresh
     const optimistic: Enrollment = {
@@ -210,12 +240,23 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       ...prev.filter(e => e.courseId !== courseId),
       optimistic,
     ]);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(employeeId ?? '') });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
+    toast.success('Заявка отправлена — ожидайте одобрения');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отправить заявку');
+      throw err;
+    }
   };
 
   const assignCourse = async (courseId: string, userId: string): Promise<void> => {
-    await courseWriteApi.enrollEmployee(courseId, userId);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(employeeId ?? '') });
+    try {
+      await courseWriteApi.enrollEmployee(courseId, userId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
+      toast.success('Курс назначен сотруднику');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось назначить курс');
+      throw err;
+    }
   };
 
   // ── Step completion (real API) ────────────────────────────────
@@ -225,9 +266,11 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     const enrollmentId = prevEnrollment?.id;
 
     if (!enrollmentId) {
+      toast.error('Нет активной записи на курс');
       throw new Error('No active enrollment found for this course');
     }
 
+    try {
     await enrollmentWriteApi.completeStep(enrollmentId, itemId);
 
     // Re-fetch to get server truth (updated progress + possible COMPLETED status)
@@ -255,8 +298,12 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(employeeId ?? '') });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
     return updated;
+    } catch (err) {
+      toast.apiError(err, 'Не удалось сохранить прогресс');
+      throw err;
+    }
   };
 
   const completeStep = async (courseId: string, stepId: string): Promise<void> => {
@@ -289,19 +336,31 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
   };
 
   const approveEnrollmentRequest = async (courseId: string, userId: string): Promise<void> => {
-    const apps = await courseWriteApi.getApplications(courseId);
-    const app  = apps.find(a => a.employeeId === userId);
-    if (!app) return;
-    await courseWriteApi.approveApplication(courseId, app.id);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(userId) });
+    try {
+      const apps = await courseWriteApi.getApplications(courseId);
+      const app  = apps.find(a => a.employeeId === userId);
+      if (!app) return;
+      await courseWriteApi.approveApplication(courseId, app.id);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(userId) });
+      toast.success('Заявка одобрена');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось одобрить заявку');
+      throw err;
+    }
   };
 
   const rejectEnrollmentRequest = async (courseId: string, userId: string): Promise<void> => {
-    const apps = await courseWriteApi.getApplications(courseId);
-    const app  = apps.find(a => a.employeeId === userId);
-    if (!app) return;
-    await courseWriteApi.rejectApplication(courseId, app.id);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(userId) });
+    try {
+      const apps = await courseWriteApi.getApplications(courseId);
+      const app  = apps.find(a => a.employeeId === userId);
+      if (!app) return;
+      await courseWriteApi.rejectApplication(courseId, app.id);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(userId) });
+      toast.success('Заявка отклонена');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отклонить заявку');
+      throw err;
+    }
   };
 
   const getCourseEnrollments = async (courseId: string): Promise<Enrollment[]> => {

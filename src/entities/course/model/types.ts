@@ -66,10 +66,12 @@ export interface Course {
   title: string;
   description: string;
   authorId: string;
+  coverId?: string;
   status: CourseStatus;
   courseType: CourseType;
   createdAt: string;
   lessonsCount: number;
+  moduleCount?: number; // from list summary (when modules[] not available)
   modules?: Module[]; // опционально — загружается при открытии курса
   /** Если задан — курс предназначен конкретному департаменту */
   targetDepartmentId?: string | null;
@@ -77,6 +79,15 @@ export interface Course {
   /** Если задан — курс предназначен конкретному отделу */
   targetDivisionId?: string | null;
   targetDivisionName?: string | null;
+  /** Прогресс прохождения, встроенный в ответ списка курсов — используется как primary source */
+  embeddedEnrollment?: {
+    enrollmentId: string;
+    status: string;
+    progress: number;      // 0-100
+    completedSteps: number;
+    totalSteps: number;
+    completedAt?: string | null;
+  };
 }
 
 // Запись пользователя на курс

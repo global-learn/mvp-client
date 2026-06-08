@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
-import { courseRealApi, testDefApi, mapTestDefinitionToQuestions } from './courseRealApi';
+import { courseRealApi, fileApi, testDefApi, mapTestDefinitionToQuestions } from './courseRealApi';
 import type { EnrollmentDto } from '@shared/api/schemas';
 import type { TestQuestion } from '../model/types';
 
@@ -20,12 +20,20 @@ export function useCourseQuery(id: string) {
   });
 }
 
-export function useMyEnrollmentDtosQuery(userId: string | undefined) {
+export function useMyEnrollmentDtosQuery() {
   return useQuery<EnrollmentDto[]>({
-    queryKey: queryKeys.courses.enrollments(userId ?? ''),
+    queryKey: queryKeys.courses.enrollments('me'),
     queryFn:  () => courseRealApi.getMyEnrollmentDtos(),
-    enabled:  !!userId,
     staleTime: 30_000,
+  });
+}
+
+export function useCoverUrl(fileId?: string) {
+  return useQuery({
+    queryKey: ['file-url', fileId],
+    queryFn:  () => fileApi.getUrl(fileId!),
+    enabled:  !!fileId,
+    staleTime: 600_000,
   });
 }
 

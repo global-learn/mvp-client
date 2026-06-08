@@ -5,47 +5,42 @@ import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, isManager } from '@entities/user/model/types';
-import type { CourseType } from '@entities/course/model/types';
-import { COURSE_TYPE_LABELS } from '@entities/course/model/types';
+import { useDepartmentsQuery, useDivisionsQuery } from '@entities/company/api/hooks';
 import styles from './CourseList.module.css';
-
-type TabFilter = 'all_types' | CourseType;
 
 export function CourseList() {
   const { courses, enrollments, getEnrollment, approveCourse, rejectCourse, isLoading } = useCourses();
   const { user } = useUser();
   const admin        = isAdmin(user);
-  const isRegularMgr = isManager(user);          // только роль manager
+  const isRegularMgr = isManager(user);
 
-  const [approving, setApproving]   = useState<string | null>(null);
-  const [rejecting, setRejecting]   = useState<string | null>(null);
-  const [activeTab, setActiveTab]   = useState<TabFilter>('all_types');
-  const [filterDeptId, setFilterDeptId] = useState('');
-  const [filterDivId,  setFilterDivId]  = useState('');
-  const [searchQuery,  setSearchQuery]  = useState('');
+  const [approving, setApproving] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDeptId, setSelectedDeptId] = useState('');
+  const [selectedDivId,  setSelectedDivId]  = useState('');
 
-  const allPublished  = useMemo(() => courses.filter(c => c.status === 'published'), [courses]);
+  const { data: deptPage } = useDepartmentsQuery({ limit: 200 });
+  const { data: divPage  } = useDivisionsQuery({ limit: 200 });
+  const departments = deptPage?.data ?? [];
+  const divisions   = divPage?.data  ?? [];
+
+  const allPublished   = useMemo(() => courses.filter(c => c.status === 'published'), [courses]);
   const pendingCourses = courses.filter(c => c.status === 'pending');
 
-  // ── Фильтрованные опубликованные (для canControl-вида) ────────
   const publishedCourses = useMemo(() => {
-    return allPublished.filter(c => {
-      if (activeTab !== 'all_types' && c.courseType !== activeTab) return false;
-      if (activeTab === 'employee') {
-        if (filterDeptId && c.targetDepartmentId !== filterDeptId) return false;
-        if (filterDivId  && c.targetDivisionId  !== filterDivId)  return false;
-      }
-      return true;
-    });
-  }, [allPublished, activeTab, filterDeptId, filterDivId]);
+    if (selectedDivId)  return allPublished.filter(c => c.targetDivisionId   === selectedDivId);
+    if (selectedDeptId) return allPublished.filter(c => c.targetDepartmentId === selectedDeptId);
+    return allPublished;
+  }, [allPublished, selectedDeptId, selectedDivId]);
 
-  // ── Мои курсы (любой enrollement в published-курсе) ──────────
+  // ── Мои курсы (любой enrollment в published-курсе) ──────────
   const myEnrolledCourses = useMemo(() =>
     allPublished.filter(c => enrollments.some(e => e.courseId === c.id)),
   [allPublished, enrollments]);
 
   // ── Для менеджера: "Назначенные" vs "Доступные" ───────────────
-  const assignedCourses  = myEnrolledCourses; // все, где есть enrollment
+  const assignedCourses  = myEnrolledCourses;
   const availableCourses = useMemo(() => {
     const notEnrolled = allPublished.filter(c => !enrollments.some(e => e.courseId === c.id));
     if (!searchQuery.trim()) return notEnrolled;
@@ -56,25 +51,6 @@ export function CourseList() {
     );
   }, [allPublished, enrollments, searchQuery]);
 
-  // ── Dropdown-фильтры (для canControl) ───────────────────────
-  const depts = useMemo(() => {
-    const map = new Map<string, string>();
-    allPublished.forEach(c => {
-      if (c.courseType === 'employee' && c.targetDepartmentId && c.targetDepartmentName)
-        map.set(c.targetDepartmentId, c.targetDepartmentName);
-    });
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [allPublished]);
-
-  const divs = useMemo(() => {
-    const map = new Map<string, string>();
-    allPublished.forEach(c => {
-      if (c.courseType === 'employee' && c.targetDivisionId && c.targetDivisionName)
-        map.set(c.targetDivisionId, c.targetDivisionName);
-    });
-    return [...map.entries()].map(([id, name]) => ({ id, name }));
-  }, [allPublished]);
-
   const handleApprove = async (courseId: string) => {
     setApproving(courseId);
     try { await approveCourse(courseId); } finally { setApproving(null); }
@@ -82,11 +58,6 @@ export function CourseList() {
   const handleReject = async (courseId: string) => {
     setRejecting(courseId);
     try { await rejectCourse(courseId); } finally { setRejecting(null); }
-  };
-  const handleTabChange = (tab: TabFilter) => {
-    setActiveTab(tab);
-    setFilterDeptId('');
-    setFilterDivId('');
   };
 
   if (isLoading) return <div className={styles.empty}>Загрузка курсов...</div>;
@@ -182,12 +153,6 @@ export function CourseList() {
   // ════════════════════════════════════════════════════════════════
   // ВИД ДЛЯ КОНТРОЛИРУЮЩИХ РОЛЕЙ (admin, dept_head, div_head, senior_manager)
   // ════════════════════════════════════════════════════════════════
-  const tabs: { key: TabFilter; label: string }[] = [
-    { key: 'all_types', label: 'Все' },
-    { key: 'all',       label: COURSE_TYPE_LABELS.all },
-    { key: 'employee',  label: COURSE_TYPE_LABELS.employee },
-  ];
-
   return (
     <div>
       {/* ── Секция модерации (только admin) ── */}
@@ -202,9 +167,7 @@ export function CourseList() {
               <div key={course.id} className={styles.pendingCard}>
                 <div className={styles.pendingInfo}>
                   <span className={styles.pendingCourseName}>{course.title}</span>
-                  <span className={styles.pendingMeta}>
-                    {COURSE_TYPE_LABELS[course.courseType]} · {course.lessonsCount} уроков
-                  </span>
+                  <span className={styles.pendingMeta}>{course.description}</span>
                 </div>
                 <div className={styles.pendingActions}>
                   <button
@@ -289,46 +252,39 @@ export function CourseList() {
         </section>
       )}
 
-      {/* ── Фильтры + поиск ── */}
+      {/* ── Фильтры ── */}
       <div className={styles.filterBar}>
-        <div className={styles.typeTabs}>
-          {tabs.map(t => (
-            <button
-              key={t.key}
-              className={`${styles.typeTab} ${activeTab === t.key ? styles.typeTabActive : ''}`}
-              onClick={() => handleTabChange(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className={styles.filterSelects}>
+          <select
+            className={styles.filterSelect}
+            value={selectedDeptId}
+            onChange={e => { setSelectedDeptId(e.target.value); setSelectedDivId(''); }}
+          >
+            <option value="">Все департаменты</option>
+            {departments.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          <select
+            className={styles.filterSelect}
+            value={selectedDivId}
+            onChange={e => setSelectedDivId(e.target.value)}
+          >
+            <option value="">Все отделы</option>
+            {(selectedDeptId
+              ? divisions.filter(d => d.departmentId === selectedDeptId)
+              : divisions
+            ).map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
         </div>
-
-        {activeTab === 'employee' && (depts.length > 0 || divs.length > 0) && (
-          <div className={styles.filterSelects}>
-            {depts.length > 0 && (
-              <select className={styles.filterSelect} value={filterDeptId}
-                onChange={e => setFilterDeptId(e.target.value)}>
-                <option value="">Все департаменты</option>
-                {depts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            )}
-            {divs.length > 0 && (
-              <select className={styles.filterSelect} value={filterDivId}
-                onChange={e => setFilterDivId(e.target.value)}>
-                <option value="">Все отделы</option>
-                {divs.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-            )}
-          </div>
-        )}
-
-        {/* Поиск (для canControl) */}
         <div className={styles.searchWrap} style={{ marginLeft: 'auto' }}>
           <Search size={15} className={styles.searchIcon} />
           <input
             className={styles.searchInput}
             type="text"
-            placeholder="Поиск..."
+            placeholder="Поиск курсов..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />

@@ -8,8 +8,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { User, UserAvatar, EmployeeRole } from './types';
 import { authApi } from '../api/authApi';
-import { employeeApi } from '../api/employeeApi';
-import { departmentApi, divisionApi, positionApi } from '@entities/company/api/companyApi';
 import { queryKeys } from '@shared/lib/query/queryKeys';
 
 // Maps backend role string (e.g. "admin", "Admin", "department_head") → EmployeeRole
@@ -20,27 +18,32 @@ function parseRole(raw: string): EmployeeRole {
 }
 
 async function fetchCurrentUser(): Promise<User> {
-  const me = await authApi.me();
-  const employee = await employeeApi.getById(me.id);
-  const division = await divisionApi.getById(employee.divisionId);
-  const [department, position] = await Promise.all([
-    departmentApi.getById(division.departmentId),
-    employee.positionId ? positionApi.getById(employee.positionId) : Promise.resolve(null),
-  ]);
+  const profile = await authApi.myProfile();
 
-  const roleName = parseRole(me.role);
+  const roleName = parseRole(profile.role.name);
+  const emp = profile.employee;
+
+  if (!emp) {
+    return {
+      id:       profile.id,
+      email:    profile.email,
+      fullname: null,
+      type:     'EMPLOYEE',
+    };
+  }
+
   return {
-    id:       me.id,
-    email:    me.email,
-    fullname: employee.fullname,
+    id:       profile.id,
+    email:    profile.email,
+    fullname: emp.fullname,
     type:     'EMPLOYEE',
     employee: {
-      id:             employee.id,
-      department:     { id: department.id, name: department.name },
-      division:       { id: division.id, name: division.name, departmentId: division.departmentId },
-      position:       position ? { id: position.id, name: position.name } : undefined,
+      id:             emp.id,
+      department:     { id: emp.division.department.id, name: emp.division.department.name },
+      division:       { id: emp.division.id, name: emp.division.name, departmentId: emp.division.department.id },
+      position:       emp.position ? { id: emp.position.id, name: emp.position.name } : undefined,
       role:           { id: roleName, name: roleName },
-      employmentDate: employee.employmentDate,
+      employmentDate: emp.employmentDate,
     },
   };
 }

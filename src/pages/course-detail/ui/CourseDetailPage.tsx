@@ -4,7 +4,6 @@ import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Cl
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
-import { MOCK_USER_INFO } from '@entities/course/api/courseApi';
 import { employeeApi } from '@entities/user/api/employeeApi';
 import type { EmployeeDto } from '@shared/api/schemas';
 import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
@@ -96,10 +95,11 @@ function TestPlayer({
   onComplete: () => Promise<void>;
 }) {
   const needsLoad = item.questions.length === 0 && !!item.testId;
-  const { data: loadedQuestions, isLoading: questionsLoading } = useTestDefinitionQuery(
+  const { data: testDef, isLoading: questionsLoading } = useTestDefinitionQuery(
     needsLoad ? item.testId : undefined,
   );
-  const questions = needsLoad ? (loadedQuestions ?? []) : item.questions;
+  const questions = needsLoad ? (testDef?.questions ?? []) : item.questions;
+  const passingPercent = (needsLoad && testDef) ? testDef.passingPercent : item.passingPercent;
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [state, setState] = useState<TestState>(isDone ? 'passed' : 'answering');
@@ -117,7 +117,7 @@ function TestPlayer({
     const pct = Math.round((correct / questions.length) * 100);
     setScore(pct);
 
-    if (pct >= item.passingPercent) {
+    if (pct >= passingPercent) {
       setState('passed');
       if (!isDone) {
         setPending(true);
@@ -144,7 +144,7 @@ function TestPlayer({
 
   return (
     <>
-      <span className={styles.contentTypeBadge}>Тест · минимум {item.passingPercent}% правильных</span>
+      <span className={styles.contentTypeBadge}>Тест · минимум {passingPercent}% правильных</span>
 
       {questions.length === 0 && (
         <p style={{ color: 'var(--muted-foreground)', padding: '1rem 0' }}>Вопросы не найдены.</p>
@@ -205,7 +205,7 @@ function TestPlayer({
 
       {state === 'failed' && (
         <div className={`${styles.testResult} ${styles.testResultFail}`}>
-          ✗ Не пройден — {score}% (нужно {item.passingPercent}%). Попробуйте ещё раз.
+          ✗ Не пройден — {score}% (нужно {passingPercent}%). Попробуйте ещё раз.
           <button className={styles.retryBtn} onClick={handleRetry}>Попробовать снова</button>
         </div>
       )}
@@ -221,12 +221,29 @@ function CourseStatsPanel({ courseId, getCourseEnrollments }: {
   getCourseEnrollments: (id: string) => Promise<Enrollment[]>;
 }) {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [employeeInfo, setEmployeeInfo] = useState<Record<string, { name: string; departmentName: string }>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    void getCourseEnrollments(courseId).then(data => {
+    void getCourseEnrollments(courseId).then(async data => {
       setEnrollments(data);
+      const uniqueIds = [...new Set([
+        ...data.map(e => e.userId),
+        ...data.flatMap(e => e.assignedBy ? [e.assignedBy] : []),
+      ])];
+      const info: Record<string, { name: string; departmentName: string }> = {};
+      await Promise.allSettled(
+        uniqueIds.map(async id => {
+          try {
+            const emp = await employeeApi.getById(id);
+            info[id] = { name: emp.fullname, departmentName: emp.department.name };
+          } catch {
+            info[id] = { name: id, departmentName: '—' };
+          }
+        }),
+      );
+      setEmployeeInfo(info);
       setLoading(false);
     });
   }, [courseId, getCourseEnrollments]);
@@ -280,21 +297,21 @@ function CourseStatsPanel({ courseId, getCourseEnrollments }: {
       ) : (
         <div className={styles.statsTable}>
           {enrollments.map(e => {
-            const info = MOCK_USER_INFO[e.userId];
+            const info = employeeInfo[e.userId];
             const name = info?.name ?? e.userId;
-            const division = info?.division ?? '—';
+            const department = info?.departmentName ?? '—';
             const badge = statusLabel[e.status] ?? { text: e.status, cls: '' };
             const enrollDate = e.enrolledAt
               ? new Date(e.enrolledAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })
               : '—';
-            const assignerInfo = e.assignedBy ? (MOCK_USER_INFO[e.assignedBy]?.name ?? e.assignedBy) : null;
+            const assignerInfo = e.assignedBy ? (employeeInfo[e.assignedBy]?.name ?? e.assignedBy) : null;
             return (
               <div key={`${e.courseId}-${e.userId}`} className={styles.statsRow}>
                 <div className={styles.statsAvatar}>{name[0]}</div>
                 <div className={styles.statsInfo}>
                   <div className={styles.statsName}>{name}</div>
                   <div className={styles.statsMeta}>
-                    {division}
+                    {department}
                     {assignerInfo && <span className={styles.statsAssignedBy}> · Назначил: {assignerInfo}</span>}
                     <span className={styles.statsDate}> · {enrollDate}</span>
                   </div>

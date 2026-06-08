@@ -54,6 +54,7 @@
 | GET | /courses/{id} | ✅ courseRealApi → useCourseQuery / getCourseWithModules |
 | GET | /me/enrollments | ✅ courseRealApi → useMyEnrollmentDtosQuery |
 | GET | /enrollments/{id} | ✅ enrollmentWriteApi.getById |
+| GET | /courses/{id}/enrollments | ✅ courseRealApi.getCourseEnrollmentDtos → getCourseEnrollments |
 
 ---
 
@@ -104,34 +105,35 @@
 
 ### ⚠️ Test Attempts — частично
 
-Загрузка вопросов через `GET /test-definitions/{id}` реализована. Attempt-флоу (submit/score) не реализован.
+Загрузка вопросов через `GET /test-definitions/{id}` реализована, включая `passingPercent`. Attempt-флоу (submit/score) не реализован.
 
 | Метод | Endpoint | Статус |
 |-------|----------|--------|
-| GET | /test-definitions/{id} | ✅ testDefApi.getById → useTestDefinitionQuery → TestPlayer lazy-load |
+| GET | /test-definitions/{id} | ✅ testDefApi.getById → useTestDefinitionQuery → TestPlayer (вкл. passingPercent) |
 | POST | /tests/{testId}/attempts | ❌ не реализован |
 | GET | /attempts/{id} | ❌ не реализован |
 | POST | /attempts/{id}/answers | ❌ не реализован |
 | POST | /attempts/{id}/finish | ❌ не реализован |
 
-> Тест отображается корректно. Результат пишется только в completedItems (без attempt-попытки на бэкенде).
+> Тест отображается корректно, порог прохождения берётся из бэкенда. Результат пишется только в completedItems (без attempt-попытки на бэкенде).
 
 ---
 
-### ❌ Onboarding READ — нет эндпоинтов в бэкенде
-
-В swagger только POST-эндпоинты. Контекст полностью на mock.
+### ✅ Onboarding — полностью на реальном API
 
 | Метод | Endpoint | Статус |
 |-------|----------|--------|
-| POST | /onboarding/templates | ✅ onboardingRealApi.ts (не подключён к контексту) |
-| POST | /onboardings | ✅ onboardingRealApi.ts (не подключён к контексту) |
-| POST | /onboardings/{id}/complete-step | ✅ onboardingRealApi.ts (не подключён к контексту) |
-| POST | /onboardings/{id}/chat/messages | ✅ onboardingRealApi.ts (не подключён к контексту) |
-| GET | /onboarding/templates | ❌ эндпоинт отсутствует в бэкенде |
-| GET | /onboardings | ❌ эндпоинт отсутствует в бэкенде |
-
-> Ждём GET-эндпоинты от бэкенда. Когда появятся — подключить onboardingRealApi к OnboardingContext.
+| POST | /onboarding/templates | ✅ onboardingRealApi.createTemplate |
+| GET | /onboarding/templates | ✅ onboardingRealApi.getTemplates → OnboardingContext |
+| GET | /onboarding/templates/{id} | ✅ onboardingRealApi.getTemplateById |
+| POST | /onboardings | ✅ onboardingRealApi.assign → OnboardingContext |
+| GET | /onboardings/mine | ✅ onboardingRealApi.getMyOnboardings → myAssignments |
+| GET | /onboardings/assigned-by-me | ✅ onboardingRealApi.getManagedOnboardings → managedAssignments |
+| GET | /onboardings | ✅ onboardingRealApi.getAllOnboardings → allAssignments (admin only) |
+| GET | /onboardings/{id} | ✅ onboardingRealApi.getOnboardingById |
+| POST | /onboardings/{id}/complete-step | ✅ onboardingRealApi.completeStep |
+| POST | /onboardings/{id}/chat/messages | ✅ onboardingRealApi.sendChatMessage |
+| GET | /onboardings/{id}/chat/messages | ✅ onboardingRealApi.getChatMessages |
 
 ---
 
@@ -148,15 +150,13 @@
 
 ## Что сломано / работает некорректно прямо сейчас
 
-1. **Тест-плеер attempt flow** — вопросы загружаются через реальный API, но результат не записывается на бэкенде (нет attempt). Шаг помечается завершённым сразу через `completeStep`.
+1. **Тест-плеер attempt flow** — вопросы и `passingPercent` загружаются через реальный API, но результат не записывается на бэкенде (нет attempt). Шаг помечается завершённым сразу через `completeStep`.
 
-2. **`getCourseEnrollments`** — mock. Нет прямого эндпоинта для списка записей по курсу.
+2. **`approveCourse` / `rejectCourse`** — noop. Нет эндпоинта изменения статуса курса в swagger (нет `status` в `PATCH /courses/{id}`).
 
-3. **`approveCourse` / `rejectCourse`** — mock. Нет эндпоинта в swagger.
+3. **Онбординг — сообщения чата** — при загрузке назначения сообщения начинаются с пустого списка. Исторические сообщения не подгружаются (нет вызова `getChatMessages` при инициализации). Новые сообщения, отправленные в текущей сессии, отображаются корректно.
 
-4. **Статистика в CourseDetailPage** — имена пользователей в таблице enrollments показываются как `userId` (нет batch lookup API).
-
-5. **Онбординг** — весь на mock. Ждём GET эндпоинты от бэкенда.
+4. **Онбординг — divisionName** — поле `divisionName` в `OnboardingAssignment` будет пустой строкой, так как `EmployeeDto` содержит только `divisionId` (без названия отдела). Бэкенд может решить, добавив `division: {id, name}` в `EmployeeResponseDto`.
 
 ---
 
@@ -170,19 +170,12 @@ POST /attempts/{id}/answers       → каждый ответ пользоват
 POST /attempts/{id}/finish        → завершить, получить score
 ```
 
-> Вопросы уже загружаются. Нужно заменить client-side scoring на серверный attempt-флоу.
+> Вопросы и passingPercent уже загружаются. Нужно заменить client-side scoring на серверный attempt-флоу.
 
-### Б: Онбординг (ждём бэкенд GET-эндпоинты)
+### Б: Cleanup (финал)
 
-Подключить `onboardingRealApi` к `OnboardingContext`, когда появятся:
-- `GET /onboarding/templates`
-- `GET /onboardings`
-
-### В: Cleanup (финал)
-
-- Удалить `courseApi.ts` (mock) — остались `getCourseEnrollments`, `approveCourse`, `rejectCourse`.
-- Удалить `MOCK_USER_INFO` из `CourseDetailPage` (остался только в stats panel, нужен batch endpoint).
-- Удалить `onboardingApi.ts` (mock) — после Б.
+- Удалить `courseApi.ts` (mock) — больше не импортируется нигде.
+- Удалить `onboardingApi.ts` (mock) — больше не импортируется в Context.
 
 ---
 
@@ -190,11 +183,12 @@ POST /attempts/{id}/finish        → завершить, получить score
 
 | Файл | Проблема |
 |------|----------|
-| `CoursesContext.tsx` | Импортирует `courseApi` (mock) для 3 операций: getCourseEnrollments, approveCourse, rejectCourse |
-| `CourseDetailPage.tsx` | `MOCK_USER_INFO` используется только в stats panel (нет batch-endpoint на бэкенде) |
-| `OnboardingContext.tsx` | Весь на `onboardingApi` (mock) — ждём GET-эндпоинты |
+| `courseApi.ts` | Файл-заглушка — больше не импортируется. Можно удалить. |
+| `onboardingApi.ts` | Файл-заглушка — больше не импортируется в Context. Можно удалить. |
 | `controlApi.ts` | Полностью mock — нет эндпоинтов в swagger |
 | `CourseBuilder` | Не поддерживает редактирование существующего курса (только создание) |
+| `OnboardingContext` | `divisionName` пустая строка — `EmployeeDto` не возвращает название отдела |
+| `OnboardingContext` | Исторические сообщения чата не загружаются при инициализации |
 
 ---
 

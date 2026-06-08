@@ -10,7 +10,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
 import type { Course, Enrollment, Certificate, CreateCourseDto, EnrollmentRequest, EmployeeForAssignment } from './types';
 import { getAllItems } from './types';
-import { courseApi } from '../api/courseApi';
 import {
   courseRealApi,
   courseWriteApi,
@@ -23,7 +22,7 @@ import {
 } from '../api/courseRealApi';
 import { useCoursesQuery, useMyEnrollmentDtosQuery } from '../api/hooks';
 import { employeeApi } from '@entities/user/api/employeeApi';
-import { divisionApi, departmentApi } from '@entities/company/api/companyApi';
+import { divisionApi } from '@entities/company/api/companyApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, isAdmin, type User } from '@entities/user/model/types';
 import type { TestContent } from './types';
@@ -153,7 +152,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       for (const step of mod.steps) {
         for (const item of step.items) {
           if (item.type === 'lesson') {
-            const lessonId = await lessonApi.create(item.title);
+            const lessonId = await lessonApi.create(item.title, item.content);
             await courseWriteApi.addStep(courseId, moduleId, {
               name:     item.title,
               type:     'LESSON',
@@ -226,8 +225,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     const enrollmentId = prevEnrollment?.id;
 
     if (!enrollmentId) {
-      // Fallback to mock if no real enrollment ID (shouldn't happen in normal flow)
-      return courseApi.markItemComplete(courseId, user.id, itemId);
+      throw new Error('No active enrollment found for this course');
     }
 
     await enrollmentWriteApi.completeStep(enrollmentId, itemId);
@@ -272,16 +270,18 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     return Promise.all(
       apps.map(async app => {
         let fullname = app.employeeId;
+        let email = '';
         try {
           const emp = await employeeApi.getById(app.employeeId);
           fullname = emp.fullname;
+          email = emp.email;
         } catch { /* fallback to id */ }
         return {
           id:          app.id,
           courseId:    app.courseId,
           userId:      app.employeeId,
           userName:    fullname,
-          userEmail:   '',
+          userEmail:   email,
           requestedAt: app.createdAt,
         };
       }),
@@ -304,15 +304,19 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments(userId) });
   };
 
-  const getCourseEnrollments = async (courseId: string): Promise<Enrollment[]> =>
-    courseApi.getCourseEnrollments(courseId);
-
-  const approveCourse = async (courseId: string): Promise<void> => {
-    await courseApi.approveCourse(courseId);
+  const getCourseEnrollments = async (courseId: string): Promise<Enrollment[]> => {
+    const dtos = await courseRealApi.getCourseEnrollmentDtos(courseId);
+    const course = courses.find(c => c.id === courseId);
+    const totalSteps = course ? getAllItems(course).length : 0;
+    return dtos.map(dto => mapEnrollmentDto(dto, totalSteps));
   };
 
-  const rejectCourse = async (courseId: string): Promise<void> => {
-    await courseApi.rejectCourse(courseId);
+  const approveCourse = async (_courseId: string): Promise<void> => {
+    // No dedicated endpoint for course status change yet — noop
+  };
+
+  const rejectCourse = async (_courseId: string): Promise<void> => {
+    // No dedicated endpoint for course status change yet — noop
   };
 
   const getCourseWithModules = async (courseId: string): Promise<Course | null> => {
@@ -333,31 +337,24 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       empDtos = result.data;
     }
 
-    // Enrich with division + department names
-    const [divsResult, deptsResult] = await Promise.all([
-      divisionApi.list({ page: 1, limit: 200 }),
-      departmentApi.list({ page: 1, limit: 200 }),
-    ]);
-    const divMap  = new Map(divsResult.data.map(d => [d.id, d]));
-    const deptMap = new Map(deptsResult.data.map(d => [d.id, d]));
+    // Fetch division names (department name already in EmployeeDto)
+    const divsResult = await divisionApi.list({ page: 1, limit: 200 });
+    const divMap = new Map(divsResult.data.map(d => [d.id, d]));
 
     // dept_head: filter to own department only
     const userDeptId = user.employee?.department.id;
     const filtered = role === 'department_head'
-      ? empDtos.filter(e => divMap.get(e.divisionId)?.departmentId === userDeptId)
+      ? empDtos.filter(e => e.department.id === userDeptId)
       : empDtos;
 
-    return filtered.map(e => {
-      const div  = divMap.get(e.divisionId);
-      const dept = div ? deptMap.get(div.departmentId) : undefined;
-      return {
-        userId:     e.id,
-        fullname:   e.fullname,
-        division:   { id: e.divisionId,        name: div?.name  ?? e.divisionId },
-        department: { id: div?.departmentId ?? '', name: dept?.name ?? '' },
-        role:       { name: '' },
-      };
-    });
+    return filtered.map(e => ({
+      userId:     e.id,
+      fullname:   e.fullname,
+      email:      e.email,
+      division:   { id: e.divisionId, name: divMap.get(e.divisionId)?.name ?? e.divisionId },
+      department: { id: e.department.id, name: e.department.name },
+      role:       { name: e.role.name },
+    }));
   };
 
   return (

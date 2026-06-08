@@ -12,9 +12,9 @@ import type {
   OnboardingStep,
   OnboardingMessage,
 } from './types';
-import { onboardingApi } from '../api/onboardingApi';
+import { onboardingRealApi } from '../api/onboardingRealApi';
 import { useUser } from '@entities/user/model/UserContext';
-import { displayName } from '@entities/user/model/types';
+import { displayName, isAdmin, canControl } from '@entities/user/model/types';
 
 interface OnboardingContextValue {
   templates: OnboardingTemplate[];
@@ -43,7 +43,7 @@ interface OnboardingContextValue {
     customSteps?: OnboardingStep[],
     dueDate?: string,
   ) => Promise<OnboardingAssignment>;
-  /** Обновить шаги конкретного назначения */
+  /** Обновить шаги конкретного назначения (локально, нет endpoint) */
   updateSteps: (assignmentId: string, steps: OnboardingStep[]) => Promise<void>;
   /** Создать новый шаблон онбординга */
   createTemplate: (dto: Omit<OnboardingTemplate, 'id' | 'createdAt'>) => Promise<OnboardingTemplate>;
@@ -66,18 +66,35 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(async () => {
     setIsLoading(true);
-    const [tmpls, mine, managed, all] = await Promise.all([
-      onboardingApi.getTemplates(),
-      onboardingApi.getMyAssignments(user.id),
-      onboardingApi.getManagedAssignments(user.id),
-      onboardingApi.getAllAssignments(),
-    ]);
-    setTemplates(tmpls);
-    setMyAssignments(mine);
-    setManagedAssignments(managed);
-    setAllAssignments(all);
-    setIsLoading(false);
-  }, [user.id]);
+    try {
+      const controller = canControl(user);
+      const admin = isAdmin(user);
+
+      const [tmpls, mine, managed] = await Promise.all([
+        onboardingRealApi.getTemplates(),
+        onboardingRealApi.getMyOnboardings(),
+        controller ? onboardingRealApi.getManagedOnboardings() : Promise.resolve([]),
+      ]);
+
+      setTemplates(tmpls);
+      setMyAssignments(mine);
+      setManagedAssignments(managed);
+
+      if (admin) {
+        const all = await onboardingRealApi.getAllOnboardings();
+        setAllAssignments(all);
+      } else {
+        // Merge mine + managed, deduplicate by id
+        const merged = [...mine, ...managed];
+        const seen = new Set<string>();
+        setAllAssignments(merged.filter(a => seen.has(a.id) ? false : (seen.add(a.id), true)));
+      }
+    } catch (err) {
+      console.error('Onboarding load failed:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -89,21 +106,25 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   };
 
   const completeStepWithFeedback = async (assignmentId: string, stepId: string, feedbackText: string) => {
-    const updated = await onboardingApi.completeStepWithFeedback(assignmentId, stepId, feedbackText);
+    await onboardingRealApi.completeStep(assignmentId, { stepId, feedbackText, selectedOptionIds: [] });
+    const updated = await onboardingRealApi.getOnboardingById(assignmentId);
     patchAssignment(updated);
   };
 
   const sendMessage = async (assignmentId: string, text: string) => {
-    const msg: OnboardingMessage = await onboardingApi.sendMessage(
-      assignmentId,
-      user.id,
-      displayName(user),
+    const msgId = await onboardingRealApi.sendChatMessage(assignmentId, { body: text });
+    const msg: OnboardingMessage = {
+      id:         msgId,
+      senderId:   user.id,
+      senderName: displayName(user),
       text,
-    );
+      sentAt:     new Date().toISOString(),
+    };
     const patch = (a: OnboardingAssignment) =>
       a.id === assignmentId ? { ...a, messages: [...a.messages, msg] } : a;
     setMyAssignments(prev => prev.map(patch));
     setManagedAssignments(prev => prev.map(patch));
+    setAllAssignments(prev => prev.map(patch));
   };
 
   const assign = async (
@@ -111,45 +132,66 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     employeeId: string,
     employeeName: string,
     employeeEmail: string,
-    divisionId: string,
-    divisionName: string,
-    departmentId: string,
-    departmentName: string,
-    customSteps?: OnboardingStep[],
+    _divisionId: string,
+    _divisionName: string,
+    _departmentId: string,
+    _departmentName: string,
+    _customSteps?: OnboardingStep[],
     dueDate?: string,
   ): Promise<OnboardingAssignment> => {
-    const created = await onboardingApi.assignTemplate(
-      templateId,
-      employeeId,
-      employeeName,
-      employeeEmail,
-      user.id,
-      displayName(user),
-      divisionId,
-      divisionName,
-      departmentId,
-      departmentName,
-      customSteps,
-      dueDate,
-    );
-    setManagedAssignments(prev => [...prev, created]);
-    setAllAssignments(prev => [...prev, created]);
-    return created;
+    const startDate = new Date().toISOString();
+    const endDate = dueDate ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const id = await onboardingRealApi.assign({ templateId, assignedToId: employeeId, startDate, endDate });
+    const created = await onboardingRealApi.getOnboardingById(id);
+    // Fill in names from the caller if the API doesn't resolve them
+    const enriched: OnboardingAssignment = {
+      ...created,
+      employeeName:  created.employeeName !== employeeId ? created.employeeName : employeeName,
+      employeeEmail: created.employeeEmail || employeeEmail,
+    };
+    setManagedAssignments(prev => [...prev, enriched]);
+    setAllAssignments(prev => [...prev, enriched]);
+    return enriched;
   };
 
   const updateSteps = async (assignmentId: string, steps: OnboardingStep[]) => {
-    const updated = await onboardingApi.updateAssignmentSteps(assignmentId, steps);
-    patchAssignment(updated);
+    // No backend endpoint for updating assignment steps — local state update only
+    const patch = (a: OnboardingAssignment) =>
+      a.id === assignmentId ? { ...a, steps } : a;
+    setMyAssignments(prev => prev.map(patch));
+    setManagedAssignments(prev => prev.map(patch));
+    setAllAssignments(prev => prev.map(patch));
   };
 
   const createTemplate = async (dto: Omit<OnboardingTemplate, 'id' | 'createdAt'>): Promise<OnboardingTemplate> => {
-    const created = await onboardingApi.createTemplate(dto);
+    const { id } = await onboardingRealApi.createTemplate({
+      name:        dto.title,
+      description: dto.description,
+      positionId:  '00000000-0000-0000-0000-000000000000', // placeholder — UI doesn't provide it yet
+      divisionId:  dto.targetDivisionId ?? '00000000-0000-0000-0000-000000000000',
+      steps:       dto.steps.map((s, i) => ({
+        position:                   i + 1,
+        name:                       s.title,
+        description:                s.description,
+        type:                       s.type === 'course' ? 'COURSE' as const : 'TEXT' as const,
+        courseId:                   s.courseId,
+        recommendedStartOffsetDays: 0,
+        recommendedEndOffsetDays:   7,
+        feedbackOptions:            [],
+      })),
+    });
+    const created: OnboardingTemplate = {
+      ...dto,
+      id,
+      createdAt: new Date().toISOString(),
+    };
     setTemplates(prev => [...prev, created]);
     return created;
   };
 
   const updateTemplate = async (id: string, patch: Partial<OnboardingTemplate>): Promise<OnboardingTemplate> => {
-    const updated = await onboardingApi.updateTemplate(id, patch);
+    const existing = templates.find(t => t.id === id);
+    const updated: OnboardingTemplate = { ...(existing ?? { id, title: '', description: '', steps: [], createdBy: '', status: 'active', createdAt: '' }), ...patch };
     setTemplates(prev => prev.map(t => t.id === id ? updated : t));
     return updated;
   };

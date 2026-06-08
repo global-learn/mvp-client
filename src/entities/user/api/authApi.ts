@@ -1,11 +1,16 @@
 import { api } from '@shared/api/axios';
-import { IdResponseSchema, UserDtoSchema, MeResponseDtoSchema } from '@shared/api/schemas';
-import type { UserDto, MeResponseDto } from '@shared/api/schemas';
+import { IdResponseSchema, UserDtoSchema, MeResponseDtoSchema, MyProfileResponseDtoSchema } from '@shared/api/schemas';
+import type { UserDto, MeResponseDto, MyProfileResponseDto } from '@shared/api/schemas';
 
 export const authApi = {
   me: async (): Promise<MeResponseDto> => {
     const { data } = await api.get('/auth/me');
     return MeResponseDtoSchema.parse(data);
+  },
+
+  myProfile: async (): Promise<MyProfileResponseDto> => {
+    const { data } = await api.get('/auth/me/profile');
+    return MyProfileResponseDtoSchema.parse(data);
   },
 
   login: async (email: string, password: string) => {

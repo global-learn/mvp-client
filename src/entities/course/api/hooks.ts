@@ -30,9 +30,15 @@ export function useMyEnrollmentDtosQuery(userId: string | undefined) {
 }
 
 export function useTestDefinitionQuery(testId?: string) {
-  return useQuery<TestQuestion[]>({
+  return useQuery<{ questions: TestQuestion[]; passingPercent: number }>({
     queryKey: queryKeys.courses.testDefinition(testId ?? ''),
-    queryFn:  () => testDefApi.getById(testId!).then(mapTestDefinitionToQuestions),
+    queryFn:  async () => {
+      const dto = await testDefApi.getById(testId!);
+      return {
+        questions:      mapTestDefinitionToQuestions(dto),
+        passingPercent: dto.passingPercent ?? 80,
+      };
+    },
     enabled:  !!testId,
     staleTime: 300_000,
   });

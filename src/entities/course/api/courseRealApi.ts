@@ -21,7 +21,7 @@ function mapStep(backendStep: CourseDto['modules'][number]['steps'][number]): St
   const item: StepItem =
     backendStep.type === 'TEST'
       ? { id: backendStep.id, title: backendStep.name, type: 'test', questions: [], passingPercent: 0, testId: backendStep.testId }
-      : { id: backendStep.id, title: backendStep.name, type: 'lesson', content: '' };
+      : { id: backendStep.id, title: backendStep.name, type: 'lesson', content: backendStep.lessonContent ?? '' };
 
   return { id: backendStep.id, title: backendStep.name, items: [item] };
 }
@@ -36,6 +36,10 @@ export function mapTestDefinitionToQuestions(dto: TestDefinitionDto): TestQuesti
       isCorrect: a.isCorrect,
     })),
   }));
+}
+
+export function mapTestDefinitionPassingPercent(dto: TestDefinitionDto): number {
+  return dto.passingPercent ?? 80;
 }
 
 function mapModule(backendModule: CourseDto['modules'][number]): Module {
@@ -90,6 +94,7 @@ export function mapEnrollmentDto(dto: EnrollmentDto, totalSteps: number): Enroll
     progress,
     completedItems,
     enrolledAt:     dto.startedAt,
+    assignedBy:     dto.assignedById,
   };
 }
 
@@ -111,6 +116,11 @@ export const courseRealApi = {
 
   async getMyEnrollmentDtos(): Promise<EnrollmentDto[]> {
     const { data } = await api.get('/me/enrollments', { params: { page: 1, limit: 200 } });
+    return EnrollmentPaginatedSchema.parse(data).data;
+  },
+
+  async getCourseEnrollmentDtos(courseId: string): Promise<EnrollmentDto[]> {
+    const { data } = await api.get(`/courses/${courseId}/enrollments`, { params: { page: 1, limit: 200 } });
     return EnrollmentPaginatedSchema.parse(data).data;
   },
 };
@@ -154,7 +164,11 @@ export const courseWriteApi = {
     moduleId: string,
     dto: { name: string; type: 'LESSON' | 'TEST'; lessonId?: string; testId?: string },
   ): Promise<string> {
-    const { data } = await api.post(`/courses/${courseId}/modules/${moduleId}/steps`, dto);
+    // Explicitly whitelist body fields — backend rejects unknown properties
+    const body: Record<string, unknown> = { name: dto.name, type: dto.type };
+    if (dto.lessonId != null) body.lessonId = dto.lessonId;
+    if (dto.testId  != null) body.testId  = dto.testId;
+    const { data } = await api.post(`/courses/${courseId}/modules/${moduleId}/steps`, body);
     return IdResponseSchema.parse(data).id;
   },
 
@@ -189,9 +203,15 @@ export const courseWriteApi = {
 // ── Lessons ──────────────────────────────────────────────────────
 
 export const lessonApi = {
-  async create(name: string): Promise<string> {
-    const { data } = await api.post('/lessons', { name });
+  async create(name: string, content?: string): Promise<string> {
+    const body: Record<string, unknown> = { name };
+    if (content !== undefined) body.content = content;
+    const { data } = await api.post('/lessons', body);
     return IdResponseSchema.parse(data).id;
+  },
+
+  async update(id: string, dto: { name?: string; content?: string }): Promise<void> {
+    await api.patch(`/lessons/${id}`, dto);
   },
 
   async delete(id: string): Promise<void> {

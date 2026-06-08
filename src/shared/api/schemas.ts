@@ -135,9 +135,37 @@ export const EmployeeDtoSchema = z.object({
   divisionId:     z.string(),
   positionId:     z.string().nullable().optional(),
   avatarId:       z.string().nullable().optional(),
+  email:          z.string(),
+  role:           z.object({ id: z.string(), name: z.string() }),
+  department:     z.object({ id: z.string(), name: z.string() }),
 });
 
 export type EmployeeDto = z.infer<typeof EmployeeDtoSchema>;
+
+// ── Auth — /auth/me/profile ──────────────────────────────────────
+
+export const MyProfileResponseDtoSchema = z.object({
+  id:        z.string(),
+  createdAt: z.string(),
+  email:     z.string(),
+  role:      z.object({ id: z.string(), name: z.string() }),
+  employee:  z.object({
+    id:             z.string(),
+    fullname:       z.string(),
+    biography:      z.string().nullable().optional(),
+    employmentDate: z.string(),
+    dismissalDate:  z.string().nullable().optional(),
+    avatarId:       z.string().nullable().optional(),
+    division: z.object({
+      id:         z.string(),
+      name:       z.string(),
+      department: z.object({ id: z.string(), name: z.string() }),
+    }),
+    position: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  }).nullable().optional(),
+});
+
+export type MyProfileResponseDto = z.infer<typeof MyProfileResponseDtoSchema>;
 
 // ── Onboarding templates ─────────────────────────────────────────
 
@@ -239,12 +267,13 @@ export type ApiUser = z.infer<typeof UserSchema>;
 // ── Courses (backend DTOs) ────────────────────────────────────────
 
 export const CourseStepDtoSchema = z.object({
-  id:       z.string(),
-  name:     z.string(),
-  position: z.number(),
-  type:     z.enum(['LESSON', 'TEST']),
-  lessonId: z.string().optional(),
-  testId:   z.string().optional(),
+  id:            z.string(),
+  name:          z.string(),
+  position:      z.number(),
+  type:          z.enum(['LESSON', 'TEST']),
+  lessonId:      z.string().optional(),
+  lessonContent: z.string().optional(),
+  testId:        z.string().optional(),
 });
 
 export const CourseModuleDtoSchema = z.object({
@@ -273,15 +302,16 @@ export const StepProgressDtoSchema = z.object({
 });
 
 export const EnrollmentDtoSchema = z.object({
-  id:          z.string(),
-  createdAt:   z.string(),
-  updatedAt:   z.string().optional(),
-  courseId:    z.string(),
-  employeeId:  z.string(),
-  status:      z.enum(['IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
-  startedAt:   z.string(),
-  completedAt: z.string().optional(),
-  progress:    z.array(StepProgressDtoSchema),
+  id:           z.string(),
+  createdAt:    z.string(),
+  updatedAt:    z.string().optional(),
+  courseId:     z.string(),
+  employeeId:   z.string(),
+  assignedById: z.string().optional(),
+  status:       z.enum(['IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
+  startedAt:    z.string(),
+  completedAt:  z.string().optional(),
+  progress:     z.array(StepProgressDtoSchema),
 });
 
 export type CourseDto      = z.infer<typeof CourseDtoSchema>;
@@ -316,10 +346,11 @@ export const CourseQuestionDtoSchema = z.object({
 });
 
 export const TestDefinitionDtoSchema = z.object({
-  id:        z.string(),
-  createdAt: z.string(),
-  name:      z.string(),
-  questions: z.array(CourseQuestionDtoSchema),
+  id:             z.string(),
+  createdAt:      z.string(),
+  name:           z.string(),
+  passingPercent: z.number().default(80),
+  questions:      z.array(CourseQuestionDtoSchema),
 });
 
 export type TestDefinitionDto = z.infer<typeof TestDefinitionDtoSchema>;
@@ -332,6 +363,92 @@ export const FileResponseDtoSchema = z.object({
 });
 
 export type FileResponseDto = z.infer<typeof FileResponseDtoSchema>;
+
+// ── Onboarding response DTOs (GET endpoints) ─────────────────────
+
+export const OnboardingTemplateSummaryDtoSchema = z.object({
+  id:          z.string(),
+  createdAt:   z.string(),
+  updatedAt:   z.string().optional(),
+  name:        z.string(),
+  description: z.string(),
+  positionId:  z.string(),
+  divisionId:  z.string(),
+  coverId:     z.string().optional(),
+  stepCount:   z.number(),
+});
+
+export const OnboardingTemplateFeedbackOptionDtoSchema = z.object({
+  id:    z.string(),
+  label: z.string(),
+});
+
+export const OnboardingTemplateStepDtoSchema = z.object({
+  id:                         z.string(),
+  position:                   z.number(),
+  name:                       z.string(),
+  description:                z.string(),
+  type:                       z.enum(['TEXT', 'COURSE']),
+  courseId:                   z.string().optional(),
+  recommendedStartOffsetDays: z.number(),
+  recommendedEndOffsetDays:   z.number(),
+  coverId:                    z.string().optional(),
+  feedbackOptions:            z.array(OnboardingTemplateFeedbackOptionDtoSchema),
+});
+
+export const OnboardingTemplateFullDtoSchema = z.object({
+  id:          z.string(),
+  createdAt:   z.string(),
+  name:        z.string(),
+  description: z.string(),
+  positionId:  z.string(),
+  divisionId:  z.string(),
+  coverId:     z.string().optional(),
+  steps:       z.array(OnboardingTemplateStepDtoSchema),
+});
+
+export const OnboardingAssignmentStepDtoSchema = z.object({
+  id:                   z.string(),
+  position:             z.number(),
+  name:                 z.string(),
+  description:          z.string(),
+  type:                 z.enum(['TEXT', 'COURSE']),
+  courseId:             z.string().optional(),
+  recommendedStartDate: z.string(),
+  recommendedEndDate:   z.string(),
+  feedbackText:         z.string().optional(),
+  completedAt:          z.string().optional(),
+  feedbackOptions:      z.array(z.object({ id: z.string(), label: z.string() })),
+  selectedOptionIds:    z.array(z.string()),
+});
+
+export const OnboardingAssignmentDtoSchema = z.object({
+  id:           z.string(),
+  createdAt:    z.string(),
+  name:         z.string(),
+  description:  z.string(),
+  templateId:   z.string().optional(),
+  assignedById: z.string(),
+  assignedToId: z.string(),
+  status:       z.enum(['IN_PROGRESS', 'COMPLETED', 'CANCELLED']),
+  startDate:    z.string(),
+  endDate:      z.string(),
+  completedAt:  z.string().optional(),
+  steps:        z.array(OnboardingAssignmentStepDtoSchema),
+});
+
+export const OnboardingChatMessageDtoSchema = z.object({
+  id:        z.string(),
+  senderId:  z.string(),
+  body:      z.string(),
+  readAt:    z.string().optional(),
+  createdAt: z.string(),
+});
+
+export type OnboardingTemplateSummaryDto  = z.infer<typeof OnboardingTemplateSummaryDtoSchema>;
+export type OnboardingTemplateFullDto     = z.infer<typeof OnboardingTemplateFullDtoSchema>;
+export type OnboardingAssignmentDto       = z.infer<typeof OnboardingAssignmentDtoSchema>;
+export type OnboardingChatMessageDto      = z.infer<typeof OnboardingChatMessageDtoSchema>;
 
 // ── Courses (frontend-facing schemas, kept for backwards compat) ──
 

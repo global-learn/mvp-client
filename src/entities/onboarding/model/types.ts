@@ -23,8 +23,11 @@ export interface OnboardingStep {
   order: number;
   /** Если type === 'course', можно прикрепить courseId */
   courseId?: string;
-  /** Дедлайн шага (ISO date) */
+  /** Дедлайн шага (ISO date) — используется в назначениях */
   dueDate?: string;
+  /** Смещение относительно старта онбординга — используется в шаблонах */
+  recommendedStartOffsetDays?: number;
+  recommendedEndOffsetDays?: number;
 }
 
 // ================================================================
@@ -35,6 +38,8 @@ export interface OnboardingTemplate {
   id: string;
   title: string;
   description: string;
+  positionId?: string;
+  positionName?: string;
   /** Для какой роли (опционально) */
   targetRole?: EmployeeRole | null;
   /** Для какого подразделения (опционально) */
@@ -43,6 +48,7 @@ export interface OnboardingTemplate {
   targetDepartmentId?: string | null;
   targetDepartmentName?: string | null;
   steps: OnboardingStep[];
+  stepCount?: number;
   createdBy: string;
   status: 'draft' | 'active';
   createdAt: string;

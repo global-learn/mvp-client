@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
+import { isAxiosError } from 'axios';
 import {
   UserPlus, X, Send, CheckCircle2, MessageSquare, ClipboardList,
   Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen, LayoutTemplate, Search,
@@ -8,6 +9,9 @@ import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import type { OnboardingAssignment, OnboardingStep, OnboardingStepType, OnboardingTemplate } from '@entities/onboarding/model/types';
 import { STEP_TYPE_LABELS, calcOnboardingProgress } from '@entities/onboarding/model/types';
+import { useDivisionsQuery } from '@entities/company/api/hooks';
+import { usePositionsQuery } from '@entities/company/api/hooks';
+import { employeeApi } from '@entities/user/api/employeeApi';
 import styles from './OnboardingManage.module.css';
 
 // ── Форматирование времени ───────────────────────────────────────
@@ -152,30 +156,182 @@ function DetailPanel({ assignment }: { assignment: OnboardingAssignment }) {
   );
 }
 
-// ── Редактор шагов ───────────────────────────────────────────────
-interface StepEditorProps {
-  steps: OnboardingStep[];
-  onChange: (steps: OnboardingStep[]) => void;
+// ── Модальное окно добавления / редактирования шага ─────────────
+interface StepFormModalProps {
+  step?: OnboardingStep | null;
+  templateMode: boolean;
+  publishedCourses: { id: string; title: string }[];
+  onSave: (data: Omit<OnboardingStep, 'id' | 'order'>) => void;
+  onClose: () => void;
 }
 
-const EMPTY_NEW_STEP: Omit<OnboardingStep, 'id' | 'order'> = {
+const EMPTY_STEP_DRAFT: Omit<OnboardingStep, 'id' | 'order'> = {
   title: '',
   description: '',
   type: 'task',
   required: false,
   dueDate: undefined,
+  recommendedStartOffsetDays: 0,
+  recommendedEndOffsetDays: 7,
 };
 
-function StepEditor({ steps, onChange }: StepEditorProps) {
+function StepFormModal({ step, templateMode, publishedCourses, onSave, onClose }: StepFormModalProps) {
+  const isEditing = !!step;
+  const [draft, setDraft] = useState<Omit<OnboardingStep, 'id' | 'order'>>(
+    step
+      ? {
+          title:                      step.title,
+          description:                step.description,
+          type:                       step.type,
+          required:                   step.required,
+          dueDate:                    step.dueDate,
+          courseId:                   step.courseId,
+          recommendedStartOffsetDays: step.recommendedStartOffsetDays ?? 0,
+          recommendedEndOffsetDays:   step.recommendedEndOffsetDays ?? 7,
+        }
+      : { ...EMPTY_STEP_DRAFT },
+  );
+
+  return (
+    <div className={styles.overlayInner} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className={styles.modal}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>{isEditing ? 'Редактировать шаг' : 'Добавить шаг'}</h2>
+          <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div className={styles.modalBody}>
+          <label className={styles.label}>
+            Название шага *
+            <input
+              className={styles.select}
+              placeholder="Например: Знакомство с командой"
+              value={draft.title}
+              autoFocus
+              onChange={e => setDraft(d => ({ ...d, title: e.target.value }))}
+            />
+          </label>
+
+          <div className={styles.stepModalRow}>
+            <label className={styles.label} style={{ flex: 1 }}>
+              Тип шага
+              <select
+                className={styles.select}
+                value={draft.type}
+                onChange={e => setDraft(d => ({ ...d, type: e.target.value as OnboardingStepType, courseId: undefined }))}
+              >
+                {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
+                  <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.stepFormCheckbox} style={{ flexShrink: 0, alignSelf: 'flex-end', paddingBottom: '0.5625rem' }}>
+              <input
+                type="checkbox"
+                checked={draft.required}
+                onChange={e => setDraft(d => ({ ...d, required: e.target.checked }))}
+              />
+              Обязательный
+            </label>
+          </div>
+
+          {draft.type === 'course' && (
+            <label className={styles.label}>
+              Курс
+              <select
+                className={styles.select}
+                value={draft.courseId ?? ''}
+                onChange={e => setDraft(d => ({ ...d, courseId: e.target.value || undefined }))}
+              >
+                <option value="">Выбрать курс...</option>
+                {publishedCourses.map(c => (
+                  <option key={c.id} value={c.id}>{c.title}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
+          {templateMode ? (
+            <div className={styles.stepModalRow}>
+              <label className={styles.label} style={{ flex: 1 }}>
+                Начало (дней от старта)
+                <input
+                  type="number"
+                  min={0}
+                  className={styles.select}
+                  value={draft.recommendedStartOffsetDays ?? 0}
+                  onChange={e => setDraft(d => ({ ...d, recommendedStartOffsetDays: Math.max(0, parseInt(e.target.value) || 0) }))}
+                />
+              </label>
+              <label className={styles.label} style={{ flex: 1 }}>
+                Конец (дней от старта)
+                <input
+                  type="number"
+                  min={0}
+                  className={styles.select}
+                  value={draft.recommendedEndOffsetDays ?? 7}
+                  onChange={e => setDraft(d => ({ ...d, recommendedEndOffsetDays: Math.max(0, parseInt(e.target.value) || 0) }))}
+                />
+              </label>
+            </div>
+          ) : (
+            <label className={styles.label}>
+              Срок выполнения
+              <input
+                type="date"
+                className={styles.select}
+                value={draft.dueDate ?? ''}
+                onChange={e => setDraft(d => ({ ...d, dueDate: e.target.value || undefined }))}
+              />
+            </label>
+          )}
+
+          <label className={styles.label}>
+            Описание
+            <textarea
+              className={styles.select}
+              placeholder="Подробное описание шага..."
+              rows={3}
+              value={draft.description}
+              style={{ resize: 'vertical', fontFamily: 'inherit' }}
+              onChange={e => setDraft(d => ({ ...d, description: e.target.value }))}
+            />
+          </label>
+        </div>
+
+        <div className={styles.modalActions}>
+          <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
+          <button
+            className={styles.submitBtn}
+            disabled={!draft.title.trim()}
+            onClick={() => onSave(draft)}
+          >
+            {isEditing ? 'Сохранить' : 'Добавить шаг'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Редактор шагов ───────────────────────────────────────────────
+interface StepEditorProps {
+  steps: OnboardingStep[];
+  onChange: (steps: OnboardingStep[]) => void;
+  /** В режиме шаблона показываем offset-дни вместо конкретной даты */
+  templateMode?: boolean;
+  /** Скрыть встроенный заголовок (когда он рендерится снаружи) */
+  headerless?: boolean;
+}
+
+function StepEditor({ steps, onChange, templateMode = false, headerless = false }: StepEditorProps) {
   const { courses } = useCourses();
   const publishedCourses = courses.filter(c =>
     c.status === 'published' && (c.courseType === 'employee' || c.courseType === 'all'),
   );
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<OnboardingStep | null>(null);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newStep, setNewStep] = useState<Omit<OnboardingStep, 'id' | 'order'>>(EMPTY_NEW_STEP);
+  // null = closed, 'new' = adding, OnboardingStep = editing
+  const [modalStep, setModalStep] = useState<OnboardingStep | 'new' | null>(null);
 
   const sorted = [...steps].sort((a, b) => a.order - b.order);
 
@@ -189,121 +345,31 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
   };
 
   const deleteStep = (id: string) => {
-    const next = sorted.filter(s => s.id !== id).map((s, i) => ({ ...s, order: i + 1 }));
-    onChange(next);
-    if (editingId === id) { setEditingId(null); setEditDraft(null); }
+    onChange(sorted.filter(s => s.id !== id).map((s, i) => ({ ...s, order: i + 1 })));
   };
 
-  const startEdit = (step: OnboardingStep) => {
-    setEditingId(step.id);
-    setEditDraft({ ...step });
-    setShowAddForm(false);
+  const handleSave = (data: Omit<OnboardingStep, 'id' | 'order'>) => {
+    if (modalStep === 'new') {
+      const newStep: OnboardingStep = {
+        ...data,
+        id:          `step-new-${Date.now()}`,
+        order:       steps.length + 1,
+        title:       data.title.trim(),
+        description: data.description.trim(),
+        courseId:    data.type === 'course' ? data.courseId : undefined,
+      };
+      onChange([...steps, newStep]);
+    } else if (modalStep) {
+      onChange(steps.map(s => s.id === modalStep.id ? { ...modalStep, ...data } : s));
+    }
+    setModalStep(null);
   };
 
-  const saveEdit = () => {
-    if (!editDraft) return;
-    onChange(steps.map(s => s.id === editDraft.id ? editDraft : s));
-    setEditingId(null);
-    setEditDraft(null);
-  };
-
-  const cancelEdit = () => { setEditingId(null); setEditDraft(null); };
-
-  const addStep = () => {
-    if (!newStep.title.trim()) return;
-    const id = `step-new-${Date.now()}`;
-    const step: OnboardingStep = {
-      ...newStep,
-      id,
-      order: steps.length + 1,
-      title: newStep.title.trim(),
-      description: newStep.description.trim(),
-      courseId: newStep.type === 'course' ? newStep.courseId : undefined,
-    };
-    onChange([...steps, step]);
-    setNewStep(EMPTY_NEW_STEP);
-    setShowAddForm(false);
-  };
-
-  // Shared form fields renderer
-  const renderStepFields = (
-    draft: Omit<OnboardingStep, 'id' | 'order'>,
-    set: (d: Omit<OnboardingStep, 'id' | 'order'>) => void,
-  ) => (
+  const inner = (
     <>
-      <div className={styles.stepFormRow}>
-        <input
-          className={styles.stepFormInput}
-          placeholder="Название шага *"
-          value={draft.title}
-          onChange={e => set({ ...draft, title: e.target.value })}
-        />
-      </div>
-      <div className={styles.stepFormRow2}>
-        <select
-          className={styles.stepFormSelect}
-          value={draft.type}
-          onChange={e => set({ ...draft, type: e.target.value as OnboardingStepType, courseId: undefined })}
-        >
-          {(Object.keys(STEP_TYPE_LABELS) as OnboardingStepType[]).map(t => (
-            <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
-          ))}
-        </select>
-        <label className={styles.stepFormCheckbox}>
-          <input
-            type="checkbox"
-            checked={draft.required}
-            onChange={e => set({ ...draft, required: e.target.checked })}
-          />
-          Обязательный
-        </label>
-      </div>
-      {draft.type === 'course' && (
-        <select
-          className={styles.stepFormSelect}
-          value={draft.courseId ?? ''}
-          onChange={e => set({ ...draft, courseId: e.target.value || undefined })}
-        >
-          <option value="">Выбрать курс...</option>
-          {publishedCourses.map(c => (
-            <option key={c.id} value={c.id}>{c.title}</option>
-          ))}
-        </select>
-      )}
-      <div className={styles.stepFormRow2}>
-        <label className={styles.stepFormLabel}>Срок:</label>
-        <input
-          type="date"
-          className={styles.stepFormInput}
-          style={{ flex: 'none', width: 'auto' }}
-          value={draft.dueDate ?? ''}
-          onChange={e => set({ ...draft, dueDate: e.target.value || undefined })}
-        />
-      </div>
-      <textarea
-        className={styles.stepFormTextarea}
-        placeholder="Описание шага..."
-        rows={2}
-        value={draft.description}
-        onChange={e => set({ ...draft, description: e.target.value })}
-      />
-    </>
-  );
-
-  return (
-    <div className={styles.stepEditorFull}>
-      <div className={styles.stepEditorHeader}>
-        <span>Шаги онбординга</span>
-        <span className={styles.stepEditorCount}>{steps.length} шагов</span>
-      </div>
-
-      {/* ── Скроллящийся список шагов (только read-only строки) ── */}
       <div className={styles.stepEditorList}>
         {sorted.map((step, idx) => (
-          <div
-            key={step.id}
-            className={`${styles.stepEditorItem} ${editingId === step.id ? styles.stepEditorItemActive : ''}`}
-          >
+          <div key={step.id} className={styles.stepEditorItem}>
             <div className={styles.stepEditorRow}>
               <span className={styles.stepEditorOrder}>{idx + 1}.</span>
               <span className={styles.stepEditorTitle}>{step.title}</span>
@@ -316,7 +382,7 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
                 <button className={styles.stepMoveBtn} disabled={idx === sorted.length - 1} onClick={() => moveStep(step.id, 1)}>
                   <ChevronDown size={13} />
                 </button>
-                <button className={styles.stepEditBtn} onClick={() => startEdit(step)}>
+                <button className={styles.stepEditBtn} onClick={() => setModalStep(step)}>
                   <Pencil size={13} />
                 </button>
                 <button className={styles.stepDeleteBtn} onClick={() => deleteStep(step.id)}>
@@ -327,56 +393,36 @@ function StepEditor({ steps, onChange }: StepEditorProps) {
           </div>
         ))}
 
-        {steps.length === 0 && !showAddForm && (
+        {steps.length === 0 && (
           <div className={styles.stepEditorEmpty}>Нет шагов — добавьте хотя бы один</div>
         )}
       </div>
 
-      {/* ── Форма редактирования шага (вне скролл-листа) ── */}
-      {editingId && editDraft && (
-        <div className={styles.stepFormPanel}>
-          <div className={styles.stepFormPanelTitle}>Редактирование шага</div>
-          {renderStepFields(editDraft, d => setEditDraft({ ...editDraft, ...d }))}
-          <div className={styles.stepFormActions}>
-            <button className={styles.stepFormCancelBtn} onClick={cancelEdit}>Отмена</button>
-            <button
-              className={styles.stepFormSaveBtn}
-              disabled={!editDraft.title.trim()}
-              onClick={saveEdit}
-            >
-              Сохранить
-            </button>
-          </div>
-        </div>
-      )}
+      <button className={styles.addStepBtn} onClick={() => setModalStep('new')}>
+        <Plus size={14} /> Добавить шаг
+      </button>
 
-      {/* ── Форма добавления шага (вне скролл-листа) ── */}
-      {!editingId && (
-        showAddForm ? (
-          <div className={styles.addStepForm}>
-            {renderStepFields(newStep, d => setNewStep({ ...newStep, ...d }))}
-            <div className={styles.stepFormActions}>
-              <button className={styles.stepFormCancelBtn} onClick={() => { setShowAddForm(false); setNewStep(EMPTY_NEW_STEP); }}>
-                Отмена
-              </button>
-              <button
-                className={styles.stepFormSaveBtn}
-                disabled={!newStep.title.trim()}
-                onClick={addStep}
-              >
-                Добавить шаг
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            className={styles.addStepBtn}
-            onClick={() => { setShowAddForm(true); setEditingId(null); setEditDraft(null); }}
-          >
-            <Plus size={14} /> Добавить шаг
-          </button>
-        )
+      {modalStep !== null && (
+        <StepFormModal
+          step={modalStep === 'new' ? null : modalStep}
+          templateMode={templateMode}
+          publishedCourses={publishedCourses}
+          onSave={handleSave}
+          onClose={() => setModalStep(null)}
+        />
       )}
+    </>
+  );
+
+  if (headerless) return inner;
+
+  return (
+    <div className={styles.stepEditorFull}>
+      <div className={styles.stepEditorHeader}>
+        <span>Шаги онбординга</span>
+        <span className={styles.stepEditorCount}>{steps.length} шагов</span>
+      </div>
+      {inner}
     </div>
   );
 }
@@ -386,22 +432,33 @@ interface AssignModalProps {
   onClose: () => void;
 }
 
-const MOCK_EMPLOYEES = [
-  { id: 'emp-2',  name: 'Мария Иванова',     email: 'user@test.com',  divId: 'div-sales',   divName: 'Отдел продаж',                deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-3',  name: 'Сергей Волков',      email: 'serg@corp.ru',   divId: 'div-sales',   divName: 'Отдел продаж',                deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-8',  name: 'Артём Лебедев',      email: 'artem@corp.ru',  divId: 'div-sales',   divName: 'Отдел продаж',                deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-9',  name: 'Ольга Рыбакова',     email: 'olga.r@corp.ru', divId: 'div-supply',  divName: 'Отдел обеспечения продаж',    deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'emp-10', name: 'Павел Зайцев',       email: 'pavel@corp.ru',  divId: 'div-meat',    divName: 'Отдел мясной промышленности', deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
-  { id: 'emp-11', name: 'Екатерина Морозова', email: 'kate@corp.ru',   divId: 'div-retail',  divName: 'Отдел сетевого ретейла',      deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
-];
-
 function AssignModal({ onClose }: AssignModalProps) {
   const { templates, assign } = useOnboarding();
   const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
-  const [empId, setEmpId] = useState(MOCK_EMPLOYEES[0].id);
+  const [empId, setEmpId] = useState('');
   const [steps, setSteps] = useState<OnboardingStep[]>([]);
   const [dueDate, setDueDate] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [employees, setEmployees] = useState<{ id: string; name: string; email: string; divisionName: string; divisionId: string; departmentId: string; departmentName: string }[]>([]);
+
+  useEffect(() => {
+    void employeeApi.list({ page: 1, limit: 200 }).then(res => {
+      setEmployees(res.data.map(e => ({
+        id:             e.id,
+        name:           e.fullname,
+        email:          e.email,
+        divisionId:     e.divisionId,
+        divisionName:   e.divisionId,
+        departmentId:   e.department.id,
+        departmentName: e.department.name,
+      })));
+    });
+  }, []);
+
+  useEffect(() => {
+    if (employees.length > 0 && !empId) setEmpId(employees[0].id);
+  }, [employees, empId]);
 
   // Sync steps when template changes
   useEffect(() => {
@@ -409,20 +466,20 @@ function AssignModal({ onClose }: AssignModalProps) {
     setSteps(tmpl ? tmpl.steps.map(s => ({ ...s })) : []);
   }, [templateId, templates]);
 
-  const selectedEmp = MOCK_EMPLOYEES.find(e => e.id === empId)!;
+  const selectedEmp = employees.find(e => e.id === empId);
 
   const handleSubmit = async () => {
-    if (!templateId || !empId || steps.length === 0) return;
+    if (!templateId || !empId || steps.length === 0 || !selectedEmp) return;
     setSubmitting(true);
     await assign(
       templateId,
       selectedEmp.id,
       selectedEmp.name,
       selectedEmp.email,
-      selectedEmp.divId,
-      selectedEmp.divName,
-      selectedEmp.deptId,
-      selectedEmp.deptName,
+      selectedEmp.divisionId,
+      selectedEmp.divisionName,
+      selectedEmp.departmentId,
+      selectedEmp.departmentName,
       steps,
       dueDate || undefined,
     );
@@ -433,20 +490,21 @@ function AssignModal({ onClose }: AssignModalProps) {
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
-        {/* Фиксированный заголовок */}
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>Назначить онбординг</h2>
           <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
 
-        {/* Скроллящийся контент */}
         <div className={styles.modalBody}>
           <label className={styles.label}>
             Сотрудник
             <select className={styles.select} value={empId} onChange={e => setEmpId(e.target.value)}>
-              {MOCK_EMPLOYEES.map(e => (
-                <option key={e.id} value={e.id}>{e.name} — {e.divName}</option>
-              ))}
+              {employees.length === 0
+                ? <option value="">Загрузка...</option>
+                : employees.map(e => (
+                    <option key={e.id} value={e.id}>{e.name} — {e.email}</option>
+                  ))
+              }
             </select>
           </label>
 
@@ -473,7 +531,6 @@ function AssignModal({ onClose }: AssignModalProps) {
           <StepEditor steps={steps} onChange={setSteps} />
         </div>
 
-        {/* Фиксированный футер */}
         <div className={styles.modalActions}>
           <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
           <button
@@ -495,68 +552,57 @@ interface TemplateModalProps {
   onClose: () => void;
 }
 
-const DIVISIONS = [
-  { id: 'div-sales',   name: 'Отдел продаж',                 deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'div-supply',  name: 'Отдел обеспечения продаж',    deptId: 'dept-sales',      deptName: 'Департамент продаж' },
-  { id: 'div-meat',    name: 'Отдел мясной промышленности', deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
-  { id: 'div-retail',  name: 'Отдел сетевого ретейла',      deptId: 'dept-monitoring', deptName: 'Департамент мониторинга' },
-  { id: 'div-dev',     name: 'Отдел разработки',             deptId: 'dept-marketing',  deptName: 'Департамент маркетинга' },
-];
-
-const DEPARTMENTS = [
-  { id: 'dept-sales',      name: 'Департамент продаж' },
-  { id: 'dept-monitoring', name: 'Департамент мониторинга' },
-  { id: 'dept-marketing',  name: 'Департамент маркетинга' },
-];
-
-const DEPT_DIVISIONS: Record<string, { id: string; name: string }[]> = {
-  'dept-sales':      [{ id: 'div-sales', name: 'Отдел продаж' }, { id: 'div-supply', name: 'Отдел обеспечения продаж' }],
-  'dept-monitoring': [{ id: 'div-meat',  name: 'Отдел мясной промышленности' }, { id: 'div-retail', name: 'Отдел сетевого ретейла' }],
-  'dept-marketing':  [{ id: 'div-dev',   name: 'Отдел разработки' }],
-};
-
 function TemplateModal({ initial, onClose }: TemplateModalProps) {
   const { createTemplate, updateTemplate } = useOnboarding();
   const { user } = useUser();
   const isEditing = !!initial;
 
+  const { data: divPage } = useDivisionsQuery({ limit: 200 });
+  const { data: posPage } = usePositionsQuery({ limit: 200 });
+  const divisions = divPage?.data ?? [];
+  const positions = posPage?.data ?? [];
+
   const [title, setTitle] = useState(initial?.title ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [divisionId, setDivisionId] = useState(initial?.targetDivisionId ?? '');
-  const [status, setStatus] = useState<'draft' | 'active'>(initial?.status ?? 'draft');
+  const [positionId, setPositionId] = useState(initial?.positionId ?? '');
   const [steps, setSteps] = useState<OnboardingStep[]>(initial?.steps ?? []);
+  const [stepsOpen, setStepsOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const selectedDiv = DIVISIONS.find(d => d.id === divisionId);
+  const canSubmit = title.trim().length > 0 && divisionId && positionId && steps.length > 0 && !submitting;
 
   const handleSubmit = async () => {
-    if (!title.trim() || steps.length === 0) return;
+    if (!canSubmit) return;
     setSubmitting(true);
-    const dto: Omit<OnboardingTemplate, 'id' | 'createdAt'> = {
-      title: title.trim(),
-      description: description.trim(),
-      targetDivisionId: selectedDiv?.id ?? null,
-      targetDivisionName: selectedDiv?.name ?? null,
-      targetDepartmentId: selectedDiv?.deptId ?? null,
-      targetDepartmentName: selectedDiv?.deptName ?? null,
-      targetRole: null,
-      steps,
-      createdBy: user.id,
-      status,
-    };
-    if (isEditing && initial) {
-      await updateTemplate(initial.id, dto);
-    } else {
-      await createTemplate(dto);
+    try {
+      const dto: Omit<OnboardingTemplate, 'id' | 'createdAt'> = {
+        title:            title.trim(),
+        description:      description.trim(),
+        positionId,
+        targetDivisionId: divisionId,
+        targetRole:       null,
+        steps,
+        createdBy:        user.id,
+        status:           'active',
+      };
+      if (isEditing && initial) {
+        await updateTemplate(initial.id, dto);
+      } else {
+        await createTemplate(dto);
+      }
+      onClose();
+    } catch (err) {
+      // 409 = template already existed → context reloaded it; just close
+      if (isAxiosError(err) && err.response?.status === 409) onClose();
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    onClose();
   };
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className={styles.modal}>
-        {/* Фиксированный заголовок */}
+      <div className={`${styles.modal} ${styles.modalLg}`}>
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle}>
             {isEditing ? 'Редактировать шаблон' : 'Создать шаблон онбординга'}
@@ -564,7 +610,6 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
           <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
         </div>
 
-        {/* Скроллящийся контент */}
         <div className={styles.modalBody}>
           <label className={styles.label}>
             Название шаблона *
@@ -572,6 +617,7 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
               className={styles.select}
               placeholder="Например: Онбординг отдела продаж"
               value={title}
+              autoFocus
               onChange={e => setTitle(e.target.value)}
             />
           </label>
@@ -588,34 +634,55 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
             />
           </label>
 
-          <label className={styles.label}>
-            Подразделение (необязательно)
-            <select className={styles.select} value={divisionId} onChange={e => setDivisionId(e.target.value)}>
-              <option value="">Для всех отделов</option>
-              {DIVISIONS.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-          </label>
+          <div className={styles.stepModalRow}>
+            <label className={styles.label} style={{ flex: 1 }}>
+              Отдел *
+              <select className={styles.select} value={divisionId} onChange={e => setDivisionId(e.target.value)}>
+                <option value="">Выберите отдел...</option>
+                {divisions.map(d => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </label>
 
-          <label className={styles.label}>
-            Статус
-            <select className={styles.select} value={status} onChange={e => setStatus(e.target.value as 'draft' | 'active')}>
-              <option value="draft">Черновик</option>
-              <option value="active">Активный</option>
-            </select>
-          </label>
+            <label className={styles.label} style={{ flex: 1 }}>
+              Должность *
+              <select className={styles.select} value={positionId} onChange={e => setPositionId(e.target.value)}>
+                <option value="">Выберите должность...</option>
+                {positions.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          </div>
 
-          <StepEditor steps={steps} onChange={setSteps} />
+          {/* ── Секция шагов (раскрывающаяся) ── */}
+          <div className={styles.stepEditorFull}>
+            <button
+              type="button"
+              className={styles.stepEditorHeader}
+              style={{ cursor: 'pointer', userSelect: 'none', textAlign: 'left', border: 'none', background: 'none', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.625rem 0.875rem' }}
+              onClick={() => setStepsOpen(o => !o)}
+            >
+              <span>Шаги онбординга</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {steps.length > 0 && (
+                  <span className={styles.stepEditorCount}>{steps.length} шагов</span>
+                )}
+                {stepsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </span>
+            </button>
+
+            {stepsOpen && <StepEditor steps={steps} onChange={setSteps} templateMode headerless />}
+          </div>
         </div>
 
-        {/* Фиксированный футер */}
         <div className={styles.modalActions}>
           <button className={styles.cancelBtn} onClick={onClose}>Отмена</button>
           <button
             className={styles.submitBtn}
             onClick={() => void handleSubmit()}
-            disabled={!title.trim() || steps.length === 0 || submitting}
+            disabled={!canSubmit}
           >
             {submitting
               ? (isEditing ? 'Сохраняем...' : 'Создаём...')
@@ -632,6 +699,20 @@ function TemplatesTab() {
   const { templates } = useOnboarding();
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<OnboardingTemplate | null>(null);
+  const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+
+  const handleEditClick = async (tmpl: OnboardingTemplate) => {
+    setLoadingEditId(tmpl.id);
+    try {
+      const full = await import('@entities/onboarding/api/onboardingRealApi')
+        .then(m => m.onboardingRealApi.getTemplateById(tmpl.id));
+      setEditTarget(full);
+    } catch {
+      setEditTarget(tmpl);
+    } finally {
+      setLoadingEditId(null);
+    }
+  };
 
   return (
     <div>
@@ -652,37 +733,25 @@ function TemplatesTab() {
       ) : (
         <div className={styles.templatesGrid}>
           {templates.map(tmpl => {
-            const activeCount = tmpl.steps.filter(s => s.required).length;
+            const count = tmpl.stepCount ?? tmpl.steps.length;
             return (
               <div key={tmpl.id} className={styles.tmplCard}>
                 <div className={styles.tmplCardHeader}>
                   <span className={styles.tmplTitle}>{tmpl.title}</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span className={`${styles.tmplStatusBadge} ${tmpl.status === 'active' ? styles.tmplStatusActive : styles.tmplStatusDraft}`}>
-                      {tmpl.status === 'active' ? 'Активный' : 'Черновик'}
-                    </span>
-                    <button
-                      className={styles.stepEditBtn}
-                      title="Редактировать шаблон"
-                      onClick={() => setEditTarget(tmpl)}
-                    >
-                      <Pencil size={13} />
-                    </button>
-                  </div>
+                  <button
+                    className={styles.stepEditBtn}
+                    title="Редактировать шаблон"
+                    disabled={loadingEditId === tmpl.id}
+                    onClick={() => void handleEditClick(tmpl)}
+                  >
+                    <Pencil size={13} />
+                  </button>
                 </div>
                 {tmpl.description && (
                   <span className={styles.tmplDesc}>{tmpl.description}</span>
                 )}
                 <div className={styles.tmplMeta}>
-                  {tmpl.targetDivisionName && (
-                    <span className={styles.tmplTargetBadge}>{tmpl.targetDivisionName}</span>
-                  )}
-                  {tmpl.targetDepartmentName && !tmpl.targetDivisionName && (
-                    <span className={styles.tmplTargetBadge}>{tmpl.targetDepartmentName}</span>
-                  )}
-                  <span className={styles.tmplStepsCount}>
-                    {tmpl.steps.length} шагов · {activeCount} обязательных
-                  </span>
+                  <span className={styles.tmplStepsCount}>{count} шагов</span>
                 </div>
               </div>
             );
@@ -699,62 +768,46 @@ function TemplatesTab() {
 // ── Вкладка «Назначения» ─────────────────────────────────────────
 function AssignmentsTab() {
   const { allAssignments } = useOnboarding();
+  const { data: divPage }  = useDivisionsQuery({ limit: 200 });
+  const divisions          = divPage?.data ?? [];
+
   const [selected, setSelected]         = useState<string | null>(null);
   const [assignOpen, setAssignOpen]     = useState(false);
   const [searchQuery, setSearchQuery]   = useState('');
-  const [filterDeptId, setFilterDeptId] = useState('');
   const [filterDivId, setFilterDivId]   = useState('');
 
-  // Сбрасываем отдел при смене департамента
-  const handleDeptChange = (deptId: string) => {
-    setFilterDeptId(deptId);
-    setFilterDivId('');
-    setSelected(null);
-  };
   const handleDivChange = (divId: string) => {
     setFilterDivId(divId);
     setSelected(null);
   };
 
-  const availableDivs = filterDeptId ? (DEPT_DIVISIONS[filterDeptId] ?? []) : [];
-
   // Фильтрация назначений
   const filtered = allAssignments
-    .filter(a => {
-      if (filterDivId)  return a.divisionId   === filterDivId;
-      if (filterDeptId) return a.departmentId === filterDeptId;
-      return true;
-    })
+    .filter(a => !filterDivId || a.divisionId === filterDivId)
     .filter(a => {
       if (!searchQuery) return true;
       const q = searchQuery.toLowerCase();
       return (
         a.employeeName.toLowerCase().includes(q) ||
         a.employeeEmail.toLowerCase().includes(q) ||
-        a.templateTitle.toLowerCase().includes(q) ||
-        a.divisionName.toLowerCase().includes(q)
+        a.templateTitle.toLowerCase().includes(q)
       );
     });
 
-  // Статистика по выбранному департаменту / отделу
+  // Статистика по выбранному отделу
   const scopeAssignments = filterDivId
-    ? allAssignments.filter(a => a.divisionId   === filterDivId)
-    : filterDeptId
-    ? allAssignments.filter(a => a.departmentId === filterDeptId)
+    ? allAssignments.filter(a => a.divisionId === filterDivId)
     : [];
-  const showStats    = !!(filterDeptId || filterDivId);
-  const statsTotal   = scopeAssignments.length;
-  const statsDone    = scopeAssignments.filter(a => a.status === 'completed').length;
-  const statsActive  = scopeAssignments.filter(a => a.status === 'in_progress').length;
-  const statsAvg     = statsTotal > 0
+  const showStats  = !!filterDivId;
+  const statsTotal = scopeAssignments.length;
+  const statsDone  = scopeAssignments.filter(a => a.status === 'completed').length;
+  const statsActive= scopeAssignments.filter(a => a.status === 'in_progress').length;
+  const statsAvg   = statsTotal > 0
     ? Math.round(scopeAssignments.reduce((s, a) => s + calcOnboardingProgress(a), 0) / statsTotal)
     : 0;
 
   const active = allAssignments.find(a => a.id === selected) ?? null;
-
-  const scopeLabel = filterDivId
-    ? (availableDivs.find(d => d.id === filterDivId)?.name ?? '')
-    : (DEPARTMENTS.find(d => d.id === filterDeptId)?.name ?? '');
+  const scopeLabel = divisions.find(d => d.id === filterDivId)?.name ?? '';
 
   return (
     <div>
@@ -772,23 +825,11 @@ function AssignmentsTab() {
 
         <select
           className={styles.filterSelect}
-          value={filterDeptId}
-          onChange={e => handleDeptChange(e.target.value)}
-        >
-          <option value="">Все департаменты</option>
-          {DEPARTMENTS.map(d => (
-            <option key={d.id} value={d.id}>{d.name}</option>
-          ))}
-        </select>
-
-        <select
-          className={styles.filterSelect}
           value={filterDivId}
           onChange={e => handleDivChange(e.target.value)}
-          disabled={!filterDeptId}
         >
           <option value="">Все отделы</option>
-          {availableDivs.map(d => (
+          {divisions.map(d => (
             <option key={d.id} value={d.id}>{d.name}</option>
           ))}
         </select>

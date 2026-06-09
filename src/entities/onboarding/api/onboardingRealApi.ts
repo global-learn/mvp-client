@@ -10,6 +10,7 @@ import {
 } from '@shared/api/schemas';
 import type {
   CreateOnboardingTemplateRequest,
+  UpdateOnboardingTemplateRequest,
   AssignOnboardingRequest,
   CompleteOnboardingStepRequest,
   SendOnboardingChatMessageRequest,
@@ -23,6 +24,23 @@ import type {
 } from '../model/types';
 import type { EmployeeDto } from '@shared/api/schemas';
 
+// ── Type mappers ─────────────────────────────────────────────────
+
+function mapBackendStepType(type: string): OnboardingStepType {
+  switch (type) {
+    case 'COURSE':   return 'course';
+    case 'DOCUMENT': return 'document';
+    case 'MEETING':  return 'meeting';
+    case 'VIDEO':    return 'video';
+    default:         return 'task'; // TEXT, TASK
+  }
+}
+
+// Backend only accepts TEXT | COURSE — all non-course types map to TEXT
+export function mapFrontendStepType(type: OnboardingStepType): 'TEXT' | 'COURSE' {
+  return type === 'course' ? 'COURSE' : 'TEXT';
+}
+
 // ── Mappers ─────────────────────────────────────────────────────
 
 function mapTemplateStep(dto: OnboardingAssignmentDto['steps'][number]): OnboardingStep {
@@ -30,7 +48,7 @@ function mapTemplateStep(dto: OnboardingAssignmentDto['steps'][number]): Onboard
     id:          dto.id,
     title:       dto.name,
     description: dto.description,
-    type:        dto.type === 'COURSE' ? 'course' : 'task',
+    type:        mapBackendStepType(dto.type),
     required:    true,
     order:       dto.position,
     courseId:    dto.courseId,
@@ -123,8 +141,10 @@ export const onboardingRealApi = {
       id:               dto.id,
       title:            dto.name,
       description:      dto.description,
+      positionId:       dto.positionId,
       targetDivisionId: dto.divisionId,
       steps:            [],
+      stepCount:        dto.stepCount,
       createdBy:        '',
       status:           'active' as const,
       createdAt:        dto.createdAt,
@@ -138,21 +158,27 @@ export const onboardingRealApi = {
       id:               dto.id,
       title:            dto.name,
       description:      dto.description,
+      positionId:       dto.positionId,
       targetDivisionId: dto.divisionId,
       steps:            dto.steps.map(s => ({
-        id:          s.id,
-        title:       s.name,
-        description: s.description,
-        type:        s.type === 'COURSE' ? 'course' as const : 'task' as const,
-        required:    true,
-        order:       s.position,
-        courseId:    s.courseId,
-        dueDate:     undefined,
+        id:                         s.id,
+        title:                      s.name,
+        description:                s.description,
+        type:                       mapBackendStepType(s.type),
+        required:                   true,
+        order:                      s.position,
+        courseId:                   s.courseId,
+        recommendedStartOffsetDays: s.recommendedStartOffsetDays,
+        recommendedEndOffsetDays:   s.recommendedEndOffsetDays,
       })),
       createdBy:  '',
       status:     'active' as const,
       createdAt:  dto.createdAt,
     };
+  },
+
+  updateTemplate: async (id: string, payload: UpdateOnboardingTemplateRequest): Promise<void> => {
+    await api.put(`/onboarding/templates/${id}`, payload);
   },
 
   getMyOnboardings: async (): Promise<OnboardingAssignment[]> => {

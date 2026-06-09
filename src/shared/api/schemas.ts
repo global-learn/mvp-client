@@ -169,7 +169,7 @@ export type MyProfileResponseDto = z.infer<typeof MyProfileResponseDtoSchema>;
 
 // ── Onboarding templates ─────────────────────────────────────────
 
-export const OnboardingStepTypeDtoSchema = z.enum(['TEXT', 'COURSE']);
+export const OnboardingStepTypeDtoSchema = z.enum(['TEXT', 'TASK', 'DOCUMENT', 'MEETING', 'VIDEO', 'COURSE']);
 
 export const OnboardingFeedbackOptionDtoSchema = z.object({
   label: z.string(),
@@ -197,6 +197,15 @@ export const CreateOnboardingTemplateRequestSchema = z.object({
 });
 
 export type CreateOnboardingTemplateRequest = z.infer<typeof CreateOnboardingTemplateRequestSchema>;
+
+export const UpdateOnboardingTemplateRequestSchema = z.object({
+  name:        z.string().min(1).max(255),
+  description: z.string(),
+  coverId:     z.string().uuid().optional(),
+  steps:       z.array(CreateOnboardingStepRequestSchema).min(1),
+});
+
+export type UpdateOnboardingTemplateRequest = z.infer<typeof UpdateOnboardingTemplateRequestSchema>;
 
 // ── Onboarding assignments ───────────────────────────────────────
 
@@ -466,11 +475,11 @@ export const OnboardingTemplateSummaryDtoSchema = z.object({
   createdAt:   z.string(),
   updatedAt:   z.string().optional(),
   name:        z.string(),
-  description: z.string(),
+  description: z.string().nullable().optional().transform(v => v ?? ''),
   positionId:  z.string(),
   divisionId:  z.string(),
-  coverId:     z.string().optional(),
-  stepCount:   z.number(),
+  coverId:     z.string().optional().nullable(),
+  stepCount:   z.number().default(0),
 });
 
 export const OnboardingTemplateFeedbackOptionDtoSchema = z.object({
@@ -495,11 +504,11 @@ export const OnboardingTemplateFullDtoSchema = z.object({
   id:          z.string(),
   createdAt:   z.string(),
   name:        z.string(),
-  description: z.string(),
+  description: z.string().nullable().optional().transform(v => v ?? ''),
   positionId:  z.string(),
   divisionId:  z.string(),
-  coverId:     z.string().optional(),
-  steps:       z.array(OnboardingTemplateStepDtoSchema),
+  coverId:     z.string().optional().nullable(),
+  steps:       z.array(OnboardingTemplateStepDtoSchema).default([]),
 });
 
 export const OnboardingAssignmentStepDtoSchema = z.object({
@@ -507,7 +516,7 @@ export const OnboardingAssignmentStepDtoSchema = z.object({
   position:             z.number(),
   name:                 z.string(),
   description:          z.string(),
-  type:                 z.enum(['TEXT', 'COURSE']),
+  type:                 OnboardingStepTypeDtoSchema,
   courseId:             z.string().optional(),
   recommendedStartDate: z.string(),
   recommendedEndDate:   z.string(),

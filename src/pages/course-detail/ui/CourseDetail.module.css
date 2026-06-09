@@ -1663,3 +1663,173 @@
     padding: 0;
   }
 }
+
+/* ── Кнопка «Создать итоговый тест» ── */
+.genTestBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.875rem;
+  background: transparent;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+.genTestBtn:hover {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+/* ── Строка модуля с кнопкой gen ── */
+.outlineModuleRow {
+  display: flex;
+  align-items: stretch;
+  gap: 0.375rem;
+}
+.outlineModuleRow .outlineModuleHeader {
+  flex: 1;
+  min-width: 0;
+}
+.moduleGenBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  margin: 0.25rem 0.25rem 0.25rem 0;
+}
+.moduleGenBtn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+/* ── Инлайн-форма генерации (курс-уровень) ── */
+.genTestModal {
+  background: var(--card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.genTestModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+}
+.genTestClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  padding: 0.125rem;
+  display: flex;
+  align-items: center;
+}
+.genTestClose:hover { color: var(--foreground); }
+.genTestHint {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin: 0 0 1rem;
+}
+.genTestFields {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.genTestField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  min-width: 120px;
+}
+.genTestLabel {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.genTestInput {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.875rem;
+  background: var(--background);
+  color: var(--foreground);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.genTestInput:focus { border-color: var(--primary); }
+.genTestSelect {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4375rem 0.625rem;
+  font-size: 0.875rem;
+  background: var(--background);
+  color: var(--foreground);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.genTestSelect:focus { border-color: var(--primary); }
+.genTestActions {
+  display: flex;
+  gap: 0.5rem;
+}
+.genTestSubmit {
+  padding: 0.5rem 1.25rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.genTestSubmit:disabled { opacity: 0.6; cursor: not-allowed; }
+.genTestCancel {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+.genTestCancel:hover { border-color: var(--foreground); color: var(--foreground); }
+
+/* ── Оверлей модалки для теста по модулю ── */
+.genTestOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.genTestOverlayBox {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}

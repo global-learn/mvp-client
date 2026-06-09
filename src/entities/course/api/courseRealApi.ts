@@ -320,6 +320,29 @@ export const courseWriteApi = {
     await api.delete(`/courses/${courseId}/modules/${moduleId}/steps/${stepId}`);
   },
 
+  async generateCourseTest(
+    courseId: string,
+    dto: { count?: number; passingPercent?: number },
+  ): Promise<string> {
+    const body: Record<string, unknown> = {};
+    if (dto.count != null) body.count = dto.count;
+    if (dto.passingPercent != null) body.passingPercent = dto.passingPercent;
+    const { data } = await api.post(`/courses/${courseId}/generate-test`, body);
+    return IdResponseSchema.parse(data).id;
+  },
+
+  async generateModuleTest(
+    courseId: string,
+    moduleId: string,
+    dto: { count?: number; passingPercent?: number },
+  ): Promise<string> {
+    const body: Record<string, unknown> = {};
+    if (dto.count != null) body.count = dto.count;
+    if (dto.passingPercent != null) body.passingPercent = dto.passingPercent;
+    const { data } = await api.post(`/courses/${courseId}/modules/${moduleId}/generate-test`, body);
+    return IdResponseSchema.parse(data).id;
+  },
+
   async enrollEmployee(courseId: string, employeeId: string): Promise<string> {
     const { data } = await api.post(`/courses/${courseId}/enroll`, { employeeId });
     return IdResponseSchema.parse(data).id;

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2, Trash2, Archive, ArchiveRestore, BarChart3, Pencil, ImagePlus } from 'lucide-react';
+import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2, Trash2, Archive, ArchiveRestore, BarChart3, Pencil, ImagePlus, Wand2, X as XIcon } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
@@ -9,7 +10,8 @@ import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment 
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
 import { useCourseQuery, useCoverUrl, useTestDefinitionQuery, useCourseAnalyticsQuery } from '@entities/course/api/hooks';
 import { useDepartmentsQuery, useDivisionsQuery } from '@entities/company/api/hooks';
-import { testAttemptApi } from '@entities/course/api/courseRealApi';
+import { testAttemptApi, courseWriteApi } from '@entities/course/api/courseRealApi';
+import { queryKeys } from '@shared/lib/query/queryKeys';
 import { toast } from '@shared/lib/toast';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal'
@@ -364,9 +366,14 @@ function CourseStatsPanel({ courseId, getCourseEnrollments }: {
 // ─────────────────────────────────────────────────────────
 // Основная страница
 // ─────────────────────────────────────────────────────────
+type GenTestTarget =
+  | { type: 'course' }
+  | { type: 'module'; moduleId: string; moduleName: string };
+
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const {
     courses, getEnrollment, enroll, requestEnrollment,
     getCourseRequests, approveEnrollmentRequest, rejectEnrollmentRequest,
@@ -388,6 +395,13 @@ export function CourseDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [archiving, setArchiving] = useState(false);
+
+  // Generate test modal state
+  const [genTarget, setGenTarget] = useState<GenTestTarget | null>(null);
+  const [genCount, setGenCount] = useState('');
+  const [genPassing, setGenPassing] = useState('80');
+  const [genModuleId, setGenModuleId] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -492,8 +506,9 @@ export function CourseDetailPage() {
 
   // ── Завершение элемента ───────────────────────────────────
   const handleItemComplete = async (itemId: string) => {
+    const wasCompleted = enrollment?.status === 'completed';
     const updated = await markItemComplete(course.id, itemId);
-    if (updated.status === 'completed') {
+    if (updated.status === 'completed' && !wasCompleted) {
       setCompletionOpen(true);
       return;
     }
@@ -574,6 +589,58 @@ export function CourseDetailPage() {
     }
   };
 
+  // ── Генерация теста ──────────────────────────────────────
+  const openGenCourse = () => {
+    setGenTarget({ type: 'course' });
+    setGenCount('');
+    setGenPassing('80');
+    setGenModuleId(course?.modules?.[0]?.id ?? '');
+  };
+
+  const openGenModule = (moduleId: string, moduleName: string) => {
+    setGenTarget({ type: 'module', moduleId, moduleName });
+    setGenCount('');
+    setGenPassing('80');
+  };
+
+  const handleGenerate = async () => {
+    if (!course || !genTarget) return;
+    const count        = genCount.trim() ? parseInt(genCount, 10) : undefined;
+    const passingPct   = genPassing.trim() ? parseInt(genPassing, 10) : 80;
+    if (count !== undefined && (isNaN(count) || count < 1)) {
+      toast.error('Укажите корректное количество вопросов');
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      if (genTarget.type === 'course') {
+        if (!genModuleId) { toast.error('Выберите модуль'); return; }
+        const testId = await courseWriteApi.generateCourseTest(course.id, { count, passingPercent: passingPct });
+        await courseWriteApi.addStep(course.id, genModuleId, {
+          name:   `Итоговый тест по ${course.title}`,
+          type:   'TEST',
+          testId,
+        });
+        toast.success('Итоговый тест создан и добавлен в модуль');
+      } else {
+        const testId = await courseWriteApi.generateModuleTest(course.id, genTarget.moduleId, { count, passingPercent: passingPct });
+        await courseWriteApi.addStep(course.id, genTarget.moduleId, {
+          name:   `Итоговый тест по модулю «${genTarget.moduleName}»`,
+          type:   'TEST',
+          testId,
+        });
+        toast.success('Тест по модулю создан и добавлен');
+      }
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(course.id) });
+      setGenTarget(null);
+    } catch (err) {
+      toast.apiError(err, 'Не удалось создать тест');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // ── Одобрение/отклонение заявок ──────────────────────────
   const handleApproveRequest = async (req: EnrollmentRequest) => {
     setApprovingId(req.userId);
@@ -622,6 +689,11 @@ export function CourseDetailPage() {
               {canDelete && !isArchived && !editMode && (
                 <button className={styles.editBtn} onClick={handleOpenEdit}>
                   <Pencil size={14} /> Редактировать
+                </button>
+              )}
+              {canDelete && !isArchived && !editMode && (
+                <button className={styles.genTestBtn} onClick={openGenCourse}>
+                  <Wand2 size={14} /> Создать итоговый тест
                 </button>
               )}
               {canDelete && (
@@ -794,6 +866,68 @@ export function CourseDetailPage() {
             </div>
           )}
 
+          {/* ── Модалка генерации итогового теста (курс) ── */}
+          {genTarget?.type === 'course' && (
+            <div className={styles.genTestModal}>
+              <div className={styles.genTestModalHeader}>
+                <span><Wand2 size={15} /> Создать итоговый тест по курсу</span>
+                <button className={styles.genTestClose} onClick={() => setGenTarget(null)}><XIcon size={15} /></button>
+              </div>
+              <p className={styles.genTestHint}>
+                Тест будет сформирован из банка вопросов курса и добавлен как шаг в выбранный модуль.
+              </p>
+              <div className={styles.genTestFields}>
+                <div className={styles.genTestField}>
+                  <label className={styles.genTestLabel}>Вопросов</label>
+                  <input
+                    className={styles.genTestInput}
+                    type="number"
+                    min="1"
+                    placeholder="Все"
+                    value={genCount}
+                    onChange={e => setGenCount(e.target.value)}
+                  />
+                </div>
+                <div className={styles.genTestField}>
+                  <label className={styles.genTestLabel}>Порог, %</label>
+                  <input
+                    className={styles.genTestInput}
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={genPassing}
+                    onChange={e => setGenPassing(e.target.value)}
+                  />
+                </div>
+                <div className={styles.genTestField} style={{ flex: 2 }}>
+                  <label className={styles.genTestLabel}>Добавить в модуль</label>
+                  <select
+                    className={styles.genTestSelect}
+                    value={genModuleId}
+                    onChange={e => setGenModuleId(e.target.value)}
+                  >
+                    <option value="">— выберите модуль —</option>
+                    {course.modules.map(m => (
+                      <option key={m.id} value={m.id}>{m.title}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className={styles.genTestActions}>
+                <button
+                  className={styles.genTestSubmit}
+                  onClick={() => void handleGenerate()}
+                  disabled={generating || !genModuleId}
+                >
+                  {generating ? 'Генерируем...' : 'Создать тест'}
+                </button>
+                <button className={styles.genTestCancel} onClick={() => setGenTarget(null)} disabled={generating}>
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Описание + автор */}
           {!editMode && <div className={styles.descriptionCard}>
             <div className={styles.descriptionCardInner}>
@@ -838,24 +972,35 @@ export function CourseDetailPage() {
                   const isModOpen    = expandedModules.has(mod.id);
                   return (
                     <div key={mod.id} className={styles.outlineModule}>
-                      <button
-                        className={styles.outlineModuleHeader}
-                        onClick={() => toggleModule(mod.id)}
-                      >
-                        <span className={styles.outlineModuleNum}>{mi + 1}</span>
-                        <span className={styles.outlineModuleName}>{mod.title}</span>
-                        <div className={styles.outlineModuleMeta}>
-                          {isEnrolled && (
-                            <span className={modDone ? styles.outlineModuleProgDone : styles.outlineModuleProg}>
-                              {modDone ? '✓' : `${modCompleted}/${modTotal}`}
-                            </span>
-                          )}
-                          {!isEnrolled && (
-                            <span className={styles.outlineModuleStepCount}>{modTotal} шагов</span>
-                          )}
-                          {isModOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </div>
-                      </button>
+                      <div className={styles.outlineModuleRow}>
+                        <button
+                          className={styles.outlineModuleHeader}
+                          onClick={() => toggleModule(mod.id)}
+                        >
+                          <span className={styles.outlineModuleNum}>{mi + 1}</span>
+                          <span className={styles.outlineModuleName}>{mod.title}</span>
+                          <div className={styles.outlineModuleMeta}>
+                            {isEnrolled && (
+                              <span className={modDone ? styles.outlineModuleProgDone : styles.outlineModuleProg}>
+                                {modDone ? '✓' : `${modCompleted}/${modTotal}`}
+                              </span>
+                            )}
+                            {!isEnrolled && (
+                              <span className={styles.outlineModuleStepCount}>{modTotal} шагов</span>
+                            )}
+                            {isModOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </div>
+                        </button>
+                        {canDelete && !isArchived && (
+                          <button
+                            className={styles.moduleGenBtn}
+                            title="Создать тест по модулю"
+                            onClick={() => openGenModule(mod.id, mod.title)}
+                          >
+                            <Wand2 size={13} />
+                          </button>
+                        )}
+                      </div>
                       {isModOpen && (
                         <div className={styles.outlineSteps}>
                           {mod.steps.map((step, si) => {
@@ -1191,6 +1336,57 @@ export function CourseDetailPage() {
           courseTitle={course.title}
           onClose={() => setAssignOpen(false)}
         />
+      )}
+
+      {/* ── Модалка генерации теста по модулю ── */}
+      {genTarget?.type === 'module' && (
+        <div className={styles.genTestOverlay} onClick={() => setGenTarget(null)}>
+          <div className={styles.genTestOverlayBox} onClick={e => e.stopPropagation()}>
+            <div className={styles.genTestModalHeader}>
+              <span><Wand2 size={15} /> Тест по модулю «{genTarget.moduleName}»</span>
+              <button className={styles.genTestClose} onClick={() => setGenTarget(null)}><XIcon size={15} /></button>
+            </div>
+            <p className={styles.genTestHint}>
+              Тест будет сформирован из вопросов этого модуля и добавлен последним шагом.
+            </p>
+            <div className={styles.genTestFields}>
+              <div className={styles.genTestField}>
+                <label className={styles.genTestLabel}>Вопросов</label>
+                <input
+                  className={styles.genTestInput}
+                  type="number"
+                  min="1"
+                  placeholder="Все"
+                  value={genCount}
+                  onChange={e => setGenCount(e.target.value)}
+                />
+              </div>
+              <div className={styles.genTestField}>
+                <label className={styles.genTestLabel}>Порог, %</label>
+                <input
+                  className={styles.genTestInput}
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={genPassing}
+                  onChange={e => setGenPassing(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className={styles.genTestActions}>
+              <button
+                className={styles.genTestSubmit}
+                onClick={() => void handleGenerate()}
+                disabled={generating}
+              >
+                {generating ? 'Генерируем...' : 'Создать тест'}
+              </button>
+              <button className={styles.genTestCancel} onClick={() => setGenTarget(null)} disabled={generating}>
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

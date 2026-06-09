@@ -247,8 +247,15 @@
 | `POST /courses/:id/questions` | ✅ `questionApi.create` | ✅ при создании курса |
 | `GET /courses/:id/questions` | ❌ нет метода | ❌ нет UI просмотра банка |
 | `DELETE /questions/:id` | ❌ нет метода | ❌ нет UI удаления вопроса |
+| `POST /courses/:id/generate-test` | ✅ `courseWriteApi.generateCourseTest` | ✅ кнопка «Создать итоговый тест» на CourseDetailPage |
+| `POST /courses/:id/modules/:mId/generate-test` | ✅ `courseWriteApi.generateModuleTest` | ✅ кнопка-иконка ✨ в каждом модуле «Программы курса» |
 
 **Вывод:** Банк вопросов — write-only с клиента. Просмотреть или удалить вопрос без пересоздания курса нельзя.
+
+**Генерация тестов (2026-06-09):**
+- **Итоговый тест по курсу:** кнопка «Создать итоговый тест» (Wand2-иконка) в шапке курса для admin/автора (только не-архивные курсы). Открывает инлайн-форму: `count` (опционально — по умолчанию все вопросы), `passingPercent` (по умолчанию 80%), выбор модуля для вставки шага. После генерации: `POST /courses/:id/generate-test` → testId → `POST /courses/:id/modules/:mId/steps` (вставляется как TEST-шаг) → инвалидация cache курса.
+- **Тест по модулю:** кнопка-иконка ✨ в шапке каждого модуля раздела «Программа курса» (admin/автор). Открывает оверлей-модал с `count` и `passingPercent`. После генерации: `POST /courses/:id/modules/:mId/generate-test` → testId → шаг вставляется в тот же модуль.
+- Оба сценария: после успеха — toast-уведомление + refresh данных курса через TanStack Query.
 
 ---
 
@@ -310,12 +317,22 @@
 |---|---|---|
 | `POST /onboarding/templates` | ✅ `onboardingRealApi.createTemplate` | ✅ TemplateModal → OnboardingManagePage |
 | `GET /onboarding/templates` | ✅ `onboardingRealApi.getTemplates` | ✅ OnboardingContext |
-| `GET /onboarding/templates/:id` | ✅ `onboardingRealApi.getTemplateById` | ⚠️ вызывается только в assign-flow |
-| `PUT /onboarding/templates/:id` | ❌ **не вызывается** | ❌ `updateTemplate` в OnboardingContext обновляет только локальный state |
+| `GET /onboarding/templates/:id` | ✅ `onboardingRealApi.getTemplateById` | ✅ при открытии TemplateModal (edit) |
+| `PUT /onboarding/templates/:id` | ✅ `onboardingRealApi.updateTemplate` | ✅ TemplateModal сохраняет через PUT |
+| `DELETE /onboarding/templates/:id` | — не существует в бэкенде | — кнопки удаления нет |
 
-**Критическая проблема:** Редактирование шаблона в UI (TemplateModal) не сохраняется на бэкенде. `PUT /onboarding/templates/:id` никогда не вызывается. Все правки теряются при перезагрузке.
+**Статус:** ✅ РЕАЛИЗОВАНО (Create + Read + Update). DELETE-эндпоинта нет в бэкенде.
 
-**Дополнительная проблема:** При создании шаблона `positionId` всегда отправляется как `'00000000-0000-0000-0000-000000000000'` — это захардкоженный placeholder, который может не существовать в БД бэкенда.
+**UX-улучшения (2026-06-09):**
+- После создания/обновления шаблона список всегда перезагружается с сервера (`load()`)
+- При 409 Conflict (шаблон уже существует) — список перезагружается, модал закрывается
+- Zod-схемы `OnboardingTemplateSummaryDtoSchema` / `OnboardingTemplateFullDtoSchema` сделаны устойчивыми к null в полях `description`, `coverId`, `stepCount`
+- `positionId` и `divisionId` выбираются пользователем из реальных данных (запросы `/positions`, `/divisions`); хардкод удалён
+- Модальное окно шаблона: 680 px, Отдел+Должность в ряд, шаги в раскрывающейся секции
+- Модальное окно шага: открывается поверх шаблонной модалки (z-index 300), лёгкий оверлей `rgba(0,0,0,0.18)` — нет накопления затемнения
+- Горизонтальный скролл внутри модалок исключён (`overflow-x: hidden`, `box-sizing: border-box`)
+
+**Ограничение бэкенда:** `PUT /onboarding/templates/:id` принимает только `name`, `description`, `steps`; изменить `positionId`/`divisionId` через обновление нельзя. Для смены отдела/должности нужно удалить шаблон и пересоздать (но DELETE не реализован).
 
 ---
 
@@ -391,9 +408,9 @@ const MOCK_EMPLOYEES = [
 | # | Баг | Где | Что нужно сделать |
 |---|---|---|---|
 | B1 | AssignModal использует `MOCK_EMPLOYEES` | `OnboardingManagePage.tsx:390` | Заменить на `useEmployeesQuery` + поиск по имени |
-| B2 | `updateTemplate` не вызывает `PUT /onboarding/templates/:id` | `OnboardingContext.tsx:215` | Реализовать API-вызов `onboardingRealApi.updateTemplate` |
-| B3 | Chat history не загружается | `onboardingRealApi.ts:41` / `onboardingRealApi.getChatMessages` | Вызывать `getChatMessages` при загрузке каждого онбординга |
-| B4 | `positionId` захардкожен как `00000000-...` | `OnboardingContext.tsx:188` | Убрать обязательность `positionId` или дать пользователю выбрать |
+| ~~B2~~ | ~~`updateTemplate` не вызывает `PUT /onboarding/templates/:id`~~ | — | ✅ Выполнено — `PUT` вызывается, после сохранения reload |
+| B3 | Chat history не загружается | `onboardingRealApi.ts` / `getChatMessages` | Вызывать `getChatMessages` при загрузке каждого онбординга |
+| ~~B4~~ | ~~`positionId` захардкожен как `00000000-...`~~ | — | ✅ Выполнено — реальный select из `/positions` |
 | B5 | `PATCH /lessons/:id` никогда не вызывается | — | Добавить режим редактирования курса в CourseBuilder |
 | ~~B6~~ | ~~Атомарность создания курса не гарантирована~~ | — | ✅ Выполнено — `POST /courses/full`, параллельное создание контента |
 

@@ -6,13 +6,14 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { isAxiosError } from 'axios';
 import type {
   OnboardingTemplate,
   OnboardingAssignment,
   OnboardingStep,
   OnboardingMessage,
 } from './types';
-import { onboardingRealApi } from '../api/onboardingRealApi';
+import { onboardingRealApi, mapFrontendStepType } from '../api/onboardingRealApi';
 import { useUser } from '@entities/user/model/UserContext';
 import { displayName, isAdmin, canControl } from '@entities/user/model/types';
 import { toast } from '@shared/lib/toast';
@@ -180,43 +181,64 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setAllAssignments(prev => prev.map(patch));
   };
 
+  const buildStepsPayload = (steps: OnboardingStep[]) =>
+    steps.map((s, i) => ({
+      position:                   i + 1,
+      name:                       s.title,
+      description:                s.description,
+      type:                       mapFrontendStepType(s.type),
+      courseId:                   s.courseId,
+      recommendedStartOffsetDays: s.recommendedStartOffsetDays ?? 0,
+      recommendedEndOffsetDays:   s.recommendedEndOffsetDays ?? 7,
+      feedbackOptions:            [] as [],
+    }));
+
   const createTemplate = async (dto: Omit<OnboardingTemplate, 'id' | 'createdAt'>): Promise<OnboardingTemplate> => {
     try {
       const { id } = await onboardingRealApi.createTemplate({
         name:        dto.title,
         description: dto.description,
-        positionId:  '00000000-0000-0000-0000-000000000000',
-        divisionId:  dto.targetDivisionId ?? '00000000-0000-0000-0000-000000000000',
-        steps:       dto.steps.map((s, i) => ({
-          position:                   i + 1,
-          name:                       s.title,
-          description:                s.description,
-          type:                       s.type === 'course' ? 'COURSE' as const : 'TEXT' as const,
-          courseId:                   s.courseId,
-          recommendedStartOffsetDays: 0,
-          recommendedEndOffsetDays:   7,
-          feedbackOptions:            [],
-        })),
+        positionId:  dto.positionId!,
+        divisionId:  dto.targetDivisionId!,
+        steps:       buildStepsPayload(dto.steps),
       });
-      const created: OnboardingTemplate = {
-        ...dto,
-        id,
-        createdAt: new Date().toISOString(),
-      };
-      setTemplates(prev => [...prev, created]);
       toast.success('Шаблон онбординга создан');
-      return created;
+      // Reload from server so summary list is always fresh
+      await load();
+      const fresh = templates.find(t => t.id === id);
+      return fresh ?? { ...dto, id, createdAt: new Date().toISOString() };
     } catch (err) {
-      toast.apiError(err, 'Не удалось создать шаблон');
+      if (isAxiosError(err) && err.response?.status === 409) {
+        // Template already exists on the server — reload to surface it
+        toast.error('Шаблон с такими параметрами уже существует');
+        void load();
+      } else {
+        toast.apiError(err, 'Не удалось создать шаблон');
+      }
       throw err;
     }
   };
 
   const updateTemplate = async (id: string, patch: Partial<OnboardingTemplate>): Promise<OnboardingTemplate> => {
     const existing = templates.find(t => t.id === id);
-    const updated: OnboardingTemplate = { ...(existing ?? { id, title: '', description: '', steps: [], createdBy: '', status: 'active', createdAt: '' }), ...patch };
-    setTemplates(prev => prev.map(t => t.id === id ? updated : t));
-    return updated;
+    const updated: OnboardingTemplate = {
+      ...(existing ?? { id, title: '', description: '', steps: [], createdBy: '', status: 'active', createdAt: '' }),
+      ...patch,
+    };
+    try {
+      await onboardingRealApi.updateTemplate(id, {
+        name:        updated.title,
+        description: updated.description,
+        steps:       buildStepsPayload(updated.steps),
+      });
+      toast.success('Шаблон обновлён');
+      // Reload to get server-side state
+      void load();
+      return updated;
+    } catch (err) {
+      toast.apiError(err, 'Не удалось обновить шаблон');
+      throw err;
+    }
   };
 
   return (

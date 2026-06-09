@@ -431,6 +431,18 @@
   padding: 1rem;
 }
 
+/* Вложенная модалка поверх другой — фон почти прозрачный, чтобы не накапливалось затемнение */
+.overlayInner {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 1rem;
+}
+
 .modal {
   background: var(--card);
   border-radius: var(--radius-xl);
@@ -441,7 +453,17 @@
   display: flex;
   flex-direction: column;
   max-height: 90vh;
-  /* Без overflow-y: auto здесь — скролл только в .modalBody */
+  overflow-x: hidden;
+}
+
+.modal * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* Широкая версия модалки (шаблоны онбординга) */
+.modalLg {
+  max-width: 680px;
 }
 
 .modalHeader {
@@ -595,6 +617,14 @@
   line-height: 1.45;
 }
 
+/* Горизонтальный ряд внутри модальных форм */
+.stepModalRow {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
 /* ── Full step editor (in AssignModal) ── */
 .stepEditorFull {
   display: flex;
@@ -602,7 +632,6 @@
   gap: 0;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
-  overflow-y: auto;
 }
 
 .stepEditorHeader {
@@ -626,8 +655,6 @@
 .stepEditorList {
   display: flex;
   flex-direction: column;
-  max-height: 260px;
-  overflow-y: auto;
 }
 
 .stepEditorItem {

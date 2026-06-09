@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import type { User, UserAvatar, EmployeeRole } from './types';
 import { authApi } from '../api/authApi';
+import { fileApi } from '@shared/api/fileApi';
 import { queryKeys } from '@shared/lib/query/queryKeys';
 
 // Maps backend role string (e.g. "admin", "Admin", "department_head") → EmployeeRole
@@ -32,17 +33,29 @@ async function fetchCurrentUser(): Promise<User> {
     };
   }
 
+  let avatar: UserAvatar | undefined;
+  if (emp.avatarId) {
+    try {
+      const url = await fileApi.getUrl(emp.avatarId);
+      avatar = { id: emp.avatarId, name: 'photo', isSystem: false, url };
+    } catch {
+      // ignore — avatar will be missing on load, but that's acceptable
+    }
+  }
+
   return {
     id:       profile.id,
     email:    profile.email,
     fullname: emp.fullname,
     type:     'EMPLOYEE',
+    avatar,
     employee: {
       id:             emp.id,
       department:     { id: emp.division.department.id, name: emp.division.department.name },
       division:       { id: emp.division.id, name: emp.division.name, departmentId: emp.division.department.id },
       position:       emp.position ? { id: emp.position.id, name: emp.position.name } : undefined,
       role:           { id: roleName, name: roleName },
+      biography:      emp.biography,
       employmentDate: emp.employmentDate,
     },
   };

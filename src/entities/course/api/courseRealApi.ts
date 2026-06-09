@@ -1,23 +1,28 @@
+import { z } from 'zod';
 import { api } from '@shared/api/axios';
 import {
   CourseDtoSchema,
   CourseSummaryDtoSchema,
   CourseApplicationDtoSchema,
+  CourseAnalyticsDtoSchema,
   EnrollmentDtoSchema,
   FileResponseDtoSchema,
   IdResponseSchema,
   TestDefinitionDtoSchema,
   TestAttemptResultSchema,
+  TestAttemptSummarySchema,
   paginatedSchema,
   type CourseApplicationDto,
+  type CourseAnalyticsDto,
   type CourseDto,
   type CourseSummaryDto,
   type EnrollmentDto,
   type FileResponseDto,
   type TestDefinitionDto,
   type TestAttemptResult,
+  type TestAttemptSummary,
 } from '@shared/api/schemas';
-import type { Course, Enrollment, EnrollmentStatus, Module, Step, StepItem, TestQuestion } from '../model/types';
+import type { Course, CourseStatus, Enrollment, EnrollmentStatus, Module, Step, StepItem, TestQuestion } from '../model/types';
 
 // ── Mappers ──────────────────────────────────────────────────────
 
@@ -27,7 +32,13 @@ function mapStep(backendStep: CourseDto['modules'][number]['steps'][number]): St
       ? { id: backendStep.id, title: backendStep.name, type: 'test', questions: [], passingPercent: 0, testId: backendStep.testId }
       : { id: backendStep.id, title: backendStep.name, type: 'lesson', content: backendStep.lessonContent ?? '' };
 
-  return { id: backendStep.id, title: backendStep.name, items: [item] };
+  return {
+    id:          backendStep.id,
+    title:       backendStep.name,
+    type:        backendStep.type === 'TEST' ? 'test' : 'lesson',
+    isCompleted: backendStep.isCompleted ?? false,
+    items:       [item],
+  };
 }
 
 export function mapTestDefinitionToQuestions(dto: TestDefinitionDto): TestQuestion[] {
@@ -50,11 +61,24 @@ function mapModule(backendModule: CourseDto['modules'][number]): Module {
   const steps = [...backendModule.steps]
     .sort((a, b) => a.position - b.position)
     .map(mapStep);
-  return { id: backendModule.id, title: backendModule.name, steps };
+  return {
+    id:             backendModule.id,
+    title:          backendModule.name,
+    steps,
+    completedSteps: backendModule.completedSteps,
+    totalSteps:     backendModule.totalSteps ?? steps.length,
+  };
 }
 
 function scopeToType(scope?: string | null): 'all' | 'employee' {
   return scope === 'ALL' || scope == null ? 'all' : 'employee';
+}
+
+function mapStatus(s?: string): CourseStatus {
+  if (s === 'archived') return 'archived';
+  if (s === 'draft')    return 'draft';
+  if (s === 'pending')  return 'pending';
+  return 'published';
 }
 
 export function mapCourse(dto: CourseDto): Course {
@@ -67,13 +91,17 @@ export function mapCourse(dto: CourseDto): Course {
     0,
   );
 
+  const authorId   = dto.author?.id   ?? dto.authorId   ?? '';
+  const authorName = dto.author?.fullname;
+
   return {
     id:          dto.id,
     title:       dto.name,
     description: dto.description,
-    authorId:    dto.authorId,
+    authorId,
+    authorName,
     coverId:     dto.coverId ?? undefined,
-    status:      'published',
+    status:      dto.isArchived === true ? 'archived' : mapStatus(dto.status),
     courseType:  scopeToType(dto.scopeInfo?.scope),
     createdAt:   dto.createdAt,
     lessonsCount,
@@ -87,13 +115,16 @@ export function mapCourse(dto: CourseDto): Course {
 
 export function mapCourseSummary(dto: CourseSummaryDto): Course {
   const e = dto.enrollment;
+  const authorId   = dto.author?.id   ?? dto.authorId   ?? '';
+  const authorName = dto.author?.fullname;
   return {
     id:          dto.id,
     title:       dto.name,
     description: dto.description,
-    authorId:    dto.authorId,
+    authorId,
+    authorName,
     coverId:     dto.coverId ?? undefined,
-    status:      'published',
+    status:      dto.isArchived === true ? 'archived' : mapStatus(dto.status),
     courseType:  scopeToType(dto.scopeInfo?.scope),
     createdAt:   dto.createdAt,
     lessonsCount: 0,
@@ -126,8 +157,10 @@ export function mapEnrollmentDto(dto: EnrollmentDto, totalSteps: number, progres
     .map(p => p.stepId);
 
   // progressOverride comes from the course list's embedded enrollment.completionRate (backend-calculated)
+  // COMPLETED enrollments always show 100% even if progress[] is empty (summary endpoints omit steps)
   const progress =
     progressOverride != null ? progressOverride
+    : dto.status === 'COMPLETED' ? 100
     : totalSteps > 0 ? Math.round((completedItems.length / totalSteps) * 100)
     : 0;
 
@@ -150,14 +183,21 @@ const CoursePaginatedSchema        = paginatedSchema(CourseDtoSchema);
 const EnrollmentPaginatedSchema    = paginatedSchema(EnrollmentDtoSchema);
 
 export const courseRealApi = {
-  async list(): Promise<Course[]> {
-    const { data } = await api.get('/courses', { params: { page: 1, limit: 200 } });
+  async list(opts?: { includeArchived?: boolean }): Promise<Course[]> {
+    const params: Record<string, unknown> = { page: 1, limit: 200 };
+    if (opts?.includeArchived) params.includeArchived = true;
+    const { data } = await api.get('/courses', { params });
     return CourseSummaryPaginatedSchema.parse(data).data.map(mapCourseSummary);
   },
 
   async getById(id: string): Promise<Course> {
     const { data } = await api.get(`/courses/${id}`);
     return mapCourse(CourseDtoSchema.parse(data));
+  },
+
+  async getAnalytics(id: string): Promise<CourseAnalyticsDto> {
+    const { data } = await api.get(`/courses/${id}/analytics`);
+    return CourseAnalyticsDtoSchema.parse(data);
   },
 
   async getMyEnrollmentDtos(): Promise<EnrollmentDto[]> {
@@ -207,6 +247,40 @@ export const courseWriteApi = {
     if (dto.coverId) body.coverId = dto.coverId;
     const { data } = await api.post('/courses', body);
     return IdResponseSchema.parse(data).id;
+  },
+
+  async createFull(dto: {
+    name: string;
+    description: string;
+    scope?: 'ALL' | 'DEPARTMENT' | 'DIVISION';
+    departmentId?: string | null;
+    divisionId?: string | null;
+    coverId?: string;
+    modules?: Array<{
+      name: string;
+      steps?: Array<{ name: string; type: 'LESSON' | 'TEST'; lessonId?: string; testId?: string }>;
+    }>;
+  }): Promise<string> {
+    const body: Record<string, unknown> = { name: dto.name, description: dto.description };
+    if (dto.scope) body.scope = dto.scope;
+    if (dto.departmentId) body.departmentId = dto.departmentId;
+    if (dto.divisionId) body.divisionId = dto.divisionId;
+    if (dto.coverId) body.coverId = dto.coverId;
+    if (dto.modules) body.modules = dto.modules;
+    const { data } = await api.post('/courses/full', body);
+    return IdResponseSchema.parse(data).id;
+  },
+
+  async delete(courseId: string): Promise<void> {
+    await api.delete(`/courses/${courseId}`);
+  },
+
+  async archive(courseId: string): Promise<void> {
+    await api.patch(`/courses/${courseId}/archive`);
+  },
+
+  async unarchive(courseId: string): Promise<void> {
+    await api.patch(`/courses/${courseId}/unarchive`);
   },
 
   async update(id: string, dto: {
@@ -292,8 +366,10 @@ export const lessonApi = {
 // ── Test definitions ─────────────────────────────────────────────
 
 export const testDefApi = {
-  async create(name: string): Promise<string> {
-    const { data } = await api.post('/test-definitions', { name });
+  async create(name: string, passingPercent?: number): Promise<string> {
+    const body: Record<string, unknown> = { name };
+    if (passingPercent != null) body.passingPercent = passingPercent;
+    const { data } = await api.post('/test-definitions', body);
     return IdResponseSchema.parse(data).id;
   },
 
@@ -338,6 +414,11 @@ export const testAttemptApi = {
   async finish(attemptId: string): Promise<TestAttemptResult> {
     const { data } = await api.post(`/attempts/${attemptId}/finish`);
     return TestAttemptResultSchema.parse(data);
+  },
+
+  async getAttempts(testId: string): Promise<TestAttemptSummary[]> {
+    const { data } = await api.get(`/tests/${testId}/attempts`);
+    return z.array(TestAttemptSummarySchema).parse(data);
   },
 };
 

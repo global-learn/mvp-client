@@ -3,7 +3,7 @@ import { IdResponseSchema, EmployeeDtoSchema, RoleDtoSchema, paginatedSchema } f
 import type { EmployeeDto, RoleDto } from '@shared/api/schemas';
 
 export const employeeApi = {
-  list: async (params: { page: number; limit: number; divisionId?: string }) => {
+  list: async (params: { page: number; limit: number; divisionId?: string; departmentId?: string; roleId?: string }) => {
     const { data } = await api.get('/employees', { params });
     return paginatedSchema(EmployeeDtoSchema).parse(data);
   },
@@ -36,6 +36,7 @@ export const employeeApi = {
     biography?: string | null;
     divisionId?: string;
     positionId?: string | null;
+    avatarId?: string | null;
   }): Promise<void> => {
     await api.patch(`/employees/${id}`, payload);
   },

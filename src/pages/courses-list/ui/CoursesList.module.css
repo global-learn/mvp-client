@@ -26,3 +26,9 @@
   color: var(--muted-foreground);
   font-size: 0.9375rem;
 }
+
+@media (max-width: 480px) {
+  .title { font-size: 1.25rem; }
+  .subtitle { font-size: 0.875rem; }
+  .header { margin-bottom: 1.5rem; }
+}

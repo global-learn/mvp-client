@@ -147,36 +147,35 @@ export function DepartmentList({
         return (
           <div key={dept.id} className={styles.dept}>
 
-            {/* ── Заголовок департамента ── */}
-            <button
-              className={styles.deptHeader}
-              onClick={() => {
-                if (!isRenamingDept) setOpenDepts(s => toggle(s, dept.id));
-              }}
-            >
-              <div className={styles.deptLeft}>
-                {isRenamingDept ? (
+            {/* ── Заголовок департамента — div, а не button (внутри есть кнопки) ── */}
+            <div className={styles.deptHeader}>
+              {isRenamingDept ? (
+                <div className={styles.deptLeft} style={{ padding: '0.875rem 0 0.875rem 1.125rem' }}>
                   <input
                     className={styles.renameInput}
                     value={nameDraft}
                     autoFocus
-                    onClick={e => e.stopPropagation()}
                     onChange={e => setNameDraft(e.target.value)}
                     onKeyDown={e => {
                       if (e.key === 'Enter')  void saveRename(e);
                       if (e.key === 'Escape') cancelRename(e as unknown as React.MouseEvent);
                     }}
                   />
-                ) : (
-                  <>
+                </div>
+              ) : (
+                <button
+                  className={styles.deptExpandBtn}
+                  onClick={() => setOpenDepts(s => toggle(s, dept.id))}
+                >
+                  <div className={styles.deptLeft}>
                     <ChevronRight
                       size={16}
                       className={`${styles.chevron} ${isDeptOpen ? styles.open : ''}`}
                     />
                     <span className={styles.deptName}>{dept.name}</span>
-                  </>
-                )}
-              </div>
+                  </div>
+                </button>
+              )}
 
               <div className={styles.deptRight}>
                 {isRenamingDept ? (
@@ -236,7 +235,7 @@ export function DepartmentList({
                   </>
                 )}
               </div>
-            </button>
+            </div>
 
             {/* Форма добавления отдела */}
             {isAdding && (

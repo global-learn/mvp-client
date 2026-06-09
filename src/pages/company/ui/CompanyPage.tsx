@@ -54,6 +54,227 @@ const defaultForm = {
   employmentDate: new Date().toISOString().slice(0, 10),
 };
 
+// ── Employee Detail Modal ────────────────────────────────────────
+
+interface EmployeeDetailModalProps {
+  emp: EmployeeListItem;
+  rawEmp: EmployeeDto;
+  isAdmin: boolean;
+  divisionsList: Array<{ id: string; name: string; deptName: string }>;
+  positionsList: PositionDto[];
+  onClose: () => void;
+  onLoad: () => Promise<void>;
+}
+
+function EmployeeDetailModal({
+  emp, rawEmp, isAdmin, divisionsList, positionsList, onClose, onLoad,
+}: EmployeeDetailModalProps) {
+  const [editing, setEditing]       = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [form, setForm] = useState({
+    fullname:   rawEmp.fullname ?? '',
+    biography:  rawEmp.biography ?? '',
+    divisionId: rawEmp.divisionId,
+    positionId: rawEmp.positionId ?? '',
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await employeeApi.update(rawEmp.id, {
+        fullname:   form.fullname || undefined,
+        biography:  form.biography || null,
+        divisionId: form.divisionId || undefined,
+        positionId: form.positionId || null,
+      });
+      setEditing(false);
+      await onLoad();
+      toast.success('Данные сотрудника обновлены');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось обновить данные');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDismiss = async () => {
+    setSaving(true);
+    try {
+      await employeeApi.dismiss(rawEmp.id);
+      onClose();
+      await onLoad();
+      toast.success('Сотрудник уволен');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось уволить сотрудника');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const infoRows: [string, string][] = [
+    ['Департамент',          emp.department.name],
+    ['Отдел',                emp.division.name],
+    ['Должность',            emp.position.name],
+    ['Роль',                 ROLE_LABELS[emp.role.name] ?? emp.role.name],
+    ['Дата трудоустройства', new Date(emp.employmentDate).toLocaleDateString('ru-RU')],
+  ];
+  if (rawEmp.biography) infoRows.push(['Биография', rawEmp.biography]);
+
+  return (
+    <div
+      className={styles.overlay}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className={styles.modal} style={{ maxWidth: 520 }}>
+        <div className={styles.modalHeader}>
+          <h2 className={styles.modalTitle}>
+            {editing ? 'Редактировать сотрудника' : 'Карточка сотрудника'}
+          </h2>
+          <button className={styles.closeBtn} onClick={onClose}><X size={18} /></button>
+        </div>
+
+        {/* Avatar + name row */}
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+          <div
+            className={styles.empAvatar}
+            style={{ width: 52, height: 52, fontSize: '1.25rem', flexShrink: 0 }}
+          >
+            {(emp.fullname ?? emp.email)[0].toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--foreground)' }}>
+              {emp.fullname ?? '—'}
+            </div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>{emp.email}</div>
+          </div>
+        </div>
+
+        {editing ? (
+          <div className={styles.form}>
+            <label className={styles.label}>
+              ФИО
+              <input
+                className={styles.input}
+                value={form.fullname}
+                onChange={e => setForm(p => ({ ...p, fullname: e.target.value }))}
+              />
+            </label>
+            <label className={styles.label}>
+              Биография
+              <textarea
+                className={styles.input}
+                value={form.biography}
+                onChange={e => setForm(p => ({ ...p, biography: e.target.value }))}
+                rows={3}
+                style={{ resize: 'vertical' as const }}
+              />
+            </label>
+            <label className={styles.label}>
+              Отдел
+              <select
+                className={styles.input}
+                value={form.divisionId}
+                onChange={e => setForm(p => ({ ...p, divisionId: e.target.value }))}
+              >
+                {divisionsList.map(d => (
+                  <option key={d.id} value={d.id}>{d.name} ({d.deptName})</option>
+                ))}
+              </select>
+            </label>
+            <label className={styles.label}>
+              Должность
+              <select
+                className={styles.input}
+                value={form.positionId}
+                onChange={e => setForm(p => ({ ...p, positionId: e.target.value }))}
+              >
+                <option value="">— не указана —</option>
+                {positionsList.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+            <div className={styles.modalActions}>
+              <button className={styles.cancelBtn} onClick={() => setEditing(false)}>Отмена</button>
+              <button
+                className={styles.submitBtn}
+                disabled={saving}
+                onClick={() => void handleSave()}
+              >
+                {saving ? 'Сохраняем...' : 'Сохранить'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.5rem' }}>
+              {infoRows.map(([label, value]) => (
+                <div key={label} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  <span style={{
+                    fontSize: '0.8125rem', color: 'var(--muted-foreground)',
+                    minWidth: 150, flexShrink: 0,
+                  }}>
+                    {label}
+                  </span>
+                  <span style={{ fontSize: '0.875rem', color: 'var(--foreground)', fontWeight: 500 }}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {isAdmin && (
+              <div className={styles.modalActions}>
+                {confirming ? (
+                  <>
+                    <span style={{
+                      fontSize: '0.875rem', color: '#dc2626',
+                      fontWeight: 500, marginRight: 'auto',
+                    }}>
+                      Уволить сотрудника?
+                    </span>
+                    <button className={styles.cancelBtn} onClick={() => setConfirming(false)}>
+                      Отмена
+                    </button>
+                    <button
+                      disabled={saving}
+                      onClick={() => void handleDismiss()}
+                      style={{
+                        padding: '0.5625rem 1.125rem',
+                        background: '#dc2626', color: '#fff',
+                        border: 'none', borderRadius: 'var(--radius-md)',
+                        fontWeight: 700, fontFamily: 'inherit',
+                        cursor: 'pointer', fontSize: '0.875rem',
+                        opacity: saving ? 0.6 : 1,
+                      }}
+                    >
+                      {saving ? '...' : 'Уволить'}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      className={styles.cancelBtn}
+                      style={{ color: '#dc2626', borderColor: '#fca5a5' }}
+                      onClick={() => setConfirming(true)}
+                    >
+                      Уволить
+                    </button>
+                    <button className={styles.submitBtn} onClick={() => setEditing(true)}>
+                      Редактировать
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Positions Tab ────────────────────────────────────────────────
 
 interface PositionNode extends PositionDto {
@@ -451,6 +672,8 @@ export function CompanyPage() {
   const [tab, setTab]               = useState<Tab>('departments');
   const [search, setSearch]         = useState('');
   const [deptFilter, setDeptFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [selectedEmpId, setSelectedEmpId] = useState<string | null>(null);
   const [addOpen, setAddOpen]       = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [addingDept, setAddingDept] = useState(false);
@@ -545,8 +768,12 @@ export function CompanyPage() {
     const q = search.toLowerCase();
     if (q) list = list.filter(e => (e.fullname ?? '').toLowerCase().includes(q) || e.email.toLowerCase().includes(q));
     if (deptFilter) list = list.filter(e => e.department.id === deptFilter);
+    if (roleFilter) {
+      const matchIds = new Set(rawEmployees.filter(e => e.role.id === roleFilter).map(e => e.id));
+      list = list.filter(e => matchIds.has(e.id));
+    }
     return list;
-  }, [allEmployees, search, deptFilter, adminUser, user]);
+  }, [allEmployees, rawEmployees, search, deptFilter, roleFilter, adminUser, user]);
 
   // ── Department actions ────────────────────────────────────────────
   const handleAddDepartment = async () => {
@@ -796,6 +1023,12 @@ export function CompanyPage() {
                 {rawDepts.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             )}
+            <select className={styles.select} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+              <option value="">Все роли</option>
+              {roles.map(r => (
+                <option key={r.id} value={r.id}>{formatRoleLabel(r.name)}</option>
+              ))}
+            </select>
           </div>
 
           {filtered.length === 0 ? (
@@ -803,7 +1036,12 @@ export function CompanyPage() {
           ) : (
             <div className={styles.empList}>
               {filtered.map(emp => (
-                <div key={emp.id} className={styles.empCard}>
+                <div
+                  key={emp.id}
+                  className={styles.empCard}
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => setSelectedEmpId(emp.id)}
+                >
                   <div className={styles.empAvatar}>{(emp.fullname ?? emp.email)[0].toUpperCase()}</div>
                   <div className={styles.empMain}>
                     <span className={styles.empName}>{emp.fullname ?? '—'}</span>
@@ -829,6 +1067,25 @@ export function CompanyPage() {
       {tab === 'positions' && adminUser && (
         <PositionsTab rawPositions={rawPositions} onLoad={load} />
       )}
+
+      {/* ── Модалка: карточка сотрудника ── */}
+      {(() => {
+        if (!selectedEmpId) return null;
+        const listEmp = allEmployees.find(e => e.id === selectedEmpId);
+        const rawEmp  = rawEmployees.find(e => e.id === selectedEmpId);
+        if (!listEmp || !rawEmp) return null;
+        return (
+          <EmployeeDetailModal
+            emp={listEmp}
+            rawEmp={rawEmp}
+            isAdmin={adminUser}
+            divisionsList={allDivisions}
+            positionsList={rawPositions}
+            onClose={() => setSelectedEmpId(null)}
+            onLoad={load}
+          />
+        );
+      })()}
 
       {/* ── Модалка: добавить сотрудника ── */}
       {addOpen && (

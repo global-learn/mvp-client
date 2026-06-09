@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { CheckCircle2, XCircle, Clock, BookOpen, TrendingUp, Search } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, BookOpen, TrendingUp, Search, Archive, PenLine } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { CourseCard } from '@entities/course/ui/CourseCard';
@@ -26,6 +26,7 @@ export function CourseList() {
   const divisions   = divPage?.data  ?? [];
 
   const allPublished   = useMemo(() => courses.filter(c => c.status === 'published'), [courses]);
+  const archivedCourses = useMemo(() => courses.filter(c => c.status === 'archived'), [courses]);
   const pendingCourses = courses.filter(c => c.status === 'pending');
 
   const publishedCourses = useMemo(() => {
@@ -34,10 +35,17 @@ export function CourseList() {
     return allPublished;
   }, [allPublished, selectedDeptId, selectedDivId]);
 
-  // ── Мои курсы (любой enrollment в published-курсе) ──────────
+  // ── Enrolled (в процессе/завершён/ожидает) ───────────────────
   const myEnrolledCourses = useMemo(() =>
     allPublished.filter(c => enrollments.some(e => e.courseId === c.id)),
   [allPublished, enrollments]);
+
+  const employeeId = user.employee?.id;
+
+  // ── Authored (я автор, опубликованные) ───────────────────────
+  const myAuthoredPublished = useMemo(() =>
+    allPublished.filter(c => c.authorId === user.id || c.authorId === employeeId),
+  [allPublished, user.id, employeeId]);
 
   // ── Для менеджера: "Назначенные" vs "Доступные" ───────────────
   const assignedCourses  = myEnrolledCourses;
@@ -194,14 +202,14 @@ export function CourseList() {
       )}
 
       {/* ── Собственные pending-курсы автора (не admin) ── */}
-      {!admin && pendingCourses.filter(c => c.authorId === user.id).length > 0 && (
+      {!admin && pendingCourses.filter(c => c.authorId === user.id || c.authorId === employeeId).length > 0 && (
         <section className={styles.pendingSection}>
           <div className={styles.pendingHeader}>
             <Clock size={16} className={styles.pendingIcon} />
             <h2 className={styles.pendingTitle}>Ожидают публикации</h2>
           </div>
           <div className={styles.pendingList}>
-            {pendingCourses.filter(c => c.authorId === user.id).map(course => (
+            {pendingCourses.filter(c => c.authorId === user.id || c.authorId === employeeId).map(course => (
               <div key={course.id} className={`${styles.pendingCard} ${styles.pendingCardAuthor}`}>
                 <div className={styles.pendingInfo}>
                   <span className={styles.pendingCourseName}>{course.title}</span>
@@ -214,40 +222,103 @@ export function CourseList() {
         </section>
       )}
 
-      {/* ── Мои курсы ── */}
-      {myEnrolledCourses.length > 0 && (
+      {/* ── Мои курсы (enrolled + authored) ── */}
+      {(myEnrolledCourses.length > 0 || myAuthoredPublished.length > 0) && (
         <section className={styles.myCoursesSection}>
           <div className={styles.myCoursesHeader}>
             <TrendingUp size={16} className={styles.myCoursesIcon} />
             <h2 className={styles.myCoursesTitle}>Мои курсы</h2>
-            <span className={styles.sectionCount}>{myEnrolledCourses.length}</span>
+          </div>
+
+          {/* Прохожу */}
+          {myEnrolledCourses.length > 0 && (
+            <>
+              <div className={styles.myCoursesSubLabel}>
+                Прохожу <span className={styles.sectionCount}>{myEnrolledCourses.length}</span>
+              </div>
+
+              <div className={styles.myCoursesList}>
+                {myEnrolledCourses.map(course => {
+                  const enrollment = getEnrollment(course.id);
+                  const progress = enrollment?.progress ?? 0;
+                  const isDone   = enrollment?.status === 'completed';
+                  const isPending = enrollment?.status === 'pending_approval';
+                  const isAlsoAuthor = course.authorId === user.id || course.authorId === employeeId;
+                  return (
+                    <Link key={course.id} to={`/courses/${course.id}`} className={styles.myCourseCard}>
+                      <div className={styles.myCourseInfo}>
+                        <span className={styles.myCourseName}>{course.title}</span>
+                        <span className={styles.myCourseMeta}>
+                          {course.moduleCount != null ? `${course.moduleCount} модулей` : `${course.lessonsCount} уроков`}
+                          {isDone && <span className={styles.myCourseCompletedBadge}>✓ Завершён</span>}
+                          {isPending && <span className={styles.myCoursePendingBadge}>⏳ Ожидает одобрения</span>}
+                          {isAlsoAuthor && <span className={styles.myAuthorBadge}><PenLine size={10} /> Автор</span>}
+                        </span>
+                      </div>
+                      {!isPending && (
+                        <div className={styles.myCourseProgress}>
+                          <div className={styles.myCourseProgressBar}>
+                            <div
+                              className={isDone ? styles.myCourseProgressFillDone : styles.myCourseProgressFill}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <span className={styles.myCourseProgressPct}>{progress}%</span>
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Создал (не enrolled) */}
+          {myAuthoredPublished.filter(c => !enrollments.some(e => e.courseId === c.id)).length > 0 && (
+            <>
+              {myEnrolledCourses.length > 0 && <div style={{ height: '0.875rem' }} />}
+              <div className={`${styles.myCoursesSubLabel} ${styles.myCoursesSubLabelAuthored}`}>
+                Создал <span className={styles.sectionCount}>{myAuthoredPublished.filter(c => !enrollments.some(e => e.courseId === c.id)).length}</span>
+              </div>
+              <div className={styles.myCoursesList}>
+                {myAuthoredPublished
+                  .filter(c => !enrollments.some(e => e.courseId === c.id))
+                  .map(course => (
+                    <Link key={course.id} to={`/courses/${course.id}`} className={`${styles.myCourseCard} ${styles.myCourseCardAuthor}`}>
+                      <div className={styles.authoredIcon}><PenLine size={14} /></div>
+                      <div className={styles.myCourseInfo}>
+                        <span className={styles.myCourseName}>{course.title}</span>
+                        <span className={styles.myCourseMeta}>
+                          {course.moduleCount != null ? `${course.moduleCount} модулей` : `${course.lessonsCount} уроков`}
+                        </span>
+                      </div>
+                      <span className={styles.myAuthorBadgeStandalone}>Вы автор</span>
+                    </Link>
+                  ))}
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {/* ── Архивные курсы (только для автора/admin) ── */}
+      {archivedCourses.length > 0 && (
+        <section className={styles.archivedSection}>
+          <div className={styles.archivedHeader}>
+            <Archive size={15} className={styles.archivedIcon} />
+            <h2 className={styles.archivedTitle}>Архив</h2>
+            <span className={styles.sectionCount}>{archivedCourses.length}</span>
           </div>
           <div className={styles.myCoursesList}>
-            {myEnrolledCourses.map(course => {
-              const enrollment = getEnrollment(course.id);
-              const progress = enrollment?.progress ?? 0;
-              const isDone   = enrollment?.status === 'completed';
-              return (
-                <Link key={course.id} to={`/courses/${course.id}`} className={styles.myCourseCard}>
-                  <div className={styles.myCourseInfo}>
-                    <span className={styles.myCourseName}>{course.title}</span>
-                    <span className={styles.myCourseMeta}>
-                      {course.lessonsCount} уроков
-                      {isDone && <span className={styles.myCourseCompletedBadge}>✓ Завершён</span>}
-                    </span>
-                  </div>
-                  <div className={styles.myCourseProgress}>
-                    <div className={styles.myCourseProgressBar}>
-                      <div
-                        className={isDone ? styles.myCourseProgressFillDone : styles.myCourseProgressFill}
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <span className={styles.myCourseProgressPct}>{progress}%</span>
-                  </div>
-                </Link>
-              );
-            })}
+            {archivedCourses.map(course => (
+              <Link key={course.id} to={`/courses/${course.id}`} className={`${styles.myCourseCard} ${styles.myCourseCardArchived}`}>
+                <div className={styles.myCourseInfo}>
+                  <span className={styles.myCourseName}>{course.title}</span>
+                  <span className={styles.myCourseMeta}>{course.description.slice(0, 60)}{course.description.length > 60 ? '…' : ''}</span>
+                </div>
+                <span className={styles.archivedCourseBadge}>Архив</span>
+              </Link>
+            ))}
           </div>
         </section>
       )}

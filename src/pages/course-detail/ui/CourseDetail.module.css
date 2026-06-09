@@ -58,6 +58,177 @@
   opacity: 0.88;
 }
 
+.deleteBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  color: var(--destructive, #e53e3e);
+  border: 1px solid var(--destructive, #e53e3e);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.deleteBtn:hover {
+  background: var(--destructive, #e53e3e);
+  color: #fff;
+}
+
+.deleteBtnConfirm {
+  padding: 0.375rem 0.75rem;
+  background: var(--destructive, #e53e3e);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.deleteBtnConfirm:hover { opacity: 0.85; }
+.deleteBtnConfirm:disabled { opacity: 0.5; cursor: default; }
+
+.deleteBtnCancel {
+  padding: 0.375rem 0.75rem;
+  background: var(--secondary);
+  color: var(--foreground);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.deleteBtnCancel:hover { opacity: 0.8; }
+.deleteBtnCancel:disabled { opacity: 0.5; cursor: default; }
+
+.archiveBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.archiveBtn:hover:not(:disabled) {
+  background: var(--secondary);
+  color: var(--foreground);
+  border-color: var(--foreground);
+}
+.archiveBtn:disabled { opacity: 0.5; cursor: default; }
+
+.archivedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* ── Analytics panel ──────────────────────────────────────── */
+.analyticsPanel {
+  margin-bottom: 2rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.analyticsGroup {
+  margin-top: 1rem;
+}
+
+.analyticsGroupTitle {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.625rem;
+}
+
+.analyticsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.analyticsRow:last-child { border-bottom: none; }
+
+.analyticsName {
+  width: 11rem;
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.analyticsBarWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.analyticsBar {
+  flex: 1;
+  height: 6px;
+  background: var(--secondary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.analyticsBarFill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.analyticsPct {
+  width: 2.5rem;
+  text-align: right;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.analyticsMeta {
+  width: 3rem;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+
 .metaRow {
   display: flex;
   align-items: center;
@@ -1036,4 +1207,459 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* ── Кнопка «Редактировать» ─────────────────────────────── */
+.editBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.editBtn:hover {
+  background: var(--secondary);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* ── Форма редактирования курса ─────────────────────────── */
+.editForm {
+  background: var(--card);
+  border: 1.5px solid var(--primary);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.editFormRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.editLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.editInput,
+.editSelect {
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.editInput:focus,
+.editSelect:focus {
+  border-color: var(--primary);
+}
+
+.editTextarea {
+  padding: 0.5rem 0.75rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  min-height: 90px;
+  transition: border-color 0.12s;
+}
+.editTextarea:focus {
+  border-color: var(--primary);
+}
+
+.editCoverRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.editCoverBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.4375rem 0.875rem;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-md);
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, color 0.12s;
+}
+.editCoverBtn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.editCoverPreview {
+  height: 60px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.editFormActions {
+  display: flex;
+  gap: 0.625rem;
+  margin-top: 0.25rem;
+}
+
+.editSaveBtn {
+  padding: 0.5625rem 1.25rem;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.editSaveBtn:hover:not(:disabled) { opacity: 0.88; }
+.editSaveBtn:disabled { opacity: 0.5; cursor: default; }
+
+.editCancelBtn {
+  padding: 0.5625rem 1rem;
+  background: transparent;
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.editCancelBtn:hover:not(:disabled) { background: var(--secondary); }
+.editCancelBtn:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Программа курса (постоянная панель) ─────────────────── */
+.outlinePanel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-xs);
+}
+
+.outlinePanelTitle {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.outlineModules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.outlineModule {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.outlineModuleHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--secondary);
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.12s;
+}
+.outlineModuleHeader:hover {
+  background: color-mix(in srgb, var(--secondary) 70%, var(--border));
+}
+
+.outlineModuleNum {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.outlineModuleName {
+  flex: 1;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--foreground);
+  text-align: left;
+}
+
+.outlineModuleMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.outlineModuleProg {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  background: var(--background);
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.outlineModuleProgDone {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #16a34a;
+  background: rgba(22,163,74,0.1);
+  padding: 0.1rem 0.5rem;
+  border-radius: 3px;
+}
+
+.outlineModuleStepCount {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.outlineSteps {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+}
+
+.outlineStep {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.625rem 1rem 0.625rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.outlineStep:last-child { border-bottom: none; }
+.outlineStep:not(:disabled):hover { background: var(--secondary); }
+.outlineStep:disabled { cursor: default; }
+
+.outlineStepDone .outlineStepName {
+  color: var(--muted-foreground);
+  text-decoration: line-through;
+  text-decoration-color: rgba(22,163,74,0.5);
+}
+
+.outlineStepIcon {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+}
+
+.outlineStepName {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+
+.outlineStepType {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  background: var(--secondary);
+  padding: 0.1rem 0.45rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+/* ════════════════════════════════════════════════════════════
+   Адаптив
+   ════════════════════════════════════════════════════════════ */
+
+/* Планшет (≤ 768px) */
+@media (max-width: 768px) {
+  .titleRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .titleRow > div:last-child {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .title {
+    font-size: 1.375rem;
+  }
+
+  .descriptionCardInner {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .authorBlock {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-left: 0;
+    padding-top: 1rem;
+    flex-direction: row;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .metaRow {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .analyticsRow {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .analyticsName {
+    width: auto;
+    flex: 1 1 100%;
+  }
+
+  .statsTable {
+    overflow-x: auto;
+  }
+
+  .statsRow {
+    padding: 0.75rem 0.875rem;
+  }
+
+  .statsRight {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.375rem;
+  }
+
+  .outlinePanel {
+    padding: 1rem;
+  }
+}
+
+/* Мобильный (≤ 480px) */
+@media (max-width: 480px) {
+  .page {
+    /* тонкие отступы на мобильном — боковые отступы дают layout */
+  }
+
+  .backLink {
+    margin-bottom: 1.25rem;
+  }
+
+  .title {
+    font-size: 1.25rem;
+  }
+
+  .assignBtn,
+  .editBtn,
+  .archiveBtn,
+  .deleteBtn {
+    padding: 0.4375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .descriptionCard {
+    padding: 1.125rem 1.25rem;
+  }
+
+  .progressSection {
+    padding: 0.75rem 1rem;
+  }
+
+  .startBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+
+  .requestBtn,
+  .reRequestBtn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .statsCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .player {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .tree {
+    position: static;
+  }
+
+  .coverBanner {
+    margin-bottom: 1rem;
+    max-height: 200px;
+  }
+
+  .editForm {
+    padding: 1rem;
+  }
+
+  .editSaveBtn,
+  .editCancelBtn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .editFormActions {
+    flex-wrap: wrap;
+  }
+
+  .pageWide {
+    padding: 0;
+  }
 }

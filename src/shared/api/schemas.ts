@@ -249,6 +249,7 @@ export const EmployeeProfileSchema = z.object({
   division:       z.object({ id: z.string(), name: z.string(), departmentId: z.string() }),
   position:       z.object({ id: z.string(), name: z.string() }).optional(),
   role:           z.object({ id: z.string(), name: EmployeeRoleSchema }),
+  biography:      z.string().nullable().optional(),
   birthDate:      z.string().optional(),
   employmentDate: z.string(),
 });
@@ -297,6 +298,7 @@ export const CourseStepDtoSchema = z.object({
   testId:        z.string().optional(),
   isCompleted:   z.boolean().optional().default(false),
 });
+export type CourseStepDto = z.infer<typeof CourseStepDtoSchema>;
 
 export const CourseModuleDtoSchema = z.object({
   id:             z.string(),
@@ -306,6 +308,13 @@ export const CourseModuleDtoSchema = z.object({
   completedSteps: z.number().optional(),
   totalSteps:     z.number().optional(),
 });
+export type CourseModuleDto = z.infer<typeof CourseModuleDtoSchema>;
+
+const CourseAuthorDtoSchema = z.object({
+  id:       z.string(),
+  fullname: z.string().optional(),
+  avatarId: z.string().optional().nullable(),
+});
 
 // GET /courses — summary list (no modules array, has moduleCount)
 export const CourseSummaryDtoSchema = z.object({
@@ -314,10 +323,13 @@ export const CourseSummaryDtoSchema = z.object({
   updatedAt:   z.string().optional(),
   name:        z.string(),
   description: z.string(),
-  authorId:    z.string(),
+  authorId:    z.string().optional(),          // flat id (old) — may be absent
+  author:      CourseAuthorDtoSchema.optional(), // nested object (new)
   coverId:     z.string().optional().nullable(),
   scopeInfo:   CourseScopeInfoDtoSchema.optional(),
   moduleCount: z.number().optional(),
+  status:      z.string().optional(),
+  isArchived:  z.boolean().optional(),
   enrollment:  CourseEnrollmentProgressDtoSchema.optional().nullable(),
 });
 export type CourseSummaryDto = z.infer<typeof CourseSummaryDtoSchema>;
@@ -329,14 +341,52 @@ export const CourseDtoSchema = z.object({
   updatedAt:      z.string().optional(),
   name:           z.string(),
   description:    z.string(),
-  authorId:       z.string(),
+  authorId:       z.string().optional(),          // flat id (old) — may be absent
+  author:         CourseAuthorDtoSchema.optional(), // nested object (new)
   coverId:        z.string().optional().nullable(),
   scopeInfo:      CourseScopeInfoDtoSchema.optional(),
   modules:        z.array(CourseModuleDtoSchema).default([]),
   totalSteps:     z.number().optional(),
   completedSteps: z.number().optional(),
+  status:         z.string().optional(),
+  isArchived:     z.boolean().optional(),
   enrollment:     CourseEnrollmentProgressDtoSchema.optional().nullable(),
 });
+
+// GET /courses/:id/analytics
+export const CourseEnrollmentStatsDtoSchema = z.object({
+  total:          z.number(),
+  inProgress:     z.number(),
+  completed:      z.number(),
+  cancelled:      z.number(),
+  completionRate: z.number(),
+});
+
+export const CourseDivisionEnrollmentDtoSchema = z.object({
+  divisionId:     z.string(),
+  divisionName:   z.string(),
+  total:          z.number(),
+  completed:      z.number(),
+  completionRate: z.number(),
+});
+
+export const CourseDeptEnrollmentDtoSchema = z.object({
+  departmentId:   z.string(),
+  departmentName: z.string(),
+  total:          z.number(),
+  completed:      z.number(),
+  completionRate: z.number(),
+});
+
+export const CourseAnalyticsDtoSchema = z.object({
+  courseId:     z.string(),
+  courseName:   z.string(),
+  enrollments:  CourseEnrollmentStatsDtoSchema,
+  byDivision:   z.array(CourseDivisionEnrollmentDtoSchema),
+  byDepartment: z.array(CourseDeptEnrollmentDtoSchema),
+});
+
+export type CourseAnalyticsDto = z.infer<typeof CourseAnalyticsDtoSchema>;
 
 export const StepProgressDtoSchema = z.object({
   id:          z.string(),
@@ -541,6 +591,18 @@ export const TestAttemptResultSchema = z.object({
 });
 
 export type TestAttemptResult = z.infer<typeof TestAttemptResultSchema>;
+
+export const TestAttemptSummarySchema = z.object({
+  id:         z.string(),
+  createdAt:  z.string(),
+  testId:     z.string(),
+  isFinished: z.boolean(),
+  endedAt:    z.string().optional().nullable(),
+  score:      z.number().optional().nullable(),
+  isPassed:   z.boolean().optional().nullable(),
+});
+
+export type TestAttemptSummary = z.infer<typeof TestAttemptSummarySchema>;
 
 // ── Courses (frontend-facing schemas, kept for backwards compat) ──
 

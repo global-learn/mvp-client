@@ -47,15 +47,16 @@
 
 | Endpoint | API-метод | Hook | UI |
 |---|---|---|---|
-| `GET /employees` | ✅ `employeeApi.list` | ✅ `useEmployeesQuery` | ✅ список во вкладке «Сотрудники» |
-| `GET /employees/:id` | ✅ `employeeApi.getById` | ✅ `useEmployeeQuery` | ❌ клик по сотруднику ничего не открывает |
+| `GET /employees` | ✅ `employeeApi.list` (+ `departmentId`, `roleId` фильтры) | ✅ `useEmployeesQuery` | ✅ список + фильтры по роли/департаменту |
+| `GET /employees/:id` | ✅ `employeeApi.getById` | ✅ `useEmployeeQuery` | ✅ клик → модалка «Карточка сотрудника» |
 | `GET /employees/me/subordinates` | ✅ `employeeApi.getSubordinates` | ✅ `useMySubordinatesQuery` | ❌ нигде не используется |
 | `POST /employees` | ✅ `employeeApi.create` | ✅ `useCreateEmployeeMutation` | ✅ модалка «Добавить сотрудника» |
-| `PATCH /employees/:id` | ✅ `employeeApi.update` | ✅ `useUpdateEmployeeMutation` | ❌ нет формы редактирования |
-| `PATCH /employees/:id/promote` | ✅ `employeeApi.promote` | ✅ `usePromoteEmployeeMutation` | ❌ нет UI |
-| `DELETE /employees/:id` | ✅ `employeeApi.dismiss` | ✅ `useDismissEmployeeMutation` | ❌ нет кнопки «Уволить» |
+| `PATCH /employees/:id` | ✅ `employeeApi.update` (+ `avatarId`) | ✅ `useUpdateEmployeeMutation` | ✅ форма редактирования в карточке (admin) + загрузка аватара в профиле |
+| `PATCH /employees/:id/promote` | ✅ `employeeApi.promote` | ✅ `usePromoteEmployeeMutation` | ❌ нет UI (promote = смена должности, не роли) |
+| `DELETE /employees/:id` | ✅ `employeeApi.dismiss` | ✅ `useDismissEmployeeMutation` | ✅ кнопка «Уволить» с confirm в карточке (admin) |
+| `POST /files` | ✅ `fileApi.upload` (в `shared/api/fileApi.ts`) | — | ✅ загрузка фото-аватара в ProfilePage → `AvatarPicker` |
 
-**Вывод:** Создание работает. Все действия над существующим сотрудником (edit, promote, dismiss) — API + хуки готовы, UI отсутствует.
+**Вывод:** ✅ РЕАЛИЗОВАНО. Карточка сотрудника (просмотр/редактирование/увольнение), фильтры по роли и департаменту, загрузка аватара через `POST /files`.
 
 ---
 
@@ -76,9 +77,9 @@
 
 | Потребность | Статус бэкенда | Комментарий |
 |---|---|---|
-| Фильтр сотрудников по роли | ❌ отсутствует | `GET /employees` принимает только `divisionId`. Нет `roleId` или `departmentId` фильтра. |
-| Фильтр сотрудников по департаменту | ❌ отсутствует | Только `divisionId`. Приходится грузить всё и фильтровать на клиенте. |
-| Загрузка аватара сотрудника | ⚠️ частично | `POST /files` есть, но нет поля `avatarFileId` ни в `PATCH /employees/:id`, ни в ответе `EmployeeDto`. |
+| Фильтр сотрудников по роли | ✅ реализован | `GET /employees` принимает `roleId`. Клиентская фильтрация в `CompanyPage`. |
+| Фильтр сотрудников по департаменту | ✅ реализован | `GET /employees` принимает `departmentId`. Клиентская фильтрация по `department.id`. |
+| Загрузка аватара сотрудника | ✅ реализовано | `POST /files` → `PATCH /employees/:id` с `avatarId`. `AvatarPicker` подключён к реальному API. |
 | Поиск сотрудников (full-text) | ❌ отсутствует | Нет query-параметра `search` на `GET /employees`. |
 | Подтверждение онбординга шага с фидбеком | ⚠️ уточнить | `POST /onboardings/{id}/complete-step` — нет поля для комментария/фидбека в теле запроса, хотя CLAUDE.md описывает это как фичу. |
 
@@ -117,6 +118,10 @@
 - Нет polling или SSE для real-time (допустимо сделать polling каждые 30 с)
 - Нет счётчика непрочитанных в иконке sidebar
 
+### ~~7.7~~ Архивация курса ✅ Выполнено
+
+---
+
 ### 7.6 Детальная аналитика по курсу
 На странице курса (для admin/managers) добавить вкладку «Аналитика»:
 - Использует `GET /courses/:id/analytics`
@@ -132,35 +137,81 @@
 
 ---
 
-## 9. Course — CRUD и структура
+## 9. Course — CRUD и структура ✅ РЕАЛИЗОВАНО
 
 | Endpoint | API-метод | UI |
 |---|---|---|
 | `GET /courses` | ✅ `courseRealApi.list` | ✅ CoursesListPage, CoursesContext |
 | `GET /courses/:id` | ✅ `courseRealApi.getById` | ✅ CourseDetailPage, CoursePlayerPage |
-| `POST /courses` | ✅ `courseWriteApi.create` | ✅ CourseBuilder → CoursesContext |
-| `POST /courses/full` | ❌ не используется | ❌ — CourseBuilder создаёт курс последовательно, не атомарно |
+| `POST /courses` | ✅ `courseWriteApi.create` | — (теперь используется только как fallback) |
+| `POST /courses/full` | ✅ `courseWriteApi.createFull` | ✅ CourseBuilder → CoursesContext.createCourse (атомарное создание) |
 | `PATCH /courses/:id` | ✅ `courseWriteApi.update` | ✅ CourseBuilder (обновление обложки/метаданных) |
-| `DELETE /courses/:id` | ❌ не вызывается | ❌ нет кнопки «Удалить курс» |
+| `DELETE /courses/:id` | ✅ `courseWriteApi.delete` | ✅ CourseDetailPage — кнопка «Удалить курс» (admin / автор курса) |
+| `PATCH /courses/:id/archive` | ✅ `courseWriteApi.archive` | ✅ CourseDetailPage — кнопка «В архив» (admin/автор) |
+| `PATCH /courses/:id/unarchive` | ✅ `courseWriteApi.unarchive` | ✅ CourseDetailPage — кнопка «Из архива» (admin/автор) |
 | `POST /courses/:id/modules` | ✅ `courseWriteApi.addModule` | ✅ CourseBuilder |
 | `DELETE /courses/:id/modules/:moduleId` | ✅ `courseWriteApi.deleteModule` | ✅ CourseBuilder |
 | `POST /courses/:id/modules/:moduleId/steps` | ✅ `courseWriteApi.addStep` | ✅ CourseBuilder |
 | `DELETE /courses/:id/modules/:moduleId/steps/:stepId` | ✅ `courseWriteApi.deleteStep` | ✅ CourseBuilder |
 
-**Критическая проблема:** курс создаётся серией ~10+ последовательных HTTP-запросов. Если любой провалится на середине — курс частично создан, восстановить его нельзя. `POST /courses/full` решил бы это атомарно, но не используется.
+**Атомарное создание курса (B6 закрыт):** `CoursesContext.createCourse` переработан:
+1. Все уроки и тест-определения создаются параллельно (`Promise.all`)
+2. Обложка загружается (`POST /files`)
+3. Курс со всей структурой создаётся одним атомарным вызовом `POST /courses/full`
+4. Вопросы добавляются к тестам уже после создания курса (требуют `courseId`)
 
-**Вывод:** CRUD работает, но нет UI для удаления курса и не используется атомарный эндпоинт создания.
+Если шаги 1–2 упадут — курс не создаётся вовсе (нет частично собранной структуры).
+`passingPercent` теперь корректно передаётся при создании тест-определения.
+
+**Удаление курса (U4 закрыт):** кнопка «Удалить курс» в `CourseDetailPage`:
+- Видна только admin и автору курса
+- Двухшаговый confirm (кнопка → «Удалить навсегда?» + «Отмена»)
+- После удаления — редирект на `/courses`
+
+**Архивация (7.7 закрыт):**
+- Кнопка «В архив» / «Из архива» рядом с «Удалить» — видна только admin/автору
+- Архивированные курсы не отображаются обычным пользователям (`GET /courses` без `includeArchived`)
+- Для admin/автора: запрос идёт с `includeArchived=true`, архивные курсы видны только им
+- Видимость архивных курсов обрабатывается в `isCourseVisibleToUser` в CoursesContext
+- На странице курса — бейдж «Архив», кнопка «Назначить» скрыта для архивных курсов
+- На странице списка — архивные курсы вынесены в отдельный блок «Архив» внизу (только для автора/admin)
+
+**Страница списка курсов — «Мои курсы» (переработано):**
+- Секция делится на две: «Прохожу» (enrolled) и «Создал» (authored, не enrolled)
+- Authored courses с отдельным стилем: синий значок карандаша, highlight-бордер, бейдж «Вы автор»
+- Курсы, где пользователь и автор, и слушатель, показываются в «Прохожу» с бейджем «Автор»
+- Sub-labels «Прохожу» / «Создал» выделены вертикальной цветной полоской (border-left), хорошо различимы
+
+**Исправленные баги (пост-реализация):**
+- `isArchived: boolean` — бэкенд возвращает это поле вместо `status: 'archived'`; добавлено в Zod-схемы, маппер теперь: `dto.isArchived === true ? 'archived' : mapStatus(dto.status)`
+- `authorId` сравнение — бэкенд хранит employee ID, а не auth account ID; все проверки `authorId === user.id` заменены на `authorId === user.id || authorId === user.employee?.id`
+- `author` nested object — бэкенд возвращает `author: {id, fullname, avatarId}` вместо плоского `authorId`; добавлена `CourseAuthorDtoSchema`, `authorId` теперь опциональный
+- `completedSet` пуст при первом рендере — `/me/enrollments` возвращает `progress: []`; теперь `completedSet` строится как объединение `enrollment.completedItems` И `step.isCompleted` из данных курса (которые возвращает `GET /courses/:id`)
+- Кнопка «Начать курс» вместо «Продолжить» при уже имеющемся прогрессе — исправлено вышеуказанным фиксом `completedSet`
+- После `markItemComplete` данные курса (шаги `isCompleted`) не обновлялись — добавлена инвалидация `queryKeys.courses.detail(courseId)`
+- Шаг можно было повторно отметить выполненным (кнопка «Отметить» не скрывалась) — исправлено фиксом `completedSet`
+
+**Редактирование курса:**
+- Добавлена кнопка «Редактировать» на `CourseDetailPage` для admin/автора (кроме архивных)
+- Inline-форма редактирования: название, описание, область видимости (departmentId/divisionId), обложка
+- `updateCourse` реализован в `CoursesContext` через `PATCH /courses/:id`
+- После сохранения инвалидируются оба ключа: `queryKeys.courses.all` и `queryKeys.courses.detail(courseId)`
+
+**Прочее UI:**
+- `CourseCard` теперь полностью кликабельная ссылка (`<Link>`) — нет отдельной кнопки «Открыть курс»
+- Добавлен адаптив (responsive) для страницы списка курсов и страницы курса (`@media ≤768px`, `≤480px`)
+- «Программа курса» — постоянная секция на странице курса (вне плеера): список модулей → шагов с прогрессом и типом
 
 ---
 
-## 10. Course Analytics
+## 10. Course Analytics ✅ РЕАЛИЗОВАНО (детальная)
 
 | Endpoint | API-метод | UI |
 |---|---|---|
-| `GET /courses/analytics` | ⚠️ вызывается в `controlApi`, но только для фильтрации курсов с enrollments | ⚠️ не используется как дашборд |
-| `GET /courses/:id/analytics` | ❌ не вызывается | ❌ нет страницы аналитики курса |
+| `GET /courses/analytics` | ⚠️ вызывается в `controlApi`, но только для фильтрации | ⚠️ не дашборд |
+| `GET /courses/:id/analytics` | ✅ `courseRealApi.getAnalytics` + `useCourseAnalyticsQuery` | ✅ `CourseDetailPage` — панель «Аналитика по подразделениям» |
 
-**Вывод:** Общая аналитика (`/courses/analytics`) используется как вспомогательный запрос в ControlPage, но не показывается пользователю напрямую. Детальная аналитика по курсу (`/courses/:id/analytics` — разбивка по division/department) не реализована нигде.
+**Реализовано:** Zod-схема `CourseAnalyticsDtoSchema` добавлена в `schemas.ts`. Hook `useCourseAnalyticsQuery` в `hooks.ts`. В `CourseDetailPage` для `canControl`-ролей отображается панель с разбивкой по департаментам и отделам (прогресс-бары, процент завершения, кол-во). Загружается параллельно с основными данными курса.
 
 ---
 
@@ -205,12 +256,15 @@
 
 | Endpoint | API-метод | UI |
 |---|---|---|
-| `POST /tests/:testId/attempts` | ✅ `testAttemptApi.start` | ✅ CourseDetailPage |
+| `POST /tests/:testId/attempts` | ✅ `testAttemptApi.start` | ✅ CourseDetailPage — возвращает ID существующей активной попытки вместо 409 |
+| `GET /tests/:testId/attempts` | ✅ `testAttemptApi.getAttempts` | ❌ нет UI (список прошлых попыток) |
 | `GET /attempts/:id` | ❌ нет метода | ❌ нельзя возобновить прерванную попытку |
 | `POST /attempts/:id/answers` | ✅ `testAttemptApi.answer` | ✅ CourseDetailPage |
 | `POST /attempts/:id/finish` | ✅ `testAttemptApi.finish` | ✅ CourseDetailPage |
 
-**Проблема:** При перезагрузке страницы во время теста попытка теряется. `GET /attempts/:id` позволил бы восстановить состояние, но не реализован.
+**Бэкенд-фикс:** `POST /tests/:testId/attempts` теперь возвращает ID существующей активной попытки вместо 409 — повторное открытие теста больше не ломается.
+
+**Проблема (A3):** При перезагрузке страницы во время теста попытка теряется. `GET /attempts/:id` позволил бы восстановить состояние, но не реализован.
 
 ---
 
@@ -341,18 +395,18 @@ const MOCK_EMPLOYEES = [
 | B3 | Chat history не загружается | `onboardingRealApi.ts:41` / `onboardingRealApi.getChatMessages` | Вызывать `getChatMessages` при загрузке каждого онбординга |
 | B4 | `positionId` захардкожен как `00000000-...` | `OnboardingContext.tsx:188` | Убрать обязательность `positionId` или дать пользователю выбрать |
 | B5 | `PATCH /lessons/:id` никогда не вызывается | — | Добавить режим редактирования курса в CourseBuilder |
-| B6 | Атомарность создания курса не гарантирована | `CoursesContext.tsx:143–201` | Перейти на `POST /courses/full` или добавить rollback |
+| ~~B6~~ | ~~Атомарность создания курса не гарантирована~~ | — | ✅ Выполнено — `POST /courses/full`, параллельное создание контента |
 
 ## Отсутствующий UI (API готов)
 
 | # | Фича | Сложность | Ценность |
 |---|---|---|---|
-| U1 | Карточка/drawer сотрудника + edit/promote/dismiss | M | Высокая |
+| ~~U1~~ | ~~Карточка/drawer сотрудника + edit/dismiss~~ | — | ✅ Выполнено |
 | ~~U2~~ | ~~Inline rename + delete для dept/div~~ | — | ✅ Выполнено |
 | ~~U3~~ | ~~Вкладка «Должности» (CRUD)~~ | — | ✅ Выполнено |
-| U4 | Кнопка «Удалить курс» + confirm | S | Средняя |
+| ~~U4~~ | ~~Кнопка «Удалить курс» + confirm~~ | — | ✅ Выполнено |
 | U5 | Страница «Мои заявки» (`GET /me/applications`) | S | Средняя — сотрудник не видит статус своих заявок |
-| U6 | Детальная аналитика курса (`GET /courses/:id/analytics`) | S | Средняя |
+| ~~U6~~ | ~~Детальная аналитика курса~~ | — | ✅ Выполнено — панель в CourseDetailPage |
 | U7 | Кнопка «Отменить онбординг» | XS | Средняя |
 | U8 | Отмена записи на курс (`DELETE /enrollments/:id`) | XS | Низкая |
 | U9 | Flow `/complete-registration` (invite-by-link) | M | Средняя |
@@ -361,8 +415,8 @@ const MOCK_EMPLOYEES = [
 
 | # | Потребность | Комментарий |
 |---|---|---|
-| A1 | Фильтр сотрудников по `departmentId` | `GET /employees` принимает только `divisionId` |
-| A2 | Поле `avatarFileId` на сотруднике | `POST /files` есть, некуда привязать |
+| ~~A1~~ | ~~Фильтр сотрудников по `departmentId`~~ | Бэкенд теперь поддерживает `departmentId` и `roleId` |
+| ~~A2~~ | ~~Поле `avatarFileId` на сотруднике~~ | Бэкенд поддерживает `avatarId` в `PATCH /employees/:id` |
 | A3 | Resumption теста (`GET /attempts/:id`) | При перезагрузке попытка теряется |
 | A4 | Отметка «начат» у онбординг-шага | Нет `POST /onboardings/:id/steps/:stepId/start` — только complete |
 

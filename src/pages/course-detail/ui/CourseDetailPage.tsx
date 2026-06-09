@@ -1,18 +1,18 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2 } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2, Trash2, Archive, ArchiveRestore, BarChart3, Pencil, ImagePlus } from 'lucide-react';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types';
 import { employeeApi } from '@entities/user/api/employeeApi';
-import type { EmployeeDto } from '@shared/api/schemas';
 import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
-import { useCourseQuery, useCoverUrl, useTestDefinitionQuery } from '@entities/course/api/hooks';
+import { useCourseQuery, useCoverUrl, useTestDefinitionQuery, useCourseAnalyticsQuery } from '@entities/course/api/hooks';
+import { useDepartmentsQuery, useDivisionsQuery } from '@entities/company/api/hooks';
 import { testAttemptApi } from '@entities/course/api/courseRealApi';
 import { toast } from '@shared/lib/toast';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
-import { CompletionModal } from './CompletionModal';
+import { CompletionModal } from './CompletionModal'
 import styles from './CourseDetail.module.css';
 
 // ─────────────────────────────────────────────────────────
@@ -366,10 +366,12 @@ function CourseStatsPanel({ courseId, getCourseEnrollments }: {
 // ─────────────────────────────────────────────────────────
 export function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const {
     courses, getEnrollment, enroll, requestEnrollment,
     getCourseRequests, approveEnrollmentRequest, rejectEnrollmentRequest,
     markItemComplete, certificates, isLoading, getCourseEnrollments,
+    deleteCourse, archiveCourse, unarchiveCourse, updateCourse,
   } = useCourses();
   const { user } = useUser();
 
@@ -383,29 +385,61 @@ export function CourseDetailPage() {
   const { data: coverUrl } = useCoverUrl(course?.coverId);
 
   const [assignOpen, setAssignOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editScope, setEditScope] = useState<'ALL' | 'DEPARTMENT' | 'DIVISION'>('ALL');
+  const [editDeptId, setEditDeptId] = useState('');
+  const [editDivId, setEditDivId] = useState('');
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null);
+  const [editCoverPreview, setEditCoverPreview] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const editCoverInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: deptPage } = useDepartmentsQuery({ limit: 200 });
+  const { data: divPage }  = useDivisionsQuery({ limit: 200 });
+  const departments = deptPage?.data ?? [];
+  const divisions   = divPage?.data  ?? [];
   const [playerOpen, setPlayerOpen] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
-  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(['m1-1', 'm2-1', 'm3-1', 'm4-1']));
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [completionOpen, setCompletionOpen] = useState(false);
   const [pendingRequests, setPendingRequests] = useState<EnrollmentRequest[]>([]);
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [authorEmployee, setAuthorEmployee] = useState<EmployeeDto | null>(null);
-
   const isController = canControl(user);
+  const isAuthor = course?.authorId === user.id || course?.authorId === user.employee?.id;
+  const canDelete = isAdmin(user) || isAuthor;
+  const isArchived = course?.status === 'archived';
 
-  // Fetch author employee info
+  const { data: analyticsData } = useCourseAnalyticsQuery(id ?? '', isController && !isLoading && !courseLoading && !!course);
+
+  // Expand all modules by default once full course (with modules) loads
   useEffect(() => {
-    if (!course?.authorId) return;
-    void employeeApi.getById(course.authorId).then(setAuthorEmployee).catch(() => {});
-  }, [course?.authorId]);
+    if (!course?.modules?.length) return;
+    setExpandedModules(new Set(course.modules.map(m => m.id)));
+  }, [course?.id, course?.modules?.length]);
 
   // Load pending enrollment requests for managers
   useEffect(() => {
     if (!isController || !id) return;
     void getCourseRequests(id).then(setPendingRequests);
   }, [isController, id, getCourseRequests]);
+
+  const enrollment  = course ? getEnrollment(course.id) : undefined;
+  const completedSet = useMemo(() => {
+    const set = new Set(enrollment?.completedItems ?? []);
+    course?.modules?.forEach(mod => mod.steps.forEach(step => {
+      if (step.isCompleted) set.add(step.id);
+    }));
+    return set;
+  }, [enrollment?.completedItems, course?.modules]);
 
   if (isLoading || courseLoading) return <div className={styles.loading}>Загрузка...</div>;
 
@@ -418,13 +452,11 @@ export function CourseDetailPage() {
     );
   }
 
-  const enrollment  = getEnrollment(course.id);
   const enrollStatus = enrollment?.status ?? 'not_enrolled';
   const isEnrolled   = enrollStatus === 'in_progress' || enrollStatus === 'completed';
   const isPending    = enrollStatus === 'pending_approval';
   const isRejected   = enrollStatus === 'rejected';
   const isCompleted  = enrollStatus === 'completed';
-  const completedSet = new Set(enrollment?.completedItems ?? []);
   const allItems     = getAllItems(course);
 
   // Когда плеер открыт — скрываем шапку курса
@@ -470,6 +502,78 @@ export function CourseDetailPage() {
     if (next) setSelectedItemId(next.id);
   };
 
+  // ── Удаление курса ───────────────────────────────────────
+  const handleDelete = async () => {
+    if (!course) return;
+    setDeleting(true);
+    try {
+      await deleteCourse(course.id);
+      navigate('/courses');
+    } finally {
+      setDeleting(false);
+      setDeleteConfirm(false);
+    }
+  };
+
+  // ── Архивация ─────────────────────────────────────────────
+  const handleArchiveToggle = async () => {
+    if (!course) return;
+    setArchiving(true);
+    try {
+      if (isArchived) {
+        await unarchiveCourse(course.id);
+      } else {
+        await archiveCourse(course.id);
+      }
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  // ── Открыть редактирование ───────────────────────────────
+  const handleOpenEdit = () => {
+    if (!course) return;
+    setEditTitle(course.title);
+    setEditDescription(course.description);
+    const scope =
+      course.targetDivisionId   ? 'DIVISION'
+      : course.targetDepartmentId ? 'DEPARTMENT'
+      : 'ALL';
+    setEditScope(scope);
+    setEditDeptId(course.targetDepartmentId ?? '');
+    setEditDivId(course.targetDivisionId ?? '');
+    setEditCoverFile(null);
+    setEditCoverPreview(null);
+    setEditMode(true);
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    setEditCoverFile(file);
+    setEditCoverPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!course || !editTitle.trim()) return;
+    setSaving(true);
+    try {
+      await updateCourse(
+        course.id,
+        {
+          name:         editTitle.trim(),
+          description:  editDescription.trim(),
+          scope:        editScope,
+          departmentId: editScope !== 'ALL' ? (editDeptId || null) : null,
+          divisionId:   editScope === 'DIVISION' ? (editDivId || null) : null,
+        },
+        editCoverFile ?? undefined,
+      );
+      setEditMode(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ── Одобрение/отклонение заявок ──────────────────────────
   const handleApproveRequest = async (req: EnrollmentRequest) => {
     setApprovingId(req.userId);
@@ -501,12 +605,65 @@ export function CourseDetailPage() {
           )}
 
           <div className={styles.titleRow}>
-            <h1 className={styles.title}>{course.title}</h1>
-            {canAssignCourse(user) && (
-              <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
-                Назначить сотрудникам
-              </button>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}>
+              <h1 className={styles.title}>{course.title}</h1>
+              {isArchived && (
+                <span className={styles.archivedBadge}>
+                  <Archive size={12} /> Архив
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+              {canAssignCourse(user) && !isArchived && (
+                <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
+                  Назначить сотрудникам
+                </button>
+              )}
+              {canDelete && !isArchived && !editMode && (
+                <button className={styles.editBtn} onClick={handleOpenEdit}>
+                  <Pencil size={14} /> Редактировать
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  className={styles.archiveBtn}
+                  onClick={() => void handleArchiveToggle()}
+                  disabled={archiving}
+                  title={isArchived ? 'Восстановить из архива' : 'Архивировать курс'}
+                >
+                  {isArchived
+                    ? <><ArchiveRestore size={15} /> {archiving ? '...' : 'Из архива'}</>
+                    : <><Archive size={15} /> {archiving ? '...' : 'В архив'}</>}
+                </button>
+              )}
+              {canDelete && !deleteConfirm && !isArchived && (
+                <button
+                  className={styles.deleteBtn}
+                  onClick={() => setDeleteConfirm(true)}
+                >
+                  <Trash2 size={15} /> Удалить
+                </button>
+              )}
+              {canDelete && deleteConfirm && (
+                <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--muted-foreground)' }}>Удалить навсегда?</span>
+                  <button
+                    className={styles.deleteBtnConfirm}
+                    onClick={() => void handleDelete()}
+                    disabled={deleting}
+                  >
+                    {deleting ? '...' : 'Удалить'}
+                  </button>
+                  <button
+                    className={styles.deleteBtnCancel}
+                    onClick={() => setDeleteConfirm(false)}
+                    disabled={deleting}
+                  >
+                    Отмена
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.metaRow}>
@@ -524,8 +681,121 @@ export function CourseDetailPage() {
             )}
           </div>
 
+          {/* ── Форма редактирования ── */}
+          {editMode && (
+            <div className={styles.editForm}>
+              <div className={styles.editFormRow}>
+                <label className={styles.editLabel}>Название</label>
+                <input
+                  className={styles.editInput}
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  placeholder="Название курса"
+                />
+              </div>
+              <div className={styles.editFormRow}>
+                <label className={styles.editLabel}>Описание</label>
+                <textarea
+                  className={styles.editTextarea}
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                  rows={4}
+                  placeholder="Описание курса"
+                />
+              </div>
+              <div className={styles.editFormRow}>
+                <label className={styles.editLabel}>Аудитория</label>
+                <select
+                  className={styles.editSelect}
+                  value={editScope}
+                  onChange={e => {
+                    setEditScope(e.target.value as 'ALL' | 'DEPARTMENT' | 'DIVISION');
+                    setEditDeptId('');
+                    setEditDivId('');
+                  }}
+                >
+                  <option value="ALL">Все сотрудники</option>
+                  <option value="DEPARTMENT">Департамент</option>
+                  <option value="DIVISION">Отдел</option>
+                </select>
+              </div>
+              {editScope !== 'ALL' && (
+                <div className={styles.editFormRow}>
+                  <label className={styles.editLabel}>Департамент</label>
+                  <select
+                    className={styles.editSelect}
+                    value={editDeptId}
+                    onChange={e => { setEditDeptId(e.target.value); setEditDivId(''); }}
+                  >
+                    <option value="">— выберите —</option>
+                    {departments.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {editScope === 'DIVISION' && (
+                <div className={styles.editFormRow}>
+                  <label className={styles.editLabel}>Отдел</label>
+                  <select
+                    className={styles.editSelect}
+                    value={editDivId}
+                    onChange={e => setEditDivId(e.target.value)}
+                  >
+                    <option value="">— выберите —</option>
+                    {(editDeptId
+                      ? divisions.filter(d => d.departmentId === editDeptId)
+                      : divisions
+                    ).map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div className={styles.editFormRow}>
+                <label className={styles.editLabel}>Обложка</label>
+                <div className={styles.editCoverRow}>
+                  <button
+                    type="button"
+                    className={styles.editCoverBtn}
+                    onClick={() => editCoverInputRef.current?.click()}
+                  >
+                    <ImagePlus size={14} />
+                    {editCoverFile ? editCoverFile.name : 'Загрузить новую обложку'}
+                  </button>
+                  <input
+                    ref={editCoverInputRef}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={handleCoverChange}
+                  />
+                  {editCoverPreview && (
+                    <img src={editCoverPreview} className={styles.editCoverPreview} alt="preview" />
+                  )}
+                </div>
+              </div>
+              <div className={styles.editFormActions}>
+                <button
+                  className={styles.editSaveBtn}
+                  onClick={() => void handleSaveEdit()}
+                  disabled={saving || !editTitle.trim()}
+                >
+                  {saving ? 'Сохранение...' : 'Сохранить'}
+                </button>
+                <button
+                  className={styles.editCancelBtn}
+                  onClick={() => setEditMode(false)}
+                  disabled={saving}
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Описание + автор */}
-          <div className={styles.descriptionCard}>
+          {!editMode && <div className={styles.descriptionCard}>
             <div className={styles.descriptionCardInner}>
               <div className={styles.descriptionBody}>
                 <h2 className={styles.descriptionTitle}>О курсе</h2>
@@ -533,8 +803,8 @@ export function CourseDetailPage() {
               </div>
               <div className={styles.authorBlock}>
                 {(() => {
-                  const authorName = authorEmployee?.fullname ?? course.authorId;
-                  const initials   = authorName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
+                  const authorName = course.authorName ?? course.authorId;
+                  const initials   = authorName.split(' ').filter(Boolean).map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
                   return (
                     <>
                       <div className={styles.authorLabel}>
@@ -551,14 +821,128 @@ export function CourseDetailPage() {
                 })()}
               </div>
             </div>
-          </div>
+          </div>}
 
-          {/* Статистика прохождения (для canControl) */}
+          {/* ── Программа курса (всегда видна если есть модули) ── */}
+          {course.modules && course.modules.length > 0 && (
+            <div className={styles.outlinePanel}>
+              <h3 className={styles.outlinePanelTitle}>
+                <BookOpen size={15} /> Программа курса
+              </h3>
+              <div className={styles.outlineModules}>
+                {course.modules.map((mod, mi) => {
+                  const modTotal     = mod.totalSteps ?? mod.steps.length;
+                  const modCompleted = mod.completedSteps ?? mod.steps.filter(s => s.isCompleted).length;
+                  const modPct       = modTotal > 0 ? Math.round((modCompleted / modTotal) * 100) : 0;
+                  const modDone      = modTotal > 0 && modCompleted >= modTotal;
+                  const isModOpen    = expandedModules.has(mod.id);
+                  return (
+                    <div key={mod.id} className={styles.outlineModule}>
+                      <button
+                        className={styles.outlineModuleHeader}
+                        onClick={() => toggleModule(mod.id)}
+                      >
+                        <span className={styles.outlineModuleNum}>{mi + 1}</span>
+                        <span className={styles.outlineModuleName}>{mod.title}</span>
+                        <div className={styles.outlineModuleMeta}>
+                          {isEnrolled && (
+                            <span className={modDone ? styles.outlineModuleProgDone : styles.outlineModuleProg}>
+                              {modDone ? '✓' : `${modCompleted}/${modTotal}`}
+                            </span>
+                          )}
+                          {!isEnrolled && (
+                            <span className={styles.outlineModuleStepCount}>{modTotal} шагов</span>
+                          )}
+                          {isModOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </div>
+                      </button>
+                      {isModOpen && (
+                        <div className={styles.outlineSteps}>
+                          {mod.steps.map((step, si) => {
+                            const done = step.isCompleted ?? completedSet.has(step.id);
+                            return (
+                              <button
+                                key={step.id}
+                                className={`${styles.outlineStep} ${done ? styles.outlineStepDone : ''}`}
+                                onClick={() => {
+                                  if (isEnrolled) {
+                                    setSelectedItemId(step.items[0]?.id ?? null);
+                                    setPlayerOpen(true);
+                                  }
+                                }}
+                                disabled={!isEnrolled}
+                              >
+                                <span className={styles.outlineStepIcon}>
+                                  {done
+                                    ? <CheckCircle2 size={14} style={{ color: '#16a34a' }} />
+                                    : step.type === 'test'
+                                      ? <ClipboardList size={14} />
+                                      : <BookOpen size={14} />}
+                                </span>
+                                <span className={styles.outlineStepName}>{si + 1}. {step.title}</span>
+                                <span className={styles.outlineStepType}>
+                                  {step.type === 'test' ? 'Тест' : 'Урок'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {isController && (
-            <CourseStatsPanel
-              courseId={course.id}
-              getCourseEnrollments={getCourseEnrollments}
-            />
+            <>
+              <CourseStatsPanel
+                courseId={course.id}
+                getCourseEnrollments={getCourseEnrollments}
+              />
+              {analyticsData && (analyticsData.byDivision.length > 0 || analyticsData.byDepartment.length > 0) && (
+                <div className={styles.analyticsPanel}>
+                  <h3 className={styles.statsPanelTitle}>
+                    <BarChart3 size={16} /> Аналитика по подразделениям
+                  </h3>
+                  {analyticsData.byDepartment.length > 0 && (
+                    <div className={styles.analyticsGroup}>
+                      <div className={styles.analyticsGroupTitle}>По департаментам</div>
+                      {analyticsData.byDepartment.map(d => (
+                        <div key={d.departmentId} className={styles.analyticsRow}>
+                          <span className={styles.analyticsName}>{d.departmentName}</span>
+                          <div className={styles.analyticsBarWrap}>
+                            <div className={styles.analyticsBar}>
+                              <div className={styles.analyticsBarFill} style={{ width: `${d.completionRate}%` }} />
+                            </div>
+                            <span className={styles.analyticsPct}>{Math.round(d.completionRate)}%</span>
+                          </div>
+                          <span className={styles.analyticsMeta}>{d.completed}/{d.total}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {analyticsData.byDivision.length > 0 && (
+                    <div className={styles.analyticsGroup}>
+                      <div className={styles.analyticsGroupTitle}>По отделам</div>
+                      {analyticsData.byDivision.map(d => (
+                        <div key={d.divisionId} className={styles.analyticsRow}>
+                          <span className={styles.analyticsName}>{d.divisionName}</span>
+                          <div className={styles.analyticsBarWrap}>
+                            <div className={styles.analyticsBar}>
+                              <div className={styles.analyticsBarFill} style={{ width: `${d.completionRate}%` }} />
+                            </div>
+                            <span className={styles.analyticsPct}>{Math.round(d.completionRate)}%</span>
+                          </div>
+                          <span className={styles.analyticsMeta}>{d.completed}/{d.total}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           {/* Прогресс (только если идёт прохождение) */}

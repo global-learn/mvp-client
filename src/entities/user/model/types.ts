@@ -64,6 +64,7 @@ export interface EmployeeProfile {
   division:   UserDivision;
   position?:  UserPosition;
   role:       UserRole;
+  biography?:       string | null;
   birthDate?:       string;
   employmentDate:   string;
 }

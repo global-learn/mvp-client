@@ -1,14 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
 import { courseRealApi, fileApi, testDefApi, mapTestDefinitionToQuestions } from './courseRealApi';
-import type { EnrollmentDto } from '@shared/api/schemas';
+import type { CourseAnalyticsDto, EnrollmentDto } from '@shared/api/schemas';
 import type { TestQuestion } from '../model/types';
 
-export function useCoursesQuery() {
+export function useCoursesQuery(includeArchived = false) {
   return useQuery({
-    queryKey: queryKeys.courses.list(),
-    queryFn:  () => courseRealApi.list(),
+    queryKey: queryKeys.courses.list(includeArchived),
+    queryFn:  () => courseRealApi.list({ includeArchived }),
     staleTime: 60_000,
+  });
+}
+
+export function useCourseAnalyticsQuery(id: string, enabled = true) {
+  return useQuery<CourseAnalyticsDto>({
+    queryKey: queryKeys.courses.analytics(id),
+    queryFn:  () => courseRealApi.getAnalytics(id),
+    enabled:  enabled && !!id,
+    staleTime: 120_000,
   });
 }
 

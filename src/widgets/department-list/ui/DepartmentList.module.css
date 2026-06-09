@@ -23,17 +23,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.875rem 1.125rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-align: left;
   transition: background 0.12s;
-  font-family: inherit;
 }
 
 .deptHeader:hover {
   background: var(--secondary);
+}
+
+/* Кнопка раскрытия — занимает левую часть заголовка */
+.deptExpandBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 0 0.875rem 1.125rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  min-width: 0;
+  text-align: left;
 }
 
 .deptLeft {
@@ -66,6 +74,7 @@
   align-items: center;
   gap: 0.625rem;
   flex-shrink: 0;
+  padding-right: 1.125rem;
 }
 
 .deptCount {

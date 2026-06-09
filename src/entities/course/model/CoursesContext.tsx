@@ -24,7 +24,7 @@ import { useCoursesQuery, useMyEnrollmentDtosQuery } from '../api/hooks';
 import { employeeApi } from '@entities/user/api/employeeApi';
 import { divisionApi } from '@entities/company/api/companyApi';
 import { useUser } from '@entities/user/model/UserContext';
-import { displayName, isAdmin, type User } from '@entities/user/model/types';
+import { canCreateCourse, displayName, isAdmin, type User } from '@entities/user/model/types';
 import { toast } from '@shared/lib/toast';
 import type { TestContent } from './types';
 
@@ -35,12 +35,18 @@ function isCourseVisibleToUser(
   enrollments: Enrollment[],
 ): boolean {
   const isEnrolled = enrollments.some(e => e.courseId === course.id);
-
   const emp = user.employee;
   if (!emp) return false;
   const r = emp.role.name;
 
-  if (course.authorId === user.id) return true;
+  const isAuthor = course.authorId === user.id || course.authorId === user.employee?.id;
+
+  // Archived: visible only to admin or course author
+  if (course.status === 'archived') {
+    return r === 'admin' || isAuthor;
+  }
+
+  if (isAuthor) return true;
   if (course.status !== 'published') return false;
   if (r === 'admin') return true;
   if (!course.targetDepartmentId && !course.targetDivisionId) return true;
@@ -74,6 +80,16 @@ interface CoursesContextValue {
   getCourseEnrollments: (courseId: string) => Promise<Enrollment[]>;
   /** coverFile — обложка курса (если передана — загружается через POST /files) */
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>, coverFile?: File) => Promise<Course>;
+  updateCourse: (courseId: string, dto: {
+    name?: string;
+    description?: string;
+    scope?: 'ALL' | 'DEPARTMENT' | 'DIVISION';
+    departmentId?: string | null;
+    divisionId?: string | null;
+  }, coverFile?: File) => Promise<void>;
+  deleteCourse: (courseId: string) => Promise<void>;
+  archiveCourse: (courseId: string) => Promise<void>;
+  unarchiveCourse: (courseId: string) => Promise<void>;
   approveCourse: (courseId: string) => Promise<void>;
   rejectCourse: (courseId: string) => Promise<void>;
   getEnrollment: (courseId: string) => Enrollment | undefined;
@@ -90,7 +106,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const employeeId = user.employee?.id;
 
-  const { data: rawCourses = [], isLoading: coursesLoading } = useCoursesQuery();
+  const { data: rawCourses = [], isLoading: coursesLoading } = useCoursesQuery(canCreateCourse(user));
   const { data: rawEnrollmentDtos = [], isLoading: enrollmentsLoading } = useMyEnrollmentDtosQuery();
 
   const [certificates, setCertificates] = useState<Certificate[]>([]);
@@ -128,76 +144,164 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     [enrollments],
   );
 
-  // ── Course creation (real API) ────────────────────────────────
+  // ── Course creation (real API, atomic via POST /courses/full) ───
 
   const createCourse = async (
     dto: Omit<CreateCourseDto, 'authorId'>,
     coverFile?: File,
   ): Promise<Course> => {
     try {
-    // 1. Create course
-    const scope: 'ALL' | 'DEPARTMENT' | 'DIVISION' =
-      dto.targetDivisionId   ? 'DIVISION'
-      : dto.targetDepartmentId ? 'DEPARTMENT'
-      : 'ALL';
-    const courseId = await courseWriteApi.create({
-      name:         dto.title,
-      description:  dto.description,
-      scope,
-      departmentId: dto.targetDepartmentId ?? undefined,
-      divisionId:   dto.targetDivisionId   ?? undefined,
-    });
+      type ItemResult =
+        | { type: 'LESSON'; name: string; lessonId: string }
+        | { type: 'TEST'; name: string; testId: string; questions: TestContent['questions']; passingPercent: number };
 
-    // 2. Upload cover if provided, then patch course
-    if (coverFile) {
-      const { id: coverId } = await fileApi.upload(coverFile);
-      await courseWriteApi.update(courseId, { coverId });
-    }
+      // 1. Pre-create all lessons and test-defs in parallel (before course exists)
+      const items = (dto.modules ?? []).flatMap(mod =>
+        mod.steps.flatMap(step => step.items),
+      );
 
-    // 3. Create modules → steps → lessons / tests
-    for (const mod of dto.modules ?? []) {
-      const moduleId = await courseWriteApi.addModule(courseId, mod.title);
-
-      // Frontend: Step.items[] — each item maps to one backend Step
-      for (const step of mod.steps) {
-        for (const item of step.items) {
+      const results: ItemResult[] = await Promise.all(
+        items.map(async item => {
           if (item.type === 'lesson') {
             const lessonId = await lessonApi.create(item.title, item.content);
-            await courseWriteApi.addStep(courseId, moduleId, {
-              name:     item.title,
-              type:     'LESSON',
-              lessonId,
-            });
+            return { type: 'LESSON' as const, name: item.title, lessonId };
           } else {
-            // test
             const testItem = item as TestContent;
-            const testId = await testDefApi.create(testItem.title);
-
-            for (const q of testItem.questions) {
-              const questionId = await questionApi.create(courseId, {
-                question: q.question,
-                answers:  q.options.map(o => ({ answer: o.text, isCorrect: o.isCorrect })),
-              });
-              await testDefApi.addQuestion(testId, questionId);
-            }
-
-            await courseWriteApi.addStep(courseId, moduleId, {
-              name:   testItem.title,
-              type:   'TEST',
-              testId,
-            });
+            const testId = await testDefApi.create(testItem.title, testItem.passingPercent);
+            return { type: 'TEST' as const, name: testItem.title, testId, questions: testItem.questions, passingPercent: testItem.passingPercent };
           }
-        }
-      }
-    }
+        }),
+      );
 
-    // 4. Fetch created course and refresh query cache
-    const course = await courseRealApi.getById(courseId);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
-    toast.success('Курс создан');
-    return course;
+      // 2. Upload cover
+      let coverId: string | undefined;
+      if (coverFile) {
+        const { id } = await fileApi.upload(coverFile);
+        coverId = id;
+      }
+
+      // 3. Build modules structure and create course atomically
+      const scope: 'ALL' | 'DEPARTMENT' | 'DIVISION' =
+        dto.targetDivisionId   ? 'DIVISION'
+        : dto.targetDepartmentId ? 'DEPARTMENT'
+        : 'ALL';
+
+      const iter = results[Symbol.iterator]();
+      const modules = (dto.modules ?? []).map(mod => ({
+        name: mod.title,
+        steps: mod.steps.flatMap(step =>
+          step.items.map(() => {
+            const r = iter.next().value as ItemResult;
+            return {
+              name: r.name,
+              type: r.type,
+              ...(r.type === 'LESSON' ? { lessonId: r.lessonId } : { testId: r.testId }),
+            };
+          }),
+        ),
+      }));
+
+      const courseId = await courseWriteApi.createFull({
+        name:         dto.title,
+        description:  dto.description,
+        scope,
+        departmentId: dto.targetDepartmentId ?? undefined,
+        divisionId:   dto.targetDivisionId   ?? undefined,
+        coverId,
+        modules,
+      });
+
+      // 4. Create questions and link to test-defs (requires courseId)
+      const testResults = results.filter((r): r is Extract<ItemResult, { type: 'TEST' }> => r.type === 'TEST');
+      await Promise.all(
+        testResults.map(async ({ testId, questions }) => {
+          for (const q of questions) {
+            const questionId = await questionApi.create(courseId, {
+              question: q.question,
+              answers:  q.options.map(o => ({ answer: o.text, isCorrect: o.isCorrect })),
+            });
+            await testDefApi.addQuestion(testId, questionId);
+          }
+        }),
+      );
+
+      // 5. Fetch and return created course
+      const course = await courseRealApi.getById(courseId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      toast.success('Курс создан');
+      return course;
     } catch (err) {
       toast.apiError(err, 'Не удалось создать курс');
+      throw err;
+    }
+  };
+
+  // ── Course deletion / archive ─────────────────────────────────
+
+  const updateCourse = async (
+    courseId: string,
+    dto: {
+      name?: string;
+      description?: string;
+      scope?: 'ALL' | 'DEPARTMENT' | 'DIVISION';
+      departmentId?: string | null;
+      divisionId?: string | null;
+    },
+    coverFile?: File,
+  ): Promise<void> => {
+    try {
+      let coverId: string | null | undefined;
+      if (coverFile) {
+        const { id } = await fileApi.upload(coverFile);
+        coverId = id;
+      }
+      await courseWriteApi.update(courseId, { ...dto, ...(coverId !== undefined ? { coverId } : {}) });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),
+      ]);
+      toast.success('Курс обновлён');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось сохранить изменения');
+      throw err;
+    }
+  };
+
+  const deleteCourse = async (courseId: string): Promise<void> => {
+    try {
+      await courseWriteApi.delete(courseId);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.all });
+      toast.success('Курс удалён');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось удалить курс');
+      throw err;
+    }
+  };
+
+  const archiveCourse = async (courseId: string): Promise<void> => {
+    try {
+      await courseWriteApi.archive(courseId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),
+      ]);
+      toast.success('Курс перенесён в архив');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось архивировать курс');
+      throw err;
+    }
+  };
+
+  const unarchiveCourse = async (courseId: string): Promise<void> => {
+    try {
+      await courseWriteApi.unarchive(courseId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.all }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),
+      ]);
+      toast.success('Курс восстановлен из архива');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось восстановить курс');
       throw err;
     }
   };
@@ -298,7 +402,10 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),
+    ]);
     return updated;
     } catch (err) {
       toast.apiError(err, 'Не удалось сохранить прогресс');
@@ -431,6 +538,10 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         assignCourse,
         getCourseEnrollments,
         createCourse,
+        updateCourse,
+        deleteCourse,
+        archiveCourse,
+        unarchiveCourse,
         approveCourse,
         rejectCourse,
         getEnrollment,

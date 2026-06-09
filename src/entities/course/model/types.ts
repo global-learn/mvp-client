@@ -37,12 +37,16 @@ export interface Step {
   id: string;
   title: string;
   items: StepItem[];
+  type: 'lesson' | 'test';
+  isCompleted?: boolean;
 }
 
 export interface Module {
   id: string;
   title: string;
   steps: Step[];
+  completedSteps?: number;
+  totalSteps?: number;
 }
 
 // ================================================================
@@ -66,6 +70,7 @@ export interface Course {
   title: string;
   description: string;
   authorId: string;
+  authorName?: string;
   coverId?: string;
   status: CourseStatus;
   courseType: CourseType;

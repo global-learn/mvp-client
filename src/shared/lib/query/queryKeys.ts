@@ -38,8 +38,9 @@ export const queryKeys = {
 
   courses: {
     all:               ['courses'] as const,
-    list:              () => ['courses', 'list'] as const,
+    list:              (includeArchived?: boolean) => ['courses', 'list', { includeArchived }] as const,
     detail:            (id: string) => ['courses', 'detail', id] as const,
+    analytics:         (id: string) => ['courses', 'analytics', id] as const,
     enrollments:       (userId: string) => ['courses', 'enrollments', userId] as const,
     courseEnrollments: (courseId: string) => ['courses', 'enrollments', 'by-course', courseId] as const,
     requests:          (courseId: string) => ['courses', 'requests', courseId] as const,

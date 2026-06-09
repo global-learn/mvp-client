@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import type { Course, Enrollment } from '../model/types';
 import { useCoverUrl } from '../api/hooks';
 import styles from './CourseCard.module.css';
@@ -35,7 +35,7 @@ export function CourseCard({ course, enrollment }: CourseCardProps) {
   const sizeMeta = courseSizeMeta(course);
 
   return (
-    <div className={styles.card}>
+    <Link to={`/courses/${course.id}`} className={styles.card}>
       <div className={styles.cover}>
         {coverUrl ? (
           <img src={coverUrl} alt={course.title} className={styles.coverImg} />
@@ -73,12 +73,6 @@ export function CourseCard({ course, enrollment }: CourseCardProps) {
           </div>
         </div>
       )}
-
-      <div className={styles.footer}>
-        <Link to={`/courses/${course.id}`} className={styles.link}>
-          Открыть курс <ArrowRight size={13} />
-        </Link>
-      </div>
-    </div>
+    </Link>
   );
 }

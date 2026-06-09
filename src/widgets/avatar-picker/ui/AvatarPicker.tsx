@@ -1,10 +1,12 @@
+import { useRef, useState } from 'react';
 import { X, Upload } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { userInitials, type UserAvatar } from '@entities/user/model/types';
+import { fileApi } from '@shared/api/fileApi';
+import { employeeApi } from '@entities/user/api/employeeApi';
+import { toast } from '@shared/lib/toast';
 import styles from './AvatarPicker.module.css';
 
-// Системные аватары — цветные круги с инициалами пользователя.
-// В продакшне: бэкенд вернёт список Avatar с isSystem: true и url (S3).
 const SYSTEM_AVATARS: UserAvatar[] = [
   { id: 'sys-blue',   name: 'Синий',      isSystem: true, bgColor: '#4299e1' },
   { id: 'sys-green',  name: 'Зелёный',    isSystem: true, bgColor: '#48bb78' },
@@ -24,6 +26,8 @@ interface AvatarPickerProps {
 export function AvatarPicker({ onClose }: AvatarPickerProps) {
   const { user, updateAvatar } = useUser();
   const initials = userInitials(user);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
 
   const handleSelect = (avatar: UserAvatar) => {
     updateAvatar(avatar);
@@ -32,6 +36,22 @@ export function AvatarPicker({ onClose }: AvatarPickerProps) {
 
   const handleBackdrop = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) onClose();
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user.employee) return;
+    setUploading(true);
+    try {
+      const { id, url } = await fileApi.upload(file);
+      await employeeApi.update(user.employee.id, { avatarId: id });
+      updateAvatar({ id, name: 'photo', isSystem: false, url });
+      onClose();
+    } catch (err) {
+      toast.apiError(err, 'Не удалось загрузить фото');
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -44,7 +64,6 @@ export function AvatarPicker({ onClose }: AvatarPickerProps) {
           </button>
         </div>
 
-        {/* Системные аватары */}
         <section>
           <p className={styles.sectionLabel}>Выбрать цвет</p>
           <div className={styles.grid}>
@@ -69,13 +88,25 @@ export function AvatarPicker({ onClose }: AvatarPickerProps) {
           </div>
         </section>
 
-        {/* Загрузить своё — UI-заглушка */}
         <section className={styles.uploadSection}>
           <p className={styles.sectionLabel}>Загрузить фото</p>
-          <div className={styles.uploadArea}>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className={styles.fileInput}
+            onChange={e => void handleFileUpload(e)}
+          />
+          <div
+            className={`${styles.uploadArea} ${uploading ? styles.uploading : ''}`}
+            onClick={() => !uploading && fileInputRef.current?.click()}
+            role="button"
+          >
             <Upload size={24} className={styles.uploadIcon} />
-            <p className={styles.uploadText}>Перетащите фото или нажмите для выбора</p>
-            <span className={styles.uploadBadge}>Скоро</span>
+            <p className={styles.uploadText}>
+              {uploading ? 'Загружаем...' : 'Нажмите для выбора фото'}
+            </p>
+            <p className={styles.uploadHint}>JPG, PNG, GIF · макс. 5 МБ</p>
           </div>
         </section>
       </div>

@@ -1,9 +1,22 @@
-/* ── Overlay ─────────────────────────────────────────────── */
+/* ── Token palette ───────────────────────────────────────────────── */
+:root {
+  --cert-gold-dark:   #8a6914;
+  --cert-gold:        #b8960c;
+  --cert-gold-mid:    #c9a84c;
+  --cert-gold-light:  #e4c76b;
+  --cert-gold-pale:   #f7eecf;
+  --cert-parchment:   #fefdf6;
+  --cert-ink:         #1c1410;
+  --cert-ink-soft:    #3d3220;
+  --cert-ink-muted:   #7a6840;
+}
+
+/* ── Overlay ─────────────────────────────────────────────────────── */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11,16 +24,15 @@
   padding: 1rem;
 }
 
-/* ── Wrapper (toolbar + paper) ──────────────────────────── */
+/* ── Wrapper ─────────────────────────────────────────────────────── */
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  max-width: 560px;
-  width: 100%;
+  gap: 0.625rem;
+  width: min(820px, 95vw);
 }
 
-/* ── Toolbar ─────────────────────────────────────────────── */
+/* ── Toolbar ─────────────────────────────────────────────────────── */
 .toolbar {
   display: flex;
   justify-content: flex-end;
@@ -31,184 +43,307 @@
 .printBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  padding: 0.4rem 0.875rem;
-  background: white;
+  gap: 0.35rem;
+  padding: 0.375rem 0.875rem;
+  background: rgba(255, 255, 255, 0.92);
   color: #333;
   border: none;
-  border-radius: var(--radius);
+  border-radius: 6px;
   font-size: 0.8125rem;
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: background 0.15s;
 }
-.printBtn:hover { background: #f0f0f0; }
+.printBtn:hover { background: white; }
 
 .closeBtn {
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  background: white;
+  background: rgba(255, 255, 255, 0.92);
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: #555;
+  color: #444;
   transition: background 0.15s;
 }
-.closeBtn:hover { background: #f0f0f0; }
+.closeBtn:hover { background: white; }
 
-/* ── Certificate paper ───────────────────────────────────── */
+/* ── Certificate paper ───────────────────────────────────────────── */
 .cert {
-  background: #fffdf7;
-  border: 2px solid #c9a84c;
-  border-radius: 12px;
-  padding: 2.5rem 2.5rem 2rem;
+  position: relative;
+  background: var(--cert-parchment);
+  /* Subtle parchment texture via layered gradients */
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(212, 165, 32, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(212, 165, 32, 0.06) 0%, transparent 50%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 24px,
+      rgba(185, 150, 60, 0.04) 24px,
+      rgba(185, 150, 60, 0.04) 25px
+    );
+  border: 3px solid var(--cert-gold);
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 6px var(--cert-gold-pale),
+    0 0 0 8px var(--cert-gold-mid),
+    0 8px 40px rgba(0, 0, 0, 0.35),
+    inset 0 0 60px rgba(212, 165, 32, 0.04);
+  padding: 0;
+  overflow: hidden;
+}
+
+/* ── Ornamental corner pieces ────────────────────────────────────── */
+.corner {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  z-index: 2;
+}
+
+.corner::before,
+.corner::after {
+  content: '';
+  position: absolute;
+  background: var(--cert-gold);
+}
+
+/* Horizontal arm */
+.corner::before {
+  width: 40px;
+  height: 2px;
+  top: 12px;
+}
+
+/* Vertical arm */
+.corner::after {
+  width: 2px;
+  height: 40px;
+  left: 12px;
+}
+
+.cornerTL { top: 12px; left: 12px; }
+.cornerTR { top: 12px; right: 12px; transform: scaleX(-1); }
+.cornerBL { bottom: 12px; left: 12px; transform: scaleY(-1); }
+.cornerBR { bottom: 12px; right: 12px; transform: scale(-1); }
+
+/* Diamond dot at the corner junction */
+.corner::before {
+  box-shadow: 0 0 0 2px var(--cert-parchment), 0 0 0 3.5px var(--cert-gold);
+}
+
+/* ── Inner content ───────────────────────────────────────────────── */
+.inner {
+  padding: 3rem 5rem 2.5rem;
   text-align: center;
   position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.12), inset 0 0 0 8px rgba(201,168,76,0.08);
+  z-index: 1;
 }
 
-/* Decorative corner ornaments */
-.cert::before,
-.cert::after {
-  content: '✦';
-  position: absolute;
-  font-size: 1.5rem;
-  color: #c9a84c;
-  opacity: 0.4;
-}
-.cert::before { top: 0.75rem; left: 1rem; }
-.cert::after  { bottom: 0.75rem; right: 1rem; }
-
-/* ── Header ──────────────────────────────────────────────── */
-.certHeader {
+/* ── Header row ──────────────────────────────────────────────────── */
+.header {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.625rem;
-  margin-bottom: 1.25rem;
+  gap: 0.75rem;
+  margin-bottom: 0.875rem;
 }
 
-.logoIcon {
-  color: #c9a84c;
+.logoMark {
+  width: 30px;
+  height: 30px;
+  color: var(--cert-gold);
+  flex-shrink: 0;
 }
 
-.logoText {
-  font-size: 1.375rem;
+.orgName {
+  font-size: 1.25rem;
   font-weight: 800;
-  color: #2d2d2d;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--cert-ink);
 }
 
-/* ── Divider ─────────────────────────────────────────────── */
-.divider {
-  height: 2px;
-  background: linear-gradient(to right, transparent, #c9a84c, transparent);
-  margin: 1rem 0;
-}
-
-/* ── Text blocks ─────────────────────────────────────────── */
+/* ── Label ───────────────────────────────────────────────────────── */
 .certLabel {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: 0.15em;
-  color: #9a7a2e;
-  margin: 0 0 1.25rem;
+  letter-spacing: 0.22em;
+  color: var(--cert-gold);
+  text-transform: uppercase;
+  margin: 0 0 1rem;
 }
 
-.certIntro {
+/* ── Decorative rule ─────────────────────────────────────────────── */
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.875rem 0;
+}
+
+.rule::before,
+.rule::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--cert-gold-mid), transparent);
+}
+
+.ruleOrnament {
+  font-size: 0.625rem;
+  color: var(--cert-gold-mid);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ── Body text ───────────────────────────────────────────────────── */
+.intro {
   font-size: 0.9375rem;
-  color: #666;
-  margin: 0 0 0.375rem;
+  color: var(--cert-ink-muted);
   font-style: italic;
-}
-
-.userName {
-  font-size: 1.875rem;
-  font-weight: 800;
-  color: #1a1a1a;
   margin: 0 0 0.5rem;
-  letter-spacing: 0.01em;
 }
 
-.certMid {
+.recipientName {
+  font-size: 2.125rem;
+  font-weight: 800;
+  color: var(--cert-ink);
+  letter-spacing: 0.03em;
+  margin: 0 0 0.5rem;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.body {
   font-size: 0.9375rem;
-  color: #666;
-  margin: 0 0 0.375rem;
+  color: var(--cert-ink-muted);
   font-style: italic;
+  margin: 0 0 0.5rem;
 }
 
-.courseTitle {
-  font-size: 1.1875rem;
+.courseName {
+  font-size: 1.25rem;
   font-weight: 700;
-  color: #2d2d2d;
-  margin: 0 0 0.25rem;
+  color: var(--cert-ink-soft);
+  margin: 0 0 0.125rem;
   line-height: 1.4;
 }
 
-/* ── Footer ──────────────────────────────────────────────── */
-.certFooter {
+/* ── Footer ──────────────────────────────────────────────────────── */
+.footer {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 2.5rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
-.footerItem {
+.footerCol {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.25rem;
 }
 
-.footerIcon {
-  color: #c9a84c;
+.footerDivider {
+  width: 1px;
+  height: 32px;
+  background: linear-gradient(to bottom, transparent, var(--cert-gold-mid), transparent);
 }
 
 .footerLabel {
-  font-size: 0.6875rem;
-  color: #999;
+  font-size: 0.5625rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.12em;
+  color: var(--cert-gold);
+  font-weight: 600;
 }
 
 .footerValue {
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
-  color: #444;
+  color: var(--cert-ink-soft);
 }
 
-/* ── Badge ───────────────────────────────────────────────── */
-.badge {
+.footerValueMono {
+  font-size: 0.6875rem;
+  font-family: 'Courier New', monospace;
+  color: var(--cert-ink-muted);
+  letter-spacing: 0.04em;
+}
+
+/* ── Wax seal ────────────────────────────────────────────────────── */
+.seal {
   position: absolute;
-  bottom: 1.25rem;
+  bottom: 1.5rem;
   right: 2rem;
-  width: 52px;
-  height: 52px;
+  width: 72px;
+  height: 72px;
+  z-index: 3;
+}
+
+.sealRing {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background: linear-gradient(135deg, #c9a84c, #e8c96b);
-  color: white;
+  background: conic-gradient(
+    from 0deg,
+    var(--cert-gold-dark) 0deg,
+    var(--cert-gold-light) 60deg,
+    var(--cert-gold) 120deg,
+    var(--cert-gold-dark) 180deg,
+    var(--cert-gold-light) 240deg,
+    var(--cert-gold) 300deg,
+    var(--cert-gold-dark) 360deg
+  );
+  box-shadow:
+    0 0 0 2px var(--cert-gold-pale),
+    0 0 0 3px var(--cert-gold-dark),
+    0 4px 16px rgba(139, 106, 0, 0.5);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(201,168,76,0.45);
+  gap: 2px;
+  position: relative;
 }
 
-/* ── Print styles ────────────────────────────────────────── */
+.sealSvg {
+  width: 48px;
+  height: 48px;
+  color: rgba(255, 255, 255, 0.85);
+  position: absolute;
+}
+
+.sealText {
+  font-size: 0.45rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.9);
+  position: absolute;
+  bottom: 12px;
+}
+
+/* ── Print ───────────────────────────────────────────────────────── */
 @media print {
   .overlay {
     position: static;
     background: none;
     backdrop-filter: none;
+    padding: 0;
   }
+  .wrapper { width: 100%; }
   .toolbar { display: none; }
   .cert {
     box-shadow: none;
-    border-color: #c9a84c;
+    border: 2px solid var(--cert-gold);
     page-break-inside: avoid;
   }
 }

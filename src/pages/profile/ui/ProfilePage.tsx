@@ -142,7 +142,7 @@ export function ProfilePage() {
                 <div className={styles.certAccent} />
                 <div className={styles.certBody}>
                   <span className={styles.certEyebrow}>Сертификат</span>
-                  <span className={styles.certTitle}>{cert.courseTitle}</span>
+                  <span className={styles.certTitle}>{cert.courseName}</span>
                   <span className={styles.certDate}>
                     Выдан {new Date(cert.issuedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>

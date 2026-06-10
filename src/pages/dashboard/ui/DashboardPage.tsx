@@ -72,11 +72,19 @@ export function DashboardPage() {
     return null;
   }, [currentCourse, currentEnrollment]);
 
-  // Общее число элементов в текущем курсе
+  // Общее число элементов / пройденных — берём из embeddedEnrollment (бэкенд считает сам),
+  // т.к. modules приходит пустым из списка курсов
   const currentTotalItems = useMemo(() =>
-    (currentCourse?.modules ?? []).flatMap(m => m.steps.flatMap(s => s.items)).length
+    (currentCourse?.embeddedEnrollment?.totalSteps
+    ?? (currentCourse?.modules ?? []).flatMap(m => m.steps.flatMap(s => s.items)).length)
     || (currentCourse?.lessonsCount ?? 0),
     [currentCourse],
+  );
+  const currentCompletedItems = useMemo(() =>
+    currentCourse?.embeddedEnrollment?.completedSteps
+    ?? currentEnrollment?.completedItems.length
+    ?? 0,
+    [currentCourse, currentEnrollment],
   );
 
   // ── Мои курсы: все записи, убывающий прогресс ────────────────
@@ -195,7 +203,7 @@ export function DashboardPage() {
               <div className={styles.progressFill} style={{ width: `${currentEnrollment.progress}%` }} />
             </div>
             <p className={styles.progressLabel}>
-              {currentEnrollment.completedItems.length} из {currentTotalItems} уроков
+              {currentCompletedItems} из {currentTotalItems} уроков
             </p>
           </div>
         </div>

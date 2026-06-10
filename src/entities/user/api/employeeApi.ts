@@ -1,6 +1,10 @@
+import { z } from 'zod';
 import { api } from '@shared/api/axios';
-import { IdResponseSchema, EmployeeDtoSchema, RoleDtoSchema, paginatedSchema } from '@shared/api/schemas';
-import type { EmployeeDto, RoleDto } from '@shared/api/schemas';
+import {
+  IdResponseSchema, EmployeeDtoSchema, RoleDtoSchema, paginatedSchema,
+  SubordinateTreeNodeDtoSchema, ManagerDashboardResponseDtoSchema,
+} from '@shared/api/schemas';
+import type { EmployeeDto, RoleDto, SubordinateTreeNodeDto, ManagerDashboardResponseDto } from '@shared/api/schemas';
 
 export const employeeApi = {
   list: async (params: { page: number; limit: number; divisionId?: string; departmentId?: string; roleId?: string }) => {
@@ -20,8 +24,6 @@ export const employeeApi = {
 
   create: async (payload: {
     email: string;
-    password: string;
-    roleId: string;
     fullname: string;
     divisionId: string;
     employmentDate: string;
@@ -47,6 +49,16 @@ export const employeeApi = {
 
   dismiss: async (id: string): Promise<void> => {
     await api.delete(`/employees/${id}`);
+  },
+
+  getSubordinateTree: async (): Promise<SubordinateTreeNodeDto[]> => {
+    const { data } = await api.get('/employees/me/subordinates/tree');
+    return z.array(SubordinateTreeNodeDtoSchema).parse(data);
+  },
+
+  getTeamDashboard: async (): Promise<ManagerDashboardResponseDto> => {
+    const { data } = await api.get('/employees/me/team-dashboard');
+    return ManagerDashboardResponseDtoSchema.parse(data);
   },
 };
 

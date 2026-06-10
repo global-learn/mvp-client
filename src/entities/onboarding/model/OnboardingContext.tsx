@@ -32,6 +32,8 @@ interface OnboardingContextValue {
   completeStepWithFeedback: (assignmentId: string, stepId: string, feedbackText: string) => Promise<void>;
   /** Отправить сообщение */
   sendMessage: (assignmentId: string, text: string) => Promise<void>;
+  /** Загрузить историю чата и пометить сообщения прочитанными */
+  loadMessages: (assignmentId: string) => Promise<void>;
   /** Назначить шаблон сотруднику */
   assign: (
     templateId: string,
@@ -45,6 +47,8 @@ interface OnboardingContextValue {
     customSteps?: OnboardingStep[],
     dueDate?: string,
   ) => Promise<OnboardingAssignment>;
+  /** Отменить онбординг */
+  cancelAssignment: (assignmentId: string) => Promise<void>;
   /** Обновить шаги конкретного назначения (локально, нет endpoint) */
   updateSteps: (assignmentId: string, steps: OnboardingStep[]) => Promise<void>;
   /** Создать новый шаблон онбординга */
@@ -72,21 +76,38 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       const controller = canControl(user);
       const admin = isAdmin(user);
 
-      const [tmpls, mine, managed] = await Promise.all([
+      const [tmplsResult, mineResult, managedResult] = await Promise.allSettled([
         onboardingRealApi.getTemplates(),
         onboardingRealApi.getMyOnboardings(),
         controller ? onboardingRealApi.getManagedOnboardings() : Promise.resolve([]),
       ]);
+
+      const tmpls  = tmplsResult.status   === 'fulfilled' ? tmplsResult.value.data : [];
+      const mine    = mineResult.status    === 'fulfilled' ? mineResult.value    : [];
+      const managed = managedResult.status === 'fulfilled' ? managedResult.value : [];
+
+      if (tmplsResult.status === 'rejected')
+        console.error('[onboarding] templates load failed:', tmplsResult.reason);
+      if (mineResult.status === 'rejected')
+        console.error('[onboarding] mine load failed:', mineResult.reason);
+      if (managedResult.status === 'rejected')
+        console.error('[onboarding] managed load failed:', managedResult.reason);
 
       setTemplates(tmpls);
       setMyAssignments(mine);
       setManagedAssignments(managed);
 
       if (admin) {
-        const all = await onboardingRealApi.getAllOnboardings();
-        setAllAssignments(all);
+        try {
+          const all = await onboardingRealApi.getAllOnboardings();
+          setAllAssignments(all);
+        } catch (err) {
+          console.error('[onboarding] all-assignments load failed:', err);
+          const merged = [...mine, ...managed];
+          const seen = new Set<string>();
+          setAllAssignments(merged.filter(a => seen.has(a.id) ? false : (seen.add(a.id), true)));
+        }
       } else {
-        // Merge mine + managed, deduplicate by id
         const merged = [...mine, ...managed];
         const seen = new Set<string>();
         setAllAssignments(merged.filter(a => seen.has(a.id) ? false : (seen.add(a.id), true)));
@@ -136,6 +157,42 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       setAllAssignments(prev => prev.map(patch));
     } catch (err) {
       toast.apiError(err, 'Не удалось отправить сообщение');
+      throw err;
+    }
+  };
+
+  const loadMessages = async (assignmentId: string) => {
+    const assignment =
+      [...myAssignments, ...managedAssignments, ...allAssignments].find(a => a.id === assignmentId);
+    if (!assignment) return;
+    try {
+      const nameMap: Record<string, string> = {
+        [assignment.employeeId]: assignment.employeeName || assignment.employeeId,
+        [assignment.assignedBy]: assignment.assignedByName || assignment.assignedBy,
+      };
+      const msgs = await onboardingRealApi.getChatMessages(assignmentId, nameMap);
+      const applyMsgs = (list: OnboardingAssignment[]) =>
+        list.map(a => a.id === assignmentId ? { ...a, messages: msgs } : a);
+      setMyAssignments(applyMsgs);
+      setManagedAssignments(applyMsgs);
+      setAllAssignments(applyMsgs);
+      onboardingRealApi.markMessagesRead(assignmentId).catch(() => {});
+    } catch {
+      // non-fatal — chat stays empty rather than crashing the view
+    }
+  };
+
+  const cancelAssignment = async (assignmentId: string) => {
+    try {
+      await onboardingRealApi.cancel(assignmentId);
+      const removeOrCancel = (list: OnboardingAssignment[]) =>
+        list.map(a => a.id === assignmentId ? { ...a, status: 'cancelled' as const } : a);
+      setMyAssignments(prev => removeOrCancel(prev));
+      setManagedAssignments(prev => removeOrCancel(prev));
+      setAllAssignments(prev => removeOrCancel(prev));
+      toast.success('Онбординг отменён');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отменить онбординг');
       throw err;
     }
   };
@@ -198,7 +255,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       const { id } = await onboardingRealApi.createTemplate({
         name:        dto.title,
         description: dto.description,
-        positionId:  dto.positionId!,
+        positionId:  dto.positionId || undefined,
         divisionId:  dto.targetDivisionId!,
         steps:       buildStepsPayload(dto.steps),
       });
@@ -251,7 +308,9 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         isLoading,
         completeStepWithFeedback,
         sendMessage,
+        loadMessages,
         assign,
+        cancelAssignment,
         updateSteps,
         createTemplate,
         updateTemplate,

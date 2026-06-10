@@ -421,3 +421,79 @@
   transition: background 0.15s;
 }
 .retryBtn:hover { background: var(--secondary); }
+
+/* ── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  /* Fullscreen overlay below the mobile topBar (52px) */
+  .playerPage {
+    position: fixed;
+    top: 52px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: 0;
+    height: auto;
+    z-index: 30;
+    background: var(--background);
+  }
+
+  .header { padding: 0.75rem 1rem; gap: 0.75rem; }
+  .headerBack { max-width: 260px; font-size: 0.875rem; }
+  .headerBar { width: 100px; }
+
+  /* Sidebar becomes a vertical strip at the top */
+  .layout { flex-direction: column; }
+
+  .sidebar {
+    width: 100%;
+    height: 170px;
+    flex-shrink: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sideModule { margin-bottom: 0.5rem; }
+
+  .content {
+    flex: 1;
+    min-height: 0;
+    padding: 1.25rem 1rem 1rem;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .header {
+    padding: 0.625rem 0.875rem;
+    flex-wrap: wrap;
+  }
+
+  .headerBack { max-width: 200px; font-size: 0.8125rem; }
+  .headerBar { width: 80px; }
+
+  .nav { flex-wrap: wrap; gap: 0.5rem; }
+  .navBtn {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.8125rem;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .stepTitle { font-size: 1.25rem; }
+
+  .completeRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .completeBtn { text-align: center; }
+
+  .resultBtns { flex-direction: column; }
+  .retryBtn { text-align: center; }
+
+  .question { padding: 1rem; }
+}

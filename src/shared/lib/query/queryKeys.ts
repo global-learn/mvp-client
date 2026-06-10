@@ -30,10 +30,12 @@ export const queryKeys = {
   },
 
   employees: {
-    all:          ['employees'] as const,
-    list:         (params?: { page?: number; limit?: number; divisionId?: string }) => ['employees', 'list', params] as const,
-    detail:       (id: string) => ['employees', id] as const,
-    subordinates: ['employees', 'subordinates'] as const,
+    all:              ['employees'] as const,
+    list:             (params?: { page?: number; limit?: number; divisionId?: string }) => ['employees', 'list', params] as const,
+    detail:           (id: string) => ['employees', id] as const,
+    subordinates:     ['employees', 'subordinates'] as const,
+    subordinateTree:  ['employees', 'subordinate-tree'] as const,
+    teamDashboard:    ['employees', 'team-dashboard'] as const,
   },
 
   courses: {
@@ -59,6 +61,11 @@ export const queryKeys = {
     managedAssignments: (userId: string) => ['onboarding', 'assignments', 'managed', userId] as const,
     assignment:         (id: string) => ['onboarding', 'assignments', id] as const,
     messages:           (assignmentId: string) => ['onboarding', 'messages', assignmentId] as const,
+  },
+
+  certificates: {
+    all:  ['certificates'] as const,
+    mine: () => ['certificates', 'mine'] as const,
   },
 
   company: {

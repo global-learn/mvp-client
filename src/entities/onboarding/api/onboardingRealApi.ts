@@ -5,7 +5,8 @@ import {
   OnboardingTemplateSummaryDtoSchema,
   OnboardingTemplateFullDtoSchema,
   OnboardingAssignmentDtoSchema,
-  OnboardingChatMessageDtoSchema,
+  OnboardingAssignmentListSchema,
+  ChatMessagesPageDtoSchema,
   type OnboardingAssignmentDto,
 } from '@shared/api/schemas';
 import type {
@@ -20,6 +21,7 @@ import type {
   OnboardingAssignment,
   OnboardingStep,
   OnboardingMessage,
+  OnboardingStepType,
   StepFeedback,
 } from '../model/types';
 import type { EmployeeDto } from '@shared/api/schemas';
@@ -85,7 +87,7 @@ function mapAssignmentDto(
     dueDate:        dto.endDate,
     completedSteps,
     feedbacks,
-    status:         dto.status === 'COMPLETED' ? 'completed' : 'in_progress',
+    status:         dto.status === 'COMPLETED' ? 'completed' : dto.status === 'CANCELLED' ? 'cancelled' : 'in_progress',
     startedAt:      dto.startDate,
     completedAt:    dto.completedAt,
     messages:       [],
@@ -132,23 +134,46 @@ export const onboardingRealApi = {
     return IdResponseSchema.parse(data).id;
   },
 
+  markMessagesRead: async (onboardingId: string): Promise<void> => {
+    await api.post(`/onboardings/${onboardingId}/chat/messages/read`);
+  },
+
+  cancel: async (onboardingId: string): Promise<void> => {
+    await api.post(`/onboardings/${onboardingId}/cancel`);
+  },
+
   // ── Read operations ───────────────────────────────────────────
 
-  getTemplates: async (): Promise<OnboardingTemplate[]> => {
-    const { data } = await api.get('/onboarding/templates', { params: { page: 1, limit: 200 } });
-    const dtos = paginatedSchema(OnboardingTemplateSummaryDtoSchema).parse(data).data;
-    return dtos.map(dto => ({
-      id:               dto.id,
-      title:            dto.name,
-      description:      dto.description,
-      positionId:       dto.positionId,
-      targetDivisionId: dto.divisionId,
-      steps:            [],
-      stepCount:        dto.stepCount,
-      createdBy:        '',
-      status:           'active' as const,
-      createdAt:        dto.createdAt,
-    }));
+  getTemplates: async (params?: {
+    divisionId?: string;
+    positionId?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ data: OnboardingTemplate[]; count: number }> => {
+    const { data } = await api.get('/onboarding/templates', {
+      params: {
+        page:       params?.page  ?? 1,
+        limit:      params?.limit ?? 200,
+        divisionId: params?.divisionId,
+        positionId: params?.positionId,
+      },
+    });
+    const parsed = paginatedSchema(OnboardingTemplateSummaryDtoSchema).parse(data);
+    return {
+      count: parsed.count,
+      data:  parsed.data.map(dto => ({
+        id:               dto.id,
+        title:            dto.name,
+        description:      dto.description,
+        positionId:       dto.positionId ?? undefined,
+        targetDivisionId: dto.divisionId ?? undefined,
+        steps:            [],
+        stepCount:        dto.stepCount,
+        createdBy:        '',
+        status:           'active' as const,
+        createdAt:        dto.createdAt,
+      })),
+    };
   },
 
   getTemplateById: async (id: string): Promise<OnboardingTemplate> => {
@@ -158,7 +183,7 @@ export const onboardingRealApi = {
       id:               dto.id,
       title:            dto.name,
       description:      dto.description,
-      positionId:       dto.positionId,
+      positionId:       dto.positionId ?? undefined,
       targetDivisionId: dto.divisionId,
       steps:            dto.steps.map(s => ({
         id:                         s.id,
@@ -183,13 +208,15 @@ export const onboardingRealApi = {
 
   getMyOnboardings: async (): Promise<OnboardingAssignment[]> => {
     const { data } = await api.get('/onboardings/mine', { params: { page: 1, limit: 200 } });
-    const dtos = paginatedSchema(OnboardingAssignmentDtoSchema).parse(data).data;
+    // endpoint returns plain array, not paginated object
+    const dtos = OnboardingAssignmentListSchema.parse(data);
     return mapAssignmentList(dtos);
   },
 
   getManagedOnboardings: async (): Promise<OnboardingAssignment[]> => {
     const { data } = await api.get('/onboardings/assigned-by-me', { params: { page: 1, limit: 200 } });
-    const dtos = paginatedSchema(OnboardingAssignmentDtoSchema).parse(data).data;
+    // endpoint returns plain array, not paginated object
+    const dtos = OnboardingAssignmentListSchema.parse(data);
     return mapAssignmentList(dtos);
   },
 
@@ -206,15 +233,16 @@ export const onboardingRealApi = {
     return mapAssignmentDto(dto, empMap);
   },
 
-  getChatMessages: async (onboardingId: string): Promise<OnboardingMessage[]> => {
+  getChatMessages: async (
+    onboardingId: string,
+    nameMap?: Record<string, string>,
+  ): Promise<OnboardingMessage[]> => {
     const { data } = await api.get(`/onboardings/${onboardingId}/chat/messages`, { params: { limit: 200 } });
-    const dtos = (Array.isArray(data) ? data : data.data ?? []).map(
-      (m: unknown) => OnboardingChatMessageDtoSchema.parse(m),
-    );
+    const dtos = ChatMessagesPageDtoSchema.parse(data).messages;
     return dtos.map(m => ({
       id:         m.id,
       senderId:   m.senderId,
-      senderName: m.senderId,
+      senderName: nameMap?.[m.senderId] ?? m.senderId,
       text:       m.body,
       sentAt:     m.createdAt,
     }));

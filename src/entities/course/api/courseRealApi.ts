@@ -11,6 +11,7 @@ import {
   TestDefinitionDtoSchema,
   TestAttemptResultSchema,
   TestAttemptSummarySchema,
+  CertificateDtoSchema,
   paginatedSchema,
   type CourseApplicationDto,
   type CourseAnalyticsDto,
@@ -21,6 +22,7 @@ import {
   type TestDefinitionDto,
   type TestAttemptResult,
   type TestAttemptSummary,
+  type CertificateDto,
 } from '@shared/api/schemas';
 import type { Course, CourseStatus, Enrollment, EnrollmentStatus, Module, Step, StepItem, TestQuestion } from '../model/types';
 
@@ -179,7 +181,6 @@ export function mapEnrollmentDto(dto: EnrollmentDto, totalSteps: number, progres
 // ── API calls ────────────────────────────────────────────────────
 
 const CourseSummaryPaginatedSchema = paginatedSchema(CourseSummaryDtoSchema);
-const CoursePaginatedSchema        = paginatedSchema(CourseDtoSchema);
 const EnrollmentPaginatedSchema    = paginatedSchema(EnrollmentDtoSchema);
 
 export const courseRealApi = {
@@ -455,5 +456,20 @@ export const enrollmentWriteApi = {
   async getById(id: string): Promise<EnrollmentDto> {
     const { data } = await api.get(`/enrollments/${id}`);
     return EnrollmentDtoSchema.parse(data);
+  },
+};
+
+
+// ── Certificate API ───────────────────────────────────────────────
+
+export const certificateApi = {
+  async getMine(): Promise<CertificateDto[]> {
+    const { data } = await api.get('/me/certificates');
+    return z.array(CertificateDtoSchema).parse(data);
+  },
+
+  async getById(id: string): Promise<CertificateDto> {
+    const { data } = await api.get(`/certificates/${id}`);
+    return CertificateDtoSchema.parse(data);
   },
 };

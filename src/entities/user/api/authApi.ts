@@ -21,7 +21,6 @@ export const authApi = {
   register: async (payload: {
     email: string;
     password: string;
-    roleId: string;
     fullname: string;
     divisionId: string;
     employmentDate: string;

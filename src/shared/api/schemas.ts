@@ -56,7 +56,6 @@ export const LoginRequestSchema = z.object({
 export const RegisterRequestSchema = z.object({
   email:          z.string().email(),
   password:       z.string().min(4).max(30),
-  roleId:         z.string().uuid(),
   fullname:       z.string().min(1).max(255),
   divisionId:     z.string().uuid(),
   employmentDate: z.string(),
@@ -190,7 +189,7 @@ export const CreateOnboardingStepRequestSchema = z.object({
 export const CreateOnboardingTemplateRequestSchema = z.object({
   name:        z.string().min(1).max(255),
   description: z.string(),
-  positionId:  z.string().uuid(),
+  positionId:  z.string().uuid().optional(),
   divisionId:  z.string().uuid(),
   coverId:     z.string().uuid().optional(),
   steps:       z.array(CreateOnboardingStepRequestSchema).min(1),
@@ -476,7 +475,7 @@ export const OnboardingTemplateSummaryDtoSchema = z.object({
   updatedAt:   z.string().optional(),
   name:        z.string(),
   description: z.string().nullable().optional().transform(v => v ?? ''),
-  positionId:  z.string(),
+  positionId:  z.string().optional().nullable(),
   divisionId:  z.string(),
   coverId:     z.string().optional().nullable(),
   stepCount:   z.number().default(0),
@@ -505,7 +504,7 @@ export const OnboardingTemplateFullDtoSchema = z.object({
   createdAt:   z.string(),
   name:        z.string(),
   description: z.string().nullable().optional().transform(v => v ?? ''),
-  positionId:  z.string(),
+  positionId:  z.string().optional().nullable(),
   divisionId:  z.string(),
   coverId:     z.string().optional().nullable(),
   steps:       z.array(OnboardingTemplateStepDtoSchema).default([]),
@@ -515,11 +514,11 @@ export const OnboardingAssignmentStepDtoSchema = z.object({
   id:                   z.string(),
   position:             z.number(),
   name:                 z.string(),
-  description:          z.string(),
+  description:          z.string().nullable().optional().transform(v => v ?? ''),
   type:                 OnboardingStepTypeDtoSchema,
   courseId:             z.string().optional(),
-  recommendedStartDate: z.string(),
-  recommendedEndDate:   z.string(),
+  recommendedStartDate: z.string().nullable().optional().transform(v => v ?? ''),
+  recommendedEndDate:   z.string().nullable().optional().transform(v => v ?? ''),
   feedbackText:         z.string().optional(),
   completedAt:          z.string().optional(),
   feedbackOptions:      z.array(z.object({ id: z.string(), label: z.string() })),
@@ -530,7 +529,7 @@ export const OnboardingAssignmentDtoSchema = z.object({
   id:           z.string(),
   createdAt:    z.string(),
   name:         z.string(),
-  description:  z.string(),
+  description:  z.string().nullable().optional().transform(v => v ?? ''),
   templateId:   z.string().optional(),
   assignedById: z.string(),
   assignedToId: z.string(),
@@ -538,8 +537,11 @@ export const OnboardingAssignmentDtoSchema = z.object({
   startDate:    z.string(),
   endDate:      z.string(),
   completedAt:  z.string().optional(),
-  steps:        z.array(OnboardingAssignmentStepDtoSchema),
+  steps:        z.array(OnboardingAssignmentStepDtoSchema).default([]),
 });
+
+// /onboardings/mine и /onboardings/assigned-by-me возвращают plain array (не paginated)
+export const OnboardingAssignmentListSchema = z.array(OnboardingAssignmentDtoSchema);
 
 export const OnboardingChatMessageDtoSchema = z.object({
   id:        z.string(),
@@ -547,6 +549,11 @@ export const OnboardingChatMessageDtoSchema = z.object({
   body:      z.string(),
   readAt:    z.string().optional(),
   createdAt: z.string(),
+});
+
+export const ChatMessagesPageDtoSchema = z.object({
+  messages:   z.array(OnboardingChatMessageDtoSchema),
+  nextCursor: z.string().nullable().optional(),
 });
 
 export type OnboardingTemplateSummaryDto  = z.infer<typeof OnboardingTemplateSummaryDtoSchema>;
@@ -589,6 +596,103 @@ export const RoleDtoSchema = z.object({
 });
 
 export type RoleDto = z.infer<typeof RoleDtoSchema>;
+
+// ── Team / Subordinates ───────────────────────────────────────────
+
+export const SubordinateTreeEmployeeDtoSchema = z.object({
+  id:          z.string(),
+  fullname:    z.string(),
+  email:       z.string(),
+  avatarId:    z.string().nullable().optional(),
+  divisionId:  z.string(),
+  divisionName: z.string(),
+});
+
+export type SubordinateTreeEmployeeDto = z.infer<typeof SubordinateTreeEmployeeDtoSchema>;
+
+export type SubordinateTreeNodeDto = {
+  positionId:   string;
+  positionName: string;
+  employees:    SubordinateTreeEmployeeDto[];
+  children:     SubordinateTreeNodeDto[];
+};
+
+export const SubordinateTreeNodeDtoSchema: z.ZodType<SubordinateTreeNodeDto> = z.lazy(() =>
+  z.object({
+    positionId:   z.string(),
+    positionName: z.string(),
+    employees:    z.array(SubordinateTreeEmployeeDtoSchema),
+    children:     z.array(SubordinateTreeNodeDtoSchema),
+  }),
+);
+
+export const SubordinateEnrollmentDtoSchema = z.object({
+  enrollmentId:  z.string(),
+  courseId:      z.string(),
+  courseName:    z.string(),
+  status:        z.string(),
+  completionRate: z.number(),
+  completedSteps: z.number(),
+  totalSteps:    z.number(),
+  startedAt:     z.string().optional().nullable(),
+  completedAt:   z.string().optional().nullable(),
+});
+
+export type SubordinateEnrollmentDto = z.infer<typeof SubordinateEnrollmentDtoSchema>;
+
+export const SubordinateOnboardingDtoSchema = z.object({
+  onboardingId:   z.string(),
+  name:           z.string(),
+  status:         z.string(),
+  completedSteps: z.number(),
+  totalSteps:     z.number(),
+  startDate:      z.string().optional().nullable(),
+  endDate:        z.string().optional().nullable(),
+});
+
+export type SubordinateOnboardingDto = z.infer<typeof SubordinateOnboardingDtoSchema>;
+
+export const SubordinateDashboardItemDtoSchema = z.object({
+  id:             z.string(),
+  fullname:       z.string(),
+  positionId:     z.string().optional().nullable(),
+  positionName:   z.string().optional().nullable(),
+  divisionId:     z.string(),
+  divisionName:   z.string(),
+  enrollments:    z.array(SubordinateEnrollmentDtoSchema),
+  activeOnboarding: SubordinateOnboardingDtoSchema.optional().nullable(),
+});
+
+export type SubordinateDashboardItemDto = z.infer<typeof SubordinateDashboardItemDtoSchema>;
+
+export const ManagerDashboardSummaryDtoSchema = z.object({
+  totalSubordinates:    z.number(),
+  activeEnrollments:    z.number(),
+  completedEnrollments: z.number(),
+  activeOnboardings:    z.number(),
+  completedOnboardings: z.number(),
+});
+
+export const ManagerDashboardResponseDtoSchema = z.object({
+  summary:      ManagerDashboardSummaryDtoSchema,
+  subordinates: z.array(SubordinateDashboardItemDtoSchema),
+});
+
+export type ManagerDashboardResponseDto = z.infer<typeof ManagerDashboardResponseDtoSchema>;
+
+// ── Certificates ─────────────────────────────────────────────────
+
+export const CertificateDtoSchema = z.object({
+  id:           z.string(),
+  enrollmentId: z.string(),
+  employeeId:   z.string(),
+  employeeName: z.string(),
+  courseId:     z.string(),
+  courseName:   z.string(),
+  issuedAt:     z.string(),
+});
+
+export type CertificateDto = z.infer<typeof CertificateDtoSchema>;
 
 // ── Test attempts ─────────────────────────────────────────────────
 

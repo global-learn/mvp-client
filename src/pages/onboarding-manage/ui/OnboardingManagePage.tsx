@@ -2,15 +2,15 @@ import { useRef, useState, useEffect } from 'react';
 import { isAxiosError } from 'axios';
 import {
   UserPlus, X, Send, CheckCircle2, MessageSquare, ClipboardList,
-  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen, LayoutTemplate, Search,
+  Plus, Trash2, ChevronUp, ChevronDown, Pencil, BookOpen, LayoutTemplate, Search, XCircle,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
+import { onboardingRealApi } from '@entities/onboarding/api/onboardingRealApi';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useUser } from '@entities/user/model/UserContext';
 import type { OnboardingAssignment, OnboardingStep, OnboardingStepType, OnboardingTemplate } from '@entities/onboarding/model/types';
 import { STEP_TYPE_LABELS, calcOnboardingProgress } from '@entities/onboarding/model/types';
-import { useDivisionsQuery } from '@entities/company/api/hooks';
-import { usePositionsQuery } from '@entities/company/api/hooks';
+import { useDepartmentsQuery, useDivisionsQuery, usePositionsQuery } from '@entities/company/api/hooks';
 import { employeeApi } from '@entities/user/api/employeeApi';
 import styles from './OnboardingManage.module.css';
 
@@ -30,6 +30,10 @@ function DetailChat({ assignment }: { assignment: OnboardingAssignment }) {
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [assignment.messages.length]);
+
   const handleSend = async () => {
     const msg = text.trim();
     if (!msg || sending) return;
@@ -37,7 +41,6 @@ function DetailChat({ assignment }: { assignment: OnboardingAssignment }) {
     setText('');
     await sendMessage(assignment.id, msg);
     setSending(false);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
   };
 
   return (
@@ -51,7 +54,7 @@ function DetailChat({ assignment }: { assignment: OnboardingAssignment }) {
           <div className={styles.chatEmptyMsg}>Нет сообщений</div>
         ) : (
           assignment.messages.map(msg => {
-            const isMe = msg.senderId === user.id || msg.senderId === 'user-current';
+            const isMe = msg.senderId === user.id || msg.senderId === user.employee?.id;
             return (
               <div key={msg.id} className={`${styles.message} ${isMe ? styles.messageMe : styles.messageThem}`}>
                 {!isMe && <span className={styles.messageSender}>{msg.senderName}</span>}
@@ -90,9 +93,20 @@ function DetailChat({ assignment }: { assignment: OnboardingAssignment }) {
 
 // ── Детальная панель сотрудника ──────────────────────────────────
 function DetailPanel({ assignment }: { assignment: OnboardingAssignment }) {
+  const { cancelAssignment } = useOnboarding();
   const progress = calcOnboardingProgress(assignment);
   const isDone = assignment.status === 'completed';
+  const isCancelled = assignment.status === 'cancelled';
   const done = new Set(assignment.completedSteps);
+
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    try { await cancelAssignment(assignment.id); }
+    finally { setCancelling(false); setCancelConfirm(false); }
+  };
 
   return (
     <div className={styles.detail}>
@@ -112,12 +126,29 @@ function DetailPanel({ assignment }: { assignment: OnboardingAssignment }) {
             <span className={styles.dot}>·</span>
             <span>{assignment.templateTitle}</span>
             <span className={styles.dot}>·</span>
-            <span>Начат {assignment.startedAt}</span>
+            <span>Начат {new Date(assignment.startedAt).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
             <span className={styles.dot}>·</span>
-            <span style={{ fontWeight: 600, color: isDone ? '#16a34a' : 'var(--foreground)' }}>
-              {progress}%
+            <span style={{ fontWeight: 600, color: isDone ? '#16a34a' : isCancelled ? 'var(--muted-foreground)' : 'var(--foreground)' }}>
+              {isCancelled ? 'Отменён' : `${progress}%`}
             </span>
           </div>
+          {!isDone && !isCancelled && (
+            <div className={styles.detailCancelRow}>
+              {!cancelConfirm ? (
+                <button className={styles.detailCancelBtn} onClick={() => setCancelConfirm(true)}>
+                  <XCircle size={13} /> Отменить онбординг
+                </button>
+              ) : (
+                <>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--muted-foreground)' }}>Отменить?</span>
+                  <button className={styles.detailCancelBtnConfirm} onClick={() => void handleCancel()} disabled={cancelling}>
+                    {cancelling ? '...' : 'Да'}
+                  </button>
+                  <button className={styles.detailCancelBtnAbort} onClick={() => setCancelConfirm(false)}>Нет</button>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className={styles.detailSteps}>
@@ -434,58 +465,105 @@ interface AssignModalProps {
 
 function AssignModal({ onClose }: AssignModalProps) {
   const { templates, assign } = useOnboarding();
-  const [templateId, setTemplateId] = useState(templates[0]?.id ?? '');
-  const [empId, setEmpId] = useState('');
-  const [steps, setSteps] = useState<OnboardingStep[]>([]);
-  const [dueDate, setDueDate] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const { user } = useUser();
 
-  const [employees, setEmployees] = useState<{ id: string; name: string; email: string; divisionName: string; divisionId: string; departmentId: string; departmentName: string }[]>([]);
+  const { data: deptPage } = useDepartmentsQuery({ limit: 200 });
+  const { data: divPage }  = useDivisionsQuery({ limit: 200 });
+  const departments  = deptPage?.data ?? [];
+  const allDivisions = divPage?.data ?? [];
 
+  const [divisionId, setDivisionId]     = useState('');
+  const [empId, setEmpId]               = useState('');
+  const [templateId, setTemplateId]     = useState('');
+  const [steps, setSteps]               = useState<OnboardingStep[]>([]);
+  const [stepsLoading, setStepsLoading] = useState(false);
+  const [dueDate, setDueDate]           = useState('');
+  const [submitting, setSubmitting]     = useState(false);
+
+  type EmpRow = { id: string; name: string; email: string; divisionId: string; departmentId: string; departmentName: string };
+  const [employees, setEmployees] = useState<EmpRow[]>([]);
+  const [empLoading, setEmpLoading] = useState(false);
+
+  // Шаблоны для выбранного отдела: с targetDivisionId === divisionId или без привязки
+  const availableTemplates = divisionId
+    ? templates.filter(t => !t.targetDivisionId || t.targetDivisionId === divisionId)
+    : [];
+
+  // Когда меняется отдел — перезагружаем сотрудников и сбрасываем выборки
   useEffect(() => {
-    void employeeApi.list({ page: 1, limit: 200 }).then(res => {
-      setEmployees(res.data.map(e => ({
-        id:             e.id,
-        name:           e.fullname,
-        email:          e.email,
-        divisionId:     e.divisionId,
-        divisionName:   e.divisionId,
-        departmentId:   e.department.id,
-        departmentName: e.department.name,
-      })));
-    });
-  }, []);
+    if (!divisionId) { setEmployees([]); setEmpId(''); setTemplateId(''); return; }
+    let cancelled = false;
+    setEmpLoading(true);
+    setEmpId('');
 
+    employeeApi.list({ page: 1, limit: 200, divisionId })
+      .then(res => {
+        if (cancelled) return;
+        const selfId = user.employee?.id;
+        const rows = res.data
+          .filter(e => e.id !== selfId)
+          .map(e => ({
+            id:             e.id,
+            name:           e.fullname,
+            email:          e.email,
+            divisionId:     e.divisionId,
+            departmentId:   e.department.id,
+            departmentName: e.department.name,
+          }));
+        setEmployees(rows);
+        if (rows.length > 0) setEmpId(rows[0].id);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setEmpLoading(false); });
+    return () => { cancelled = true; };
+  }, [divisionId, user.employee?.id]);
+
+  // Авто-выбор первого подходящего шаблона при смене отдела
   useEffect(() => {
-    if (employees.length > 0 && !empId) setEmpId(employees[0].id);
-  }, [employees, empId]);
+    const tmplsForDiv = divisionId
+      ? templates.filter(t => !t.targetDivisionId || t.targetDivisionId === divisionId)
+      : [];
+    setTemplateId(tmplsForDiv[0]?.id ?? '');
+  }, [divisionId, templates]);
 
-  // Sync steps when template changes
+  // Загрузка шагов шаблона
   useEffect(() => {
-    const tmpl = templates.find(t => t.id === templateId);
-    setSteps(tmpl ? tmpl.steps.map(s => ({ ...s })) : []);
-  }, [templateId, templates]);
+    if (!templateId) { setSteps([]); return; }
+    let cancelled = false;
+    setStepsLoading(true);
+    onboardingRealApi.getTemplateById(templateId)
+      .then(full => { if (!cancelled) setSteps(full.steps.map(s => ({ ...s }))); })
+      .catch(() => { if (!cancelled) setSteps([]); })
+      .finally(() => { if (!cancelled) setStepsLoading(false); });
+    return () => { cancelled = true; };
+  }, [templateId]);
 
-  const selectedEmp = employees.find(e => e.id === empId);
+  const selectedEmp  = employees.find(e => e.id === empId);
+  const selectedTmpl = availableTemplates.find(t => t.id === templateId);
 
   const handleSubmit = async () => {
-    if (!templateId || !empId || steps.length === 0 || !selectedEmp) return;
+    if (!selectedEmp || !templateId || steps.length === 0) return;
     setSubmitting(true);
-    await assign(
-      templateId,
-      selectedEmp.id,
-      selectedEmp.name,
-      selectedEmp.email,
-      selectedEmp.divisionId,
-      selectedEmp.divisionName,
-      selectedEmp.departmentId,
-      selectedEmp.departmentName,
-      steps,
-      dueDate || undefined,
-    );
-    setSubmitting(false);
-    onClose();
+    try {
+      await assign(
+        templateId,
+        selectedEmp.id,
+        selectedEmp.name,
+        selectedEmp.email,
+        selectedEmp.divisionId,
+        '',
+        selectedEmp.departmentId,
+        selectedEmp.departmentName,
+        steps,
+        dueDate || undefined,
+      );
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  const canSubmit = !!divisionId && !!empId && !!templateId && !stepsLoading && steps.length > 0 && !submitting;
 
   return (
     <div className={styles.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
@@ -496,29 +574,83 @@ function AssignModal({ onClose }: AssignModalProps) {
         </div>
 
         <div className={styles.modalBody}>
+
+          {/* ── Шаг 1: Отдел ── */}
           <label className={styles.label}>
-            Сотрудник
-            <select className={styles.select} value={empId} onChange={e => setEmpId(e.target.value)}>
-              {employees.length === 0
-                ? <option value="">Загрузка...</option>
-                : employees.map(e => (
-                    <option key={e.id} value={e.id}>{e.name} — {e.email}</option>
-                  ))
+            Отдел *
+            <select
+              className={styles.select}
+              value={divisionId}
+              onChange={e => setDivisionId(e.target.value)}
+            >
+              <option value="">Выберите отдел...</option>
+              {departments.map(dept => {
+                const deptDivs = allDivisions.filter(d => d.departmentId === dept.id);
+                if (deptDivs.length === 0) return null;
+                return (
+                  <optgroup key={dept.id} label={dept.name}>
+                    {deptDivs.map(d => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+          </label>
+
+          {/* ── Шаг 2: Сотрудник ── */}
+          <label className={styles.label}>
+            Сотрудник *
+            <select
+              className={styles.select}
+              value={empId}
+              onChange={e => setEmpId(e.target.value)}
+              disabled={!divisionId || empLoading || employees.length === 0}
+            >
+              {!divisionId
+                ? <option value="">Сначала выберите отдел</option>
+                : empLoading
+                  ? <option value="">Загрузка сотрудников...</option>
+                  : employees.length === 0
+                    ? <option value="">Нет доступных сотрудников</option>
+                    : employees.map(e => (
+                        <option key={e.id} value={e.id}>{e.name}</option>
+                      ))
               }
             </select>
           </label>
+          {selectedEmp && (
+            <p className={styles.fieldHint}>{selectedEmp.email} · {selectedEmp.departmentName}</p>
+          )}
 
+          {/* ── Шаг 3: Шаблон ── */}
           <label className={styles.label}>
-            Шаблон онбординга
-            <select className={styles.select} value={templateId} onChange={e => setTemplateId(e.target.value)}>
-              {templates.map(t => (
-                <option key={t.id} value={t.id}>{t.title}</option>
-              ))}
+            Шаблон онбординга *
+            <select
+              className={styles.select}
+              value={templateId}
+              onChange={e => setTemplateId(e.target.value)}
+              disabled={!divisionId}
+            >
+              {!divisionId
+                ? <option value="">Сначала выберите отдел</option>
+                : availableTemplates.length === 0
+                  ? <option value="">Нет шаблонов для этого отдела</option>
+                  : availableTemplates.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.title} · {t.stepCount ?? t.steps.length} шагов
+                      </option>
+                    ))
+              }
             </select>
           </label>
+          {selectedTmpl?.description && (
+            <p className={styles.fieldHint}>{selectedTmpl.description}</p>
+          )}
 
+          {/* ── Шаг 4: Срок ── */}
           <label className={styles.label}>
-            Срок завершения онбординга
+            Срок завершения
             <input
               type="date"
               className={styles.select}
@@ -528,7 +660,12 @@ function AssignModal({ onClose }: AssignModalProps) {
             />
           </label>
 
-          <StepEditor steps={steps} onChange={setSteps} />
+          {/* ── Шаги шаблона ── */}
+          {!!templateId && (
+            stepsLoading
+              ? <div className={styles.stepsLoadingHint}>Загрузка шагов...</div>
+              : <StepEditor steps={steps} onChange={setSteps} />
+          )}
         </div>
 
         <div className={styles.modalActions}>
@@ -536,7 +673,7 @@ function AssignModal({ onClose }: AssignModalProps) {
           <button
             className={styles.submitBtn}
             onClick={() => void handleSubmit()}
-            disabled={!templateId || !empId || steps.length === 0 || submitting}
+            disabled={!canSubmit}
           >
             {submitting ? 'Назначаем...' : 'Назначить'}
           </button>
@@ -570,7 +707,7 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
   const [stepsOpen, setStepsOpen] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = title.trim().length > 0 && divisionId && positionId && steps.length > 0 && !submitting;
+  const canSubmit = title.trim().length > 0 && !!divisionId && steps.length > 0 && !submitting;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -646,9 +783,9 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
             </label>
 
             <label className={styles.label} style={{ flex: 1 }}>
-              Должность *
+              Должность
               <select className={styles.select} value={positionId} onChange={e => setPositionId(e.target.value)}>
-                <option value="">Выберите должность...</option>
+                <option value="">Общая (все должности)</option>
                 {positions.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
@@ -695,17 +832,48 @@ function TemplateModal({ initial, onClose }: TemplateModalProps) {
 }
 
 // ── Вкладка «Шаблоны» ───────────────────────────────────────────
+const TMPL_LIMIT = 10;
+
 function TemplatesTab() {
-  const { templates } = useOnboarding();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<OnboardingTemplate | null>(null);
+  const { data: divPage } = useDivisionsQuery({ limit: 200 });
+  const { data: posPage } = usePositionsQuery({ limit: 200 });
+  const divisions = divPage?.data ?? [];
+  const positions = posPage?.data ?? [];
+
+  const [filterDivId, setFilterDivId] = useState('');
+  const [filterPosId, setFilterPosId] = useState('');
+  const [page, setPage]               = useState(1);
+  const [refreshKey, setRefreshKey]   = useState(0);
+
+  const [tmplData, setTmplData]       = useState<{ data: OnboardingTemplate[]; count: number }>({ data: [], count: 0 });
+  const [tmplLoading, setTmplLoading] = useState(false);
+
+  const [createOpen, setCreateOpen]   = useState(false);
+  const [editTarget, setEditTarget]   = useState<OnboardingTemplate | null>(null);
   const [loadingEditId, setLoadingEditId] = useState<string | null>(null);
+
+  const totalPages = Math.max(1, Math.ceil(tmplData.count / TMPL_LIMIT));
+
+  useEffect(() => {
+    setTmplLoading(true);
+    onboardingRealApi.getTemplates({
+      divisionId: filterDivId || undefined,
+      positionId: filterPosId || undefined,
+      page,
+      limit: TMPL_LIMIT,
+    })
+      .then(result => setTmplData(result))
+      .catch(() => {})
+      .finally(() => setTmplLoading(false));
+  }, [filterDivId, filterPosId, page, refreshKey]);
+
+  const handleFilterDivChange = (id: string) => { setFilterDivId(id); setPage(1); };
+  const handleFilterPosChange = (id: string) => { setFilterPosId(id); setPage(1); };
 
   const handleEditClick = async (tmpl: OnboardingTemplate) => {
     setLoadingEditId(tmpl.id);
     try {
-      const full = await import('@entities/onboarding/api/onboardingRealApi')
-        .then(m => m.onboardingRealApi.getTemplateById(tmpl.id));
+      const full = await onboardingRealApi.getTemplateById(tmpl.id);
       setEditTarget(full);
     } catch {
       setEditTarget(tmpl);
@@ -714,25 +882,56 @@ function TemplatesTab() {
     }
   };
 
+  const afterModalClose = () => {
+    setCreateOpen(false);
+    setEditTarget(null);
+    setRefreshKey(k => k + 1);
+  };
+
   return (
     <div>
-      <div className={styles.templatesHeader}>
-        <span style={{ fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
-          {templates.length} шаблонов
+      {/* ── Фильтры ── */}
+      <div className={styles.filterBar}>
+        <select
+          className={styles.filterSelect}
+          value={filterDivId}
+          onChange={e => handleFilterDivChange(e.target.value)}
+        >
+          <option value="">Все отделы</option>
+          {divisions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+        </select>
+
+        <select
+          className={styles.filterSelect}
+          value={filterPosId}
+          onChange={e => handleFilterPosChange(e.target.value)}
+        >
+          <option value="">Все должности</option>
+          {positions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+
+        <span style={{ marginLeft: 'auto', fontSize: '0.875rem', color: 'var(--muted-foreground)' }}>
+          {tmplData.count} шаблонов
         </span>
+
         <button className={styles.createTmplBtn} onClick={() => setCreateOpen(true)}>
           <Plus size={15} /> Создать шаблон
         </button>
       </div>
 
-      {templates.length === 0 ? (
+      {/* ── Список ── */}
+      {tmplLoading ? (
+        <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>
+          Загрузка...
+        </div>
+      ) : tmplData.data.length === 0 ? (
         <div className={styles.listEmpty} style={{ border: '1px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '2rem', textAlign: 'center' }}>
           <LayoutTemplate size={36} style={{ opacity: 0.25, display: 'block', margin: '0 auto 0.75rem' }} />
-          Шаблонов пока нет — создайте первый
+          {filterDivId || filterPosId ? 'Шаблонов не найдено' : 'Шаблонов пока нет — создайте первый'}
         </div>
       ) : (
         <div className={styles.templatesGrid}>
-          {templates.map(tmpl => {
+          {tmplData.data.map(tmpl => {
             const count = tmpl.stepCount ?? tmpl.steps.length;
             return (
               <div key={tmpl.id} className={styles.tmplCard}>
@@ -759,15 +958,24 @@ function TemplatesTab() {
         </div>
       )}
 
-      {createOpen && <TemplateModal onClose={() => setCreateOpen(false)} />}
-      {editTarget && <TemplateModal initial={editTarget} onClose={() => setEditTarget(null)} />}
+      {/* ── Пагинация ── */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginTop: '1rem', fontSize: '0.875rem' }}>
+          <button className={styles.cancelBtn} disabled={page <= 1} onClick={() => setPage(p => p - 1)}>←</button>
+          <span style={{ color: 'var(--muted-foreground)' }}>{page} / {totalPages}</span>
+          <button className={styles.cancelBtn} disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>→</button>
+        </div>
+      )}
+
+      {createOpen && <TemplateModal onClose={afterModalClose} />}
+      {editTarget  && <TemplateModal initial={editTarget} onClose={afterModalClose} />}
     </div>
   );
 }
 
 // ── Вкладка «Назначения» ─────────────────────────────────────────
 function AssignmentsTab() {
-  const { allAssignments } = useOnboarding();
+  const { allAssignments, loadMessages } = useOnboarding();
   const { data: divPage }  = useDivisionsQuery({ limit: 200 });
   const divisions          = divPage?.data ?? [];
 
@@ -775,6 +983,11 @@ function AssignmentsTab() {
   const [assignOpen, setAssignOpen]     = useState(false);
   const [searchQuery, setSearchQuery]   = useState('');
   const [filterDivId, setFilterDivId]   = useState('');
+
+  useEffect(() => {
+    if (selected) void loadMessages(selected);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected]);
 
   const handleDivChange = (divId: string) => {
     setFilterDivId(divId);
@@ -892,8 +1105,8 @@ function AssignmentsTab() {
                       <div className={styles.empName}>{a.employeeName}</div>
                       <div className={styles.empDiv}>{a.divisionName}</div>
                     </div>
-                    <span className={`${styles.statusBadge} ${isDone ? styles.statusDone : styles.statusInProgress}`}>
-                      {isDone ? 'Завершён' : 'В процессе'}
+                    <span className={`${styles.statusBadge} ${a.status === 'completed' ? styles.statusDone : a.status === 'cancelled' ? styles.statusCancelled : styles.statusInProgress}`}>
+                      {a.status === 'completed' ? 'Завершён' : a.status === 'cancelled' ? 'Отменён' : 'В процессе'}
                     </span>
                   </div>
 

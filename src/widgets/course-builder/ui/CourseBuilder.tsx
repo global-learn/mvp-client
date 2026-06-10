@@ -124,7 +124,7 @@ export function CourseBuilder() {
   const addStep = (moduleId: string) => {
     const mi = course.modules.findIndex(m => m.id === moduleId);
     const mod = course.modules[mi];
-    const s: Step = { id: generateId(), title: `Шаг ${mod.steps.length + 1}`, items: [] };
+    const s: Step = { id: generateId(), title: `Шаг ${mod.steps.length + 1}`, type: 'lesson', items: [] };
     const mods = [...course.modules];
     mods[mi] = { ...mod, steps: [...mod.steps, s] };
     setCourse({ ...course, modules: mods });

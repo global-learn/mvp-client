@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
-import { courseRealApi, fileApi, testDefApi, mapTestDefinitionToQuestions } from './courseRealApi';
-import type { CourseAnalyticsDto, EnrollmentDto } from '@shared/api/schemas';
+import { courseRealApi, fileApi, testDefApi, certificateApi, mapTestDefinitionToQuestions } from './courseRealApi';
+import type { CourseAnalyticsDto, EnrollmentDto, CertificateDto } from '@shared/api/schemas';
 import type { TestQuestion } from '../model/types';
 
 export function useCoursesQuery(includeArchived = false) {
@@ -43,6 +43,14 @@ export function useCoverUrl(fileId?: string) {
     queryFn:  () => fileApi.getUrl(fileId!),
     enabled:  !!fileId,
     staleTime: 600_000,
+  });
+}
+
+export function useMyCertificatesQuery() {
+  return useQuery<CertificateDto[]>({
+    queryKey: queryKeys.certificates.mine(),
+    queryFn:  () => certificateApi.getMine(),
+    staleTime: 60_000,
   });
 }
 

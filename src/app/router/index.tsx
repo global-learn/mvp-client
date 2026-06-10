@@ -10,6 +10,7 @@ import { CompanyPage }          from '@pages/company/ui/CompanyPage';
 import { ControlPage }          from '@pages/control/ui/ControlPage';
 import { OnboardingPage }           from '@pages/onboarding/ui/OnboardingPage';
 import { OnboardingManagePage }     from '@pages/onboarding-manage/ui/OnboardingManagePage';
+import { TeamPage }                 from '@pages/team/ui/TeamPage';
 import { LoginPage }                    from '@pages/login/ui/LoginPage';
 import { RegisterPage }                from '@pages/register/ui/RegisterPage';
 import { VerifyEmailPage }             from '@pages/verify-email/ui/VerifyEmailPage';
@@ -36,6 +37,7 @@ export function AppRouter() {
           <Route path="/control"           element={<ControlPage />} />
           <Route path="/onboarding"               element={<OnboardingPage />} />
           <Route path="/onboarding/manage"        element={<OnboardingManagePage />} />
+          <Route path="/team"                     element={<TeamPage />} />
         </Route>
       </Route>
     </Routes>

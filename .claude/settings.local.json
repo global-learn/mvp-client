@@ -16,7 +16,8 @@
       "Bash(python3 *)",
       "Bash(xargs cat -n)",
       "Bash(npx --prefix /home/toooweee/diplob/mvp-client tsc --noEmit)",
-      "Bash(pnpm build *)"
+      "Bash(pnpm build *)",
+      "Bash(grep *)"
     ]
   }
 }

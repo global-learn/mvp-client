@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '@entities/user/model/UserContext';
-import { canCreateCourses } from '@entities/user/model/types';
+import { canCreateCourse } from '@entities/user/model/types';
 
 // Видна admin и departmentHead.
 // Компонент сам знает кому показываться — не нужно дублировать проверку снаружи.
@@ -9,7 +9,7 @@ export function CreateCourseButton() {
   const { user } = useUser();
   const navigate = useNavigate();
 
-  if (!canCreateCourses(user)) return null;
+  if (!canCreateCourse(user)) return null;
 
   return (
     <button

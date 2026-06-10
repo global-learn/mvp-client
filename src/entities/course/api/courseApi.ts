@@ -1,4 +1,4 @@
-import type { Course, Enrollment, CreateCourseDto, EnrollmentRequest, EmployeeForAssignment } from '../model/types';
+import type { Course, Enrollment, CreateCourseDto, EnrollmentRequest } from '../model/types';
 import { calcProgress } from '../model/types';
 
 // ================================================================
@@ -22,7 +22,7 @@ let mockCourses: Course[] = [
         id: 'm1-1', title: 'Переменные и типы данных',
         steps: [
           {
-            id: 's1-1', title: 'Объявление переменных',
+            id: 's1-1', title: 'Объявление переменных', type: 'lesson' as const,
             items: [
               {
                 id: 'c1-l1', type: 'lesson', title: 'let, const и var',
@@ -78,7 +78,7 @@ const PI = 3.14;
             ],
           },
           {
-            id: 's1-2', title: 'Типы данных',
+            id: 's1-2', title: 'Типы данных', type: 'lesson' as const,
             items: [
               {
                 id: 'c1-l2', type: 'lesson', title: 'Примитивные типы',
@@ -128,7 +128,7 @@ typeof null      // "object" ← историческая ошибка JS!
         id: 'm1-2', title: 'Функции',
         steps: [
           {
-            id: 's1-3', title: 'Объявление и вызов',
+            id: 's1-3', title: 'Объявление и вызов', type: 'lesson' as const,
             items: [
               {
                 id: 'c1-l3', type: 'lesson', title: 'Функции в JavaScript',
@@ -202,7 +202,7 @@ greet("Иван"); // "Привет, Иван"
         id: 'm2-1', title: 'Основы компонентов',
         steps: [
           {
-            id: 's2-1', title: 'Компоненты и JSX',
+            id: 's2-1', title: 'Компоненты и JSX', type: 'lesson' as const,
             items: [
               {
                 id: 'c2-l1', type: 'lesson', title: 'Что такое React-компонент',
@@ -258,7 +258,7 @@ function Button({ label, onClick }) {
             ],
           },
           {
-            id: 's2-2', title: 'Хуки состояния',
+            id: 's2-2', title: 'Хуки состояния', type: 'lesson' as const,
             items: [
               {
                 id: 'c2-l2', type: 'lesson', title: 'useState и useEffect',
@@ -316,7 +316,7 @@ useEffect(() => {
         id: 'm2-2', title: 'Роутинг',
         steps: [
           {
-            id: 's2-3', title: 'React Router',
+            id: 's2-3', title: 'React Router', type: 'lesson' as const,
             items: [
               {
                 id: 'c2-l3', type: 'lesson', title: 'Навигация в React',
@@ -380,7 +380,7 @@ const { id } = useParams(); // /courses/42 → id === "42"
         id: 'm3-1', title: 'Основы Git',
         steps: [
           {
-            id: 's3-1', title: 'Первые шаги',
+            id: 's3-1', title: 'Первые шаги', type: 'lesson' as const,
             items: [
               {
                 id: 'c3-l1', type: 'lesson', title: 'Инициализация и первый коммит',
@@ -435,7 +435,7 @@ git restore file.txt  # Отменить изменения в файле
             ],
           },
           {
-            id: 's3-2', title: 'Ветки',
+            id: 's3-2', title: 'Ветки', type: 'lesson' as const,
             items: [
               {
                 id: 'c3-l2', type: 'lesson', title: 'Ветки и слияние',
@@ -672,20 +672,6 @@ export const courseApi = {
     mockEnrollments = [...mockEnrollments.slice(0, idx), updated, ...mockEnrollments.slice(idx + 1)];
     mockRequests = mockRequests.filter(r => !(r.courseId === courseId && r.userId === userId));
     return updated;
-  },
-
-  /** Список сотрудников, которым можно назначить курс */
-  async getAssignableEmployees(): Promise<EmployeeForAssignment[]> {
-    await delay(200);
-    return [
-      { userId: 'emp-2',  fullname: 'Мария Иванова',     email: 'user@test.com',  department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
-      { userId: 'emp-3',  fullname: 'Сергей Волков',      email: 'serg@corp.ru',   department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
-      { userId: 'emp-8',  fullname: 'Артём Лебедев',      email: 'artem@corp.ru',  department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
-      { userId: 'emp-9',  fullname: 'Ольга Рыбакова',     email: 'olga.r@corp.ru', department: { id: 'dept-sales',      name: 'Департамент продаж' },      role: { name: 'Менеджер' } },
-      { userId: 'emp-10', fullname: 'Павел Зайцев',       email: 'pavel@corp.ru',  department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, role: { name: 'Менеджер' } },
-      { userId: 'emp-11', fullname: 'Екатерина Морозова', email: 'kate@corp.ru',   department: { id: 'dept-monitoring', name: 'Департамент мониторинга' }, role: { name: 'Менеджер' } },
-      { userId: 'emp-12', fullname: 'Николай Фёдоров',    email: 'nikola@corp.ru', department: { id: 'dept-marketing',  name: 'Департамент маркетинга' },  role: { name: 'Разработчик' } },
-    ];
   },
 
   /** Пометить элемент курса (урок или тест) как пройденный и пересчитать прогресс */

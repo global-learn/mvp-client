@@ -1,4 +1,4 @@
-import { GraduationCap, Award, Printer, X } from 'lucide-react';
+import { Printer, X } from 'lucide-react';
 import type { Certificate } from '@entities/course/model/types';
 import styles from './CertificateModal.module.css';
 
@@ -17,58 +17,82 @@ export function CertificateModal({ certificate, onClose }: Props) {
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.wrapper} onClick={e => e.stopPropagation()}>
-        {/* Toolbar */}
+
         <div className={styles.toolbar}>
           <button className={styles.printBtn} onClick={() => window.print()}>
-            <Printer size={15} />
+            <Printer size={14} />
             Распечатать
           </button>
-          <button className={styles.closeBtn} onClick={onClose}>
+          <button className={styles.closeBtn} onClick={onClose} title="Закрыть">
             <X size={18} />
           </button>
         </div>
 
-        {/* Certificate paper */}
         <div className={styles.cert} id="certificate-print">
-          {/* Header */}
-          <div className={styles.certHeader}>
-            <GraduationCap size={36} className={styles.logoIcon} />
-            <span className={styles.logoText}>GlobalLearn</span>
+          {/* Ornamental corner pieces */}
+          <div className={`${styles.corner} ${styles.cornerTL}`} />
+          <div className={`${styles.corner} ${styles.cornerTR}`} />
+          <div className={`${styles.corner} ${styles.cornerBL}`} />
+          <div className={`${styles.corner} ${styles.cornerBR}`} />
+
+          <div className={styles.inner}>
+            {/* Header */}
+            <div className={styles.header}>
+              <svg className={styles.logoMark} viewBox="0 0 32 32" fill="none" aria-hidden>
+                <circle cx="16" cy="16" r="15" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 20 L16 10 L24 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M11 20 L21 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+              <span className={styles.orgName}>GlobalLearn</span>
+            </div>
+
+            {/* Subtitle label */}
+            <p className={styles.certLabel}>СЕРТИФИКАТ О ПРОХОЖДЕНИИ КУРСА</p>
+
+            {/* Top rule */}
+            <div className={styles.rule}>
+              <span className={styles.ruleOrnament}>✦</span>
+            </div>
+
+            {/* Body */}
+            <p className={styles.intro}>Настоящим удостоверяется, что</p>
+
+            <h2 className={styles.recipientName}>{certificate.employeeName}</h2>
+
+            <p className={styles.body}>успешно завершил(а) обучение по программе курса</p>
+
+            <h3 className={styles.courseName}>«{certificate.courseName}»</h3>
+
+            {/* Bottom rule */}
+            <div className={styles.rule}>
+              <span className={styles.ruleOrnament}>✦</span>
+            </div>
+
+            {/* Footer */}
+            <div className={styles.footer}>
+              <div className={styles.footerCol}>
+                <span className={styles.footerLabel}>Дата выдачи</span>
+                <span className={styles.footerValue}>{issuedDate}</span>
+              </div>
+              <div className={styles.footerDivider} />
+              <div className={styles.footerCol}>
+                <span className={styles.footerLabel}>Номер сертификата</span>
+                <span className={styles.footerValueMono}>{certificate.id.toUpperCase()}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Decorative line */}
-          <div className={styles.divider} />
-
-          <p className={styles.certLabel}>СЕРТИФИКАТ О ПРОХОЖДЕНИИ КУРСА</p>
-
-          <p className={styles.certIntro}>Настоящим удостоверяется, что</p>
-
-          <h2 className={styles.userName}>{certificate.userName}</h2>
-
-          <p className={styles.certMid}>успешно прошёл(а) курс</p>
-
-          <h3 className={styles.courseTitle}>«{certificate.courseTitle}»</h3>
-
-          <div className={styles.divider} />
-
-          {/* Footer */}
-          <div className={styles.certFooter}>
-            <div className={styles.footerItem}>
-              <Award size={18} className={styles.footerIcon} />
-              <span className={styles.footerLabel}>Дата выдачи</span>
-              <span className={styles.footerValue}>{issuedDate}</span>
+          {/* Wax seal */}
+          <div className={styles.seal} aria-hidden>
+            <div className={styles.sealRing}>
+              <svg viewBox="0 0 80 80" className={styles.sealSvg}>
+                <circle cx="40" cy="40" r="36" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 3" />
+                <circle cx="40" cy="40" r="30" fill="none" stroke="currentColor" strokeWidth="0.8" />
+                <path d="M40 16 L43.5 27h11.5l-9.3 6.8 3.6 11L40 38l-9.3 6.8 3.6-11L25 27h11.5z"
+                      fill="currentColor" />
+              </svg>
+              <span className={styles.sealText}>VERIFIED</span>
             </div>
-            <div className={styles.footerItem}>
-              <span className={styles.footerLabel}>Номер</span>
-              <span className={styles.footerValue} style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                {certificate.id.toUpperCase()}
-              </span>
-            </div>
-          </div>
-
-          {/* Decorative badge */}
-          <div className={styles.badge}>
-            <Award size={28} />
           </div>
         </div>
       </div>

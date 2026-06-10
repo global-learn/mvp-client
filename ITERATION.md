@@ -43,20 +43,25 @@
 
 ---
 
-## 4. Employees
+## 4. Employees ✅ РЕАЛИЗОВАНО
 
 | Endpoint | API-метод | Hook | UI |
 |---|---|---|---|
 | `GET /employees` | ✅ `employeeApi.list` (+ `departmentId`, `roleId` фильтры) | ✅ `useEmployeesQuery` | ✅ список + фильтры по роли/департаменту |
 | `GET /employees/:id` | ✅ `employeeApi.getById` | ✅ `useEmployeeQuery` | ✅ клик → модалка «Карточка сотрудника» |
-| `GET /employees/me/subordinates` | ✅ `employeeApi.getSubordinates` | ✅ `useMySubordinatesQuery` | ❌ нигде не используется |
+| `GET /employees/me/subordinates` | ✅ `employeeApi.getSubordinates` | ✅ `useMySubordinatesQuery` | ❌ не применяется (заменён деревом) |
 | `POST /employees` | ✅ `employeeApi.create` | ✅ `useCreateEmployeeMutation` | ✅ модалка «Добавить сотрудника» |
 | `PATCH /employees/:id` | ✅ `employeeApi.update` (+ `avatarId`) | ✅ `useUpdateEmployeeMutation` | ✅ форма редактирования в карточке (admin) + загрузка аватара в профиле |
 | `PATCH /employees/:id/promote` | ✅ `employeeApi.promote` | ✅ `usePromoteEmployeeMutation` | ❌ нет UI (promote = смена должности, не роли) |
 | `DELETE /employees/:id` | ✅ `employeeApi.dismiss` | ✅ `useDismissEmployeeMutation` | ✅ кнопка «Уволить» с confirm в карточке (admin) |
 | `POST /files` | ✅ `fileApi.upload` (в `shared/api/fileApi.ts`) | — | ✅ загрузка фото-аватара в ProfilePage → `AvatarPicker` |
 
-**Вывод:** ✅ РЕАЛИЗОВАНО. Карточка сотрудника (просмотр/редактирование/увольнение), фильтры по роли и департаменту, загрузка аватара через `POST /files`.
+**Обновлено (2026-06-10) — изменения в ролевой модели:**
+- `POST /employees` больше не принимает `roleId` и `password` — роль выставляется автоматически по `positionId`. Форма «Добавить сотрудника» в `/company` упрощена: убраны поля «Пароль» и «Роль».
+- Удалена дублирующая функция `canCreateCourses` из `entities/user/model/types.ts` (содержала неверную логику: role === 'manager'). Везде используется корректная `canCreateCourse` (admin | dept_head | div_head).
+- `RegisterRequestSchema` и `authApi.register` — убран `roleId`.
+- `employeeApi.create` — убраны `roleId` и `password` из типа и payload.
+- Удалён `console.log(user)` из внутренней функции `role()` в types.ts.
 
 ---
 
@@ -64,12 +69,38 @@
 
 | Endpoint | Статус | Комментарий |
 |---|---|---|
-| `GET /auth/me/profile` | ❌ не вызывается | Возвращает полный профиль (user + role + employee + division + dept + position). Используется только `GET /auth/me`. |
+| `GET /auth/me/profile` | ✅ используется | `authApi.myProfile()` в `UserContext` — основной источник профиля пользователя. `GET /auth/me` — вспомогательный (только auth-check). |
 | `POST /auth/complete-registration` | ❌ не реализовано | Flow «приглашение по ссылке» — сотрудник устанавливает пароль по токену. Модель `invite/model/types.ts` есть, но помечена как «Mock до бэкенда». |
 | `GET /roles/:id`, `POST /roles`, `DELETE /roles/:id` | ❌ не реализовано | Управление ролями. Сейчас только `GET /roles` для select. |
 | `POST /user`, `GET /user`, `GET /user/:id` | ❌ не реализовано | Отдельный CRUD пользователей (без employee-обёртки). Назначение неочевидно при наличии `/employees`. |
 | `GET /employees/me/subordinates` | ❌ нигде не применяется | Хук есть, но не вызывается ни на одной странице. |
 | `GET /courses/{id}/analytics` | ❌ не вызывается | Детальная аналитика по курсу: разбивка по division/department. |
+
+---
+
+## 4.5. Team Dashboard — «Моя команда» ✅ РЕАЛИЗОВАНО
+
+| Endpoint | API-метод | Hook | UI |
+|---|---|---|---|
+| `GET /employees/me/subordinates/tree` | ✅ `employeeApi.getSubordinateTree` | ✅ `useSubordinateTreeQuery` | ✅ `/team` — дерево по позициям |
+| `GET /employees/me/team-dashboard` | ✅ `employeeApi.getTeamDashboard` | ✅ `useTeamDashboardQuery` | ✅ `/team` — статы + данные сотрудников |
+| `GET /employees/me/subordinates` | ✅ `employeeApi.getSubordinates` | ✅ `useMySubordinatesQuery` | ❌ не применяется (заменён деревом) |
+
+**Реализовано (2026-06-10):**
+- Новая страница `/team` «Моя команда», доступна всем `canControl`-ролям (admin, dept_head, div_head, senior_manager)
+- **Сводная статистика** (5 чипов): всего подчинённых, курсов активных/завершённых, онбордингов активных/завершённых — из `team-dashboard`
+- **Дерево подчинённых** (accordion по позициям) из `subordinates/tree`: каждая позиция раскрывается, глубина неограничена (рекурсивный компонент `TreeNode`), вложенность визуально отступами
+- Каждая карточка сотрудника: инициалы-аватар, имя, отдел, чипы с количеством активных/завершённых курсов и индикатор онбординга
+- Клик по сотруднику → **Drawer-панель** (slide-in справа):
+  - Заголовок: аватар, имя, отдел, email
+  - Список курсов с прогресс-барами (in_progress / completed)
+  - Активный онбординг с прогрессом по шагам
+  - Кнопки «Назначить курс» и «Назначить онбординг»
+- **Назначить курс** → диалог со списком опубликованных курсов, поиском, кнопка «Назначить» per-course с состоянием loading/done
+- **Назначить онбординг** → диалог с выбором шаблона (фильтруется по отделу), загружает шаги, вызывает `assign()`
+- Навигация: пункт «Моя команда» (иконка Users) добавлен в группу «Управление» sidebar
+
+**Схемы** (`shared/api/schemas.ts`): `SubordinateTreeNodeDtoSchema`, `SubordinateTreeEmployeeDtoSchema`, `SubordinateDashboardItemDtoSchema`, `SubordinateEnrollmentDtoSchema`, `SubordinateOnboardingDtoSchema`, `ManagerDashboardResponseDtoSchema`
 
 ---
 
@@ -329,14 +360,25 @@
 - Zod-схемы `OnboardingTemplateSummaryDtoSchema` / `OnboardingTemplateFullDtoSchema` сделаны устойчивыми к null в полях `description`, `coverId`, `stepCount`
 - `positionId` и `divisionId` выбираются пользователем из реальных данных (запросы `/positions`, `/divisions`); хардкод удалён
 - Модальное окно шаблона: 680 px, Отдел+Должность в ряд, шаги в раскрывающейся секции
-- Модальное окно шага: открывается поверх шаблонной модалки (z-index 300), лёгкий оверлей `rgba(0,0,0,0.18)` — нет накопления затемнения
+- Модальное окно шага: открывается поверх шаблонной модалки (z-index 300), лёгкий оверлей `rgba(0,0,0,0.18)` — нет накапления затемнения
 - Горизонтальный скролл внутри модалок исключён (`overflow-x: hidden`, `box-sizing: border-box`)
+
+**Исправления (2026-06-10):**
+- `positionId` сделан опциональным в Zod-схемах ответа (`OnboardingTemplateSummaryDtoSchema`, `OnboardingTemplateFullDtoSchema`) — шаблоны без должности больше не вызывают ошибку парсинга и toast при загрузке списка; `divisionId` остался обязательным (бэкенд всегда его возвращает)
+- `CreateOnboardingTemplateRequestSchema` — `positionId` теперь опциональный, `divisionId` обязателен (так в бэкенд-DTO)
+- Форма создания шаблона: поле «Должность» теперь опционально; «Отдел» по-прежнему обязателен; `canSubmit` требует только `divisionId`
+- `OnboardingContext.createTemplate` — убран `!` non-null assertion на `positionId`
+- `OnboardingContext.load()` переведён на `Promise.allSettled` — ошибка парсинга назначений больше не блокирует загрузку шаблонов
+- `OnboardingAssignmentDtoSchema` / `OnboardingAssignmentStepDtoSchema` — `description`, `recommendedStartDate`, `recommendedEndDate` сделаны nullable (бэкенд может вернуть null); это была причина падения всего `load()` через `Promise.all`
+- `getTemplates` принимает опциональные фильтры (`divisionId`, `positionId`, `page`, `limit`) и возвращает `{ data, count }` вместо плоского массива
+- `TemplatesTab` переписан: серверная фильтрация по отделу и должности + пагинация (по 10 на странице); список обновляется после create/update через `refreshKey`
+- `AssignModal` — при выборе шаблона вызывается `getTemplateById` для загрузки полного шаблона со шагами; раньше шаги всегда были пустыми (summary не содержит шагов)
 
 **Ограничение бэкенда:** `PUT /onboarding/templates/:id` принимает только `name`, `description`, `steps`; изменить `positionId`/`divisionId` через обновление нельзя. Для смены отдела/должности нужно удалить шаблон и пересоздать (но DELETE не реализован).
 
 ---
 
-## 18. Assignments — Назначения онбординга
+## 18. Assignments — Назначения онбординга ✅ РЕАЛИЗОВАНО
 
 | Endpoint | API-метод | UI |
 |---|---|---|
@@ -346,33 +388,28 @@
 | `GET /onboardings/assigned-by-me` | ✅ `onboardingRealApi.getManagedOnboardings` | ✅ OnboardingContext |
 | `GET /onboardings/:id` | ✅ `onboardingRealApi.getOnboardingById` | ✅ OnboardingContext (после шага) |
 | `POST /onboardings/:id/complete-step` | ✅ `onboardingRealApi.completeStep` | ✅ OnboardingPage |
-| `POST /onboardings/:id/cancel` | ❌ нет метода | ❌ нет кнопки отмены онбординга |
+| `POST /onboardings/:id/cancel` | ✅ `onboardingRealApi.cancel` + `cancelAssignment` в контексте | ✅ Кнопка «Отменить онбординг» на обеих страницах |
 
-**Критическая проблема — AssignModal использует захардкоженный список сотрудников:**
-
-```typescript
-const MOCK_EMPLOYEES = [
-  { id: 'emp-2',  name: 'Мария Иванова', ... },
-  ...
-]
-```
-
-Кнопка «Назначить» отправляет `emp-2`, `emp-3` и т.д. — не реальные ID из БД. Назначение онбординга **не работает** для реальных сотрудников.
-
-Аналогично — `DIVISIONS`/`DEPARTMENTS` в фильтрах вкладки «Назначения» тоже захардкожены — фильтрация работает только с mock-данными.
+**AssignModal** — использует `employeeApi.list()` (реальные данные), фильтр по отделу — `useDivisionsQuery`.
+**Отмена онбординга (2026-06-09):** двухшаговый confirm, статус `cancelled` отображается в карточке.
 
 ---
 
-## 19. Chat — Чат онбординга
+## 19. Chat — Чат онбординга ✅ РЕАЛИЗОВАНО
 
 | Endpoint | API-метод | UI |
 |---|---|---|
-| `GET /onboardings/:id/chat/messages` | ✅ `onboardingRealApi.getChatMessages` | ❌ **никогда не вызывается** |
+| `GET /onboardings/:id/chat/messages` | ✅ `onboardingRealApi.getChatMessages` | ✅ Загружается лениво при выборе назначения |
 | `POST /onboardings/:id/chat/messages` | ✅ `onboardingRealApi.sendChatMessage` | ✅ ChatPanel (отправка) |
-| `POST /onboardings/:id/chat/messages/read` | ❌ нет метода | ❌ не реализован |
+| `POST /onboardings/:id/chat/messages/read` | ✅ `onboardingRealApi.markMessagesRead` | ✅ Вызывается после загрузки истории |
 | WebSocket `/chat` namespace | ❌ нет | ❌ нет |
 
-**Критическая проблема:** `mapAssignmentDto` всегда инициализирует `messages: []`. История чата **не загружается** — при открытии онбординга чат всегда пуст. Отправленные сообщения добавляются только в локальный React state и теряются при перезагрузке.
+**Исправлено (2026-06-09):**
+- Ответ `GET /chat/messages` — формат `{ messages: [], nextCursor }` (не `{ data: [] }`); добавлена `ChatMessagesPageDtoSchema`
+- `loadMessages(id)` в контексте — lazy load при выборе назначения; резолвит `senderName` из уже загруженных данных назначения
+- `markMessagesRead` вызывается автоматически после загрузки
+- `isMe` в чате теперь проверяет `user.employee?.id` (не только `user.id`), так как `senderId` содержит employee-UUID
+- Автоскролл к последнему сообщению на обеих страницах
 
 ---
 
@@ -382,20 +419,26 @@ const MOCK_EMPLOYEES = [
 
 ---
 
-## 20. Notifications
+## 20. Notifications ✅ РЕАЛИЗОВАНО
 
 | Endpoint | API-метод | UI |
 |---|---|---|
-| `GET /me/notifications` | ✅ `notificationApi.list` | ✅ Sidebar (загружается один раз при mount) |
-| `POST /me/notifications/:id/read` | ✅ `notificationApi.markRead` | ❌ определён, но не вызывается из Sidebar |
-| `POST /me/notifications/read-all` | ✅ `notificationApi.markAllRead` | ✅ Sidebar (кнопка «Прочитать всё») |
-| WebSocket `/notifications` namespace | ❌ нет | ❌ нет |
+| `GET /me/notifications?page=&limit=` | ✅ `notificationApi.list({page,limit})` | ✅ `NotificationContext` — загрузка при mount |
+| `POST /me/notifications/:id/read` | ✅ `notificationApi.markRead` | ✅ Клик по уведомлению → markRead + навигация |
+| `POST /me/notifications/read-all` | ✅ `notificationApi.markAllRead` | ✅ Кнопка «Прочитать все» в панели |
+| WebSocket `/notifications` namespace | ✅ `socket.io-client` (withCredentials) | ✅ событие `notification:created` → prepend в список |
 
-**Проблемы:**
-- Уведомления грузятся через `useState/useEffect` — нет TanStack Query, нет `staleTime`, нет автоматического refetch
-- Нет polling — новые уведомления появляются только после перезагрузки страницы
-- Счётчик непрочитанных есть в `unreadCount`, но **не отображается в иконке** сайдбара
-- `markRead` (по одному) не используется — только `markAllRead`
+**Реализовано (2026-06-10):**
+- `src/entities/notification/` — новая entity по FSD-паттерну
+  - `model/types.ts` — типы (`NotificationType`, `Notification`, `NotificationPayload`), лейблы и вспомогательные функции (`notifLabel`, `notifDescription`, `notifRoute`)
+  - `model/NotificationContext.tsx` — контекст: начальная загрузка (page 1, limit 50), Socket.IO подключение к `/notifications` с `withCredentials: true`, обработка `notification:created`, `markRead`, `markAllRead`
+  - `api/notificationApi.ts` — API с правильными `page`/`limit` параметрами (фиксит баг: раньше API вызывался без обязательных query-params), Zod-парсинг через `paginatedSchema`
+- `NotificationProvider` добавлен в `AppLayout.tsx` (внутри авторизованного layout)
+- `Sidebar.tsx` переписан: использует `useNotifications()` вместо локального `useState`; иконки по типу уведомления; клик → `markRead` + навигация на релевантную страницу; закрытие панели по клику вне
+- Панель уведомлений: заголовок + «Прочитать все»; иконка-аватар по типу уведомления; текстовое описание для шагов (`stepName`); синяя точка-индикатор для непрочитанных; счётчик `99+` при overflow
+- `socket.io-client@4.8.3` установлен через yarn
+
+**Типы уведомлений (все покрыты):** `ONBOARDING_ASSIGNED`, `ONBOARDING_COMPLETED`, `ONBOARDING_COMPLETED_MANAGER`, `ONBOARDING_STEP_OVERDUE`, `ONBOARDING_STEP_OVERDUE_MANAGER`, `COURSE_APPLICATION_APPROVED`, `EMPLOYEE_PROMOTED`
 
 ---
 
@@ -407,9 +450,9 @@ const MOCK_EMPLOYEES = [
 
 | # | Баг | Где | Что нужно сделать |
 |---|---|---|---|
-| B1 | AssignModal использует `MOCK_EMPLOYEES` | `OnboardingManagePage.tsx:390` | Заменить на `useEmployeesQuery` + поиск по имени |
+| ~~B1~~ | ~~AssignModal использует `MOCK_EMPLOYEES`~~ | — | ✅ Выполнено — `employeeApi.list()` + реальные ID |
 | ~~B2~~ | ~~`updateTemplate` не вызывает `PUT /onboarding/templates/:id`~~ | — | ✅ Выполнено — `PUT` вызывается, после сохранения reload |
-| B3 | Chat history не загружается | `onboardingRealApi.ts` / `getChatMessages` | Вызывать `getChatMessages` при загрузке каждого онбординга |
+| ~~B3~~ | ~~Chat history не загружается~~ | — | ✅ Выполнено — `loadMessages` ленивая загрузка + правка парсинга ответа |
 | ~~B4~~ | ~~`positionId` захардкожен как `00000000-...`~~ | — | ✅ Выполнено — реальный select из `/positions` |
 | B5 | `PATCH /lessons/:id` никогда не вызывается | — | Добавить режим редактирования курса в CourseBuilder |
 | ~~B6~~ | ~~Атомарность создания курса не гарантирована~~ | — | ✅ Выполнено — `POST /courses/full`, параллельное создание контента |
@@ -424,7 +467,7 @@ const MOCK_EMPLOYEES = [
 | ~~U4~~ | ~~Кнопка «Удалить курс» + confirm~~ | — | ✅ Выполнено |
 | U5 | Страница «Мои заявки» (`GET /me/applications`) | S | Средняя — сотрудник не видит статус своих заявок |
 | ~~U6~~ | ~~Детальная аналитика курса~~ | — | ✅ Выполнено — панель в CourseDetailPage |
-| U7 | Кнопка «Отменить онбординг» | XS | Средняя |
+| ~~U7~~ | ~~Кнопка «Отменить онбординг»~~ | — | ✅ Выполнено — двухшаговый confirm на обеих страницах |
 | U8 | Отмена записи на курс (`DELETE /enrollments/:id`) | XS | Низкая |
 | U9 | Flow `/complete-registration` (invite-by-link) | M | Средняя |
 
@@ -441,8 +484,8 @@ const MOCK_EMPLOYEES = [
 
 | # | Долг | Где | Рекомендация |
 |---|---|---|---|
-| T1 | Уведомления через `useState/useEffect` | `Sidebar.tsx:89–116` | Перевести на TanStack Query + polling 30 с |
-| T2 | MOCK_DIVISIONS/DEPARTMENTS в фильтрах назначений | `OnboardingManagePage.tsx:498–516` | Заменить на реальные запросы через хуки |
+| ~~T1~~ | ~~Уведомления через `useState/useEffect`~~ | — | ✅ Выполнено — `NotificationContext` + Socket.IO real-time |
+| ~~T2~~ | ~~MOCK_DIVISIONS/DEPARTMENTS в фильтрах назначений~~ | — | ✅ Выполнено — `useDivisionsQuery` |
 | T3 | `onboardingRealApi.fetchEmployeeMap` — N+1 запросов | `onboardingRealApi.ts:77` | Оптимизировать через пакетную загрузку или `GET /employees` с фильтром |
 | T4 | `controlApi.getEmployeeEnrollments` — fan-out запросов | `controlApi.ts:19–40` | Добавить курсор/пагинацию или серверный агрегат |
 

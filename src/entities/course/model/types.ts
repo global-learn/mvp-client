@@ -144,10 +144,11 @@ export interface EnrollmentRequest {
 
 // ── Сертификат о прохождении курса ──────────────────────────────
 export interface Certificate {
-  id: string;
-  userId: string;
-  courseId: string;
-  courseTitle: string;
-  userName: string;
-  issuedAt: string; // ISO date string
+  id:           string;
+  enrollmentId: string;
+  employeeId:   string;
+  employeeName: string;
+  courseId:     string;
+  courseName:   string;
+  issuedAt:     string;
 }

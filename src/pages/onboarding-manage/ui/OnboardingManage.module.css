@@ -617,6 +617,22 @@
   line-height: 1.45;
 }
 
+/* Подсказка под полем ввода */
+.fieldHint {
+  margin: -0.25rem 0 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+/* Сообщение о загрузке шагов */
+.stepsLoadingHint {
+  padding: 0.75rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
 /* Горизонтальный ряд внутри модальных форм */
 .stepModalRow {
   display: flex;
@@ -1172,4 +1188,50 @@
   background: var(--secondary);
   color: var(--muted-foreground);
   border: 1px solid var(--border);
+}
+
+.statusCancelled {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid rgba(185, 28, 28, 0.25);
+}
+
+.detailCancelRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+.detailCancelBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3125rem 0.75rem;
+  font-size: 0.8rem;
+  border: 1.5px solid #fca5a5;
+  border-radius: var(--radius);
+  background: transparent;
+  color: #b91c1c;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.detailCancelBtn:hover { background: #fef2f2; }
+.detailCancelBtnConfirm {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8rem;
+  border: none;
+  border-radius: var(--radius);
+  background: #dc2626;
+  color: #fff;
+  cursor: pointer;
+}
+.detailCancelBtnConfirm:disabled { opacity: 0.6; cursor: not-allowed; }
+.detailCancelBtnAbort {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8rem;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
 }

@@ -47,10 +47,8 @@ function mapToListItem(
 const defaultForm = {
   email: '',
   fullname: '',
-  password: '',
   divisionId: '',
   positionId: '',
-  roleId: '',
   employmentDate: new Date().toISOString().slice(0, 10),
 };
 
@@ -756,10 +754,6 @@ export function CompanyPage() {
 
   const availablePositions = rawPositions;
 
-  const availableRoles = adminUser
-    ? roles
-    : roles.filter(r => r.name.toLowerCase() !== 'admin');
-
   const editableDeptId: string | null | undefined = adminUser ? undefined : (user.employee?.department.id ?? null);
 
   const filtered = useMemo(() => {
@@ -850,13 +844,10 @@ export function CompanyPage() {
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.divisionId) { toast.error('Выберите отдел'); return; }
-    if (!form.roleId)     { toast.error('Выберите роль'); return; }
     setSubmitting(true);
     try {
       await employeeApi.create({
         email:          form.email,
-        password:       form.password,
-        roleId:         form.roleId,
         fullname:       form.fullname,
         divisionId:     form.divisionId,
         employmentDate: new Date(form.employmentDate).toISOString(),
@@ -1109,12 +1100,6 @@ export function CompanyPage() {
                   placeholder="Иван Иванов" required />
               </label>
               <label className={styles.label}>
-                Пароль <span className={styles.req}>*</span>
-                <input className={styles.input} type="password" value={form.password}
-                  onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Минимум 4 символа" required minLength={4} />
-              </label>
-              <label className={styles.label}>
                 Дата трудоустройства <span className={styles.req}>*</span>
                 <input className={styles.input} type="date" value={form.employmentDate}
                   onChange={e => setForm(p => ({ ...p, employmentDate: e.target.value }))}
@@ -1138,17 +1123,6 @@ export function CompanyPage() {
                   <option value="">— не указана —</option>
                   {availablePositions.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </label>
-              <label className={styles.label}>
-                Роль <span className={styles.req}>*</span>
-                <select className={styles.input} value={form.roleId}
-                  onChange={e => setForm(p => ({ ...p, roleId: e.target.value }))}
-                  required>
-                  <option value="">— выберите роль —</option>
-                  {availableRoles.map(r => (
-                    <option key={r.id} value={r.id}>{formatRoleLabel(r.name)}</option>
                   ))}
                 </select>
               </label>

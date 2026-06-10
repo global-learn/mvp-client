@@ -1,15 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, PlusCircle, Building2,
   LogOut, GraduationCap, BarChart2, ClipboardList, Menu, X, Bell,
+  CheckCheck, BookMarked, Users2, CalendarClock, TrendingUp, Users,
 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
 import { isAdmin, canControl, canCreateCourse, displayName, type User } from '@entities/user/model/types';
 import { useCourses } from '@entities/course/model/CoursesContext';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
+import { useNotifications } from '@entities/notification/model/NotificationContext';
+import { notifLabel, notifDescription, notifRoute } from '@entities/notification/model/types';
 import { UserAvatar } from '@entities/user/ui/UserAvatar';
-import { notificationApi, type NotificationDto } from '@shared/api/notificationApi';
 import styles from './Sidebar.module.css';
 
 type NavItem = {
@@ -41,26 +43,25 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Управление',
     items: [
-      { to: '/onboarding/manage',     label: 'Онбординг',  icon: ClipboardList, visible: canControl },
-      { to: '/company',               label: 'Компания',    icon: Building2,     visible: canCreateCourse },
-      { to: '/control',               label: 'Контроль',    icon: BarChart2,     visible: canControl },
+      { to: '/team',                  label: 'Моя команда', icon: Users,         visible: canControl },
+      { to: '/onboarding/manage',     label: 'Онбординг',   icon: ClipboardList, visible: canControl },
+      { to: '/company',               label: 'Компания',     icon: Building2,     visible: canCreateCourse },
+      { to: '/control',               label: 'Контроль',     icon: BarChart2,     visible: canControl },
     ],
   },
 ];
 
 const ALL_ITEMS = NAV_GROUPS.flatMap(g => g.items);
 
-const NOTIF_LABELS: Record<string, string> = {
-  ONBOARDING_ASSIGNED:          'Назначен онбординг',
-  ONBOARDING_COMPLETED:         'Онбординг завершён',
-  COURSE_ENROLLMENT_APPROVED:   'Заявка на курс одобрена',
-  COURSE_ENROLLMENT_REJECTED:   'Заявка на курс отклонена',
-  COURSE_ASSIGNED:              'Курс назначен',
+const TYPE_ICON: Record<string, typeof Bell> = {
+  ONBOARDING_ASSIGNED:           BookMarked,
+  ONBOARDING_COMPLETED:          BookMarked,
+  ONBOARDING_COMPLETED_MANAGER:  Users2,
+  ONBOARDING_STEP_OVERDUE:       CalendarClock,
+  ONBOARDING_STEP_OVERDUE_MANAGER: CalendarClock,
+  COURSE_APPLICATION_APPROVED:   BookOpen,
+  EMPLOYEE_PROMOTED:             TrendingUp,
 };
-
-function notifLabel(type: string): string {
-  return NOTIF_LABELS[type] ?? type.replace(/_/g, ' ').toLowerCase();
-}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -84,9 +85,10 @@ export function Sidebar() {
   const navigate = useNavigate();
   const { courses } = useCourses();
   const { myAssignments, managedAssignments } = useOnboarding();
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationDto[]>([]);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Close drawer on navigation
   useEffect(() => { setIsOpen(false); }, [pathname]);
@@ -97,37 +99,32 @@ export function Sidebar() {
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  // Load notifications on mount
-  const loadNotifications = useCallback(async () => {
-    try {
-      const list = await notificationApi.list();
-      setNotifications(list);
-    } catch { /* silently ignore — non-critical */ }
-  }, []);
-
-  useEffect(() => { void loadNotifications(); }, [loadNotifications]);
-
-  const handleNotifToggle = async () => {
-    const opening = !notifOpen;
-    setNotifOpen(opening);
-    if (opening) {
-      // Mark all as read and refresh list
-      try {
-        await notificationApi.markAllRead();
-        setNotifications(prev => prev.map(n => ({ ...n, readAt: new Date().toISOString() })));
-      } catch { /* ignore */ }
-    }
-  };
+  // Close notification panel when clicking outside
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [notifOpen]);
 
   const userIsAdmin = isAdmin(user);
   const pendingCount = userIsAdmin ? courses.filter(c => c.status === 'pending').length : 0;
   const myOnboardingBadge = myAssignments.filter(a => a.status === 'in_progress').length;
   const managedBadge = managedAssignments.filter(a => a.status === 'in_progress').length;
-  const unreadCount = notifications.filter(n => !n.readAt).length;
 
   const handleLogout = async () => {
     await logout();
     navigate('/login', { replace: true });
+  };
+
+  const handleNotifClick = async (id: string, type: string) => {
+    await markRead(id);
+    navigate(notifRoute(type));
+    setNotifOpen(false);
   };
 
   const roleName = user.employee?.role.name ?? user.type.toLowerCase();
@@ -137,7 +134,6 @@ export function Sidebar() {
       <div className={styles.logo}>
         <GraduationCap size={22} strokeWidth={2} className={styles.logoIcon} />
         <span className={styles.logoText}>GlobalLearn</span>
-        {/* Close button — only visible on mobile */}
         <button className={styles.closeBtn} onClick={() => setIsOpen(false)} aria-label="Закрыть меню">
           <X size={18} />
         </button>
@@ -177,28 +173,66 @@ export function Sidebar() {
 
       <div className={styles.footer}>
         {/* Notification bell */}
-        <button className={styles.notifBtn} onClick={() => { void handleNotifToggle(); }}>
-          <Bell size={17} />
-          <span className={styles.notifBtnLabel}>Уведомления</span>
-          {unreadCount > 0 && <span className={styles.notifUnreadBadge}>{unreadCount}</span>}
-        </button>
+        <div ref={panelRef} className={styles.notifWrap}>
+          <button
+            className={`${styles.notifBtn} ${notifOpen ? styles.notifBtnActive : ''}`}
+            onClick={() => setNotifOpen(prev => !prev)}
+          >
+            <Bell size={17} />
+            <span className={styles.notifBtnLabel}>Уведомления</span>
+            {unreadCount > 0 && (
+              <span className={styles.notifUnreadBadge}>{unreadCount > 99 ? '99+' : unreadCount}</span>
+            )}
+          </button>
 
-        {/* Notification panel */}
-        {notifOpen && (
-          <div className={styles.notifPanel}>
-            {notifications.length === 0 ? (
-              <p className={styles.notifEmpty}>Нет уведомлений</p>
-            ) : notifications.map(n => (
-              <div
-                key={n.id}
-                className={`${styles.notifItem} ${!n.readAt ? styles.notifItemUnread : ''}`}
-              >
-                <div className={styles.notifType}>{notifLabel(n.type)}</div>
-                <div className={styles.notifTime}>{timeAgo(n.createdAt)}</div>
+          {notifOpen && (
+            <div className={styles.notifPanel}>
+              <div className={styles.notifHeader}>
+                <span className={styles.notifTitle}>Уведомления</span>
+                {unreadCount > 0 && (
+                  <button
+                    className={styles.markAllBtn}
+                    onClick={() => { void markAllRead(); }}
+                    title="Прочитать все"
+                  >
+                    <CheckCheck size={14} />
+                    <span>Прочитать все</span>
+                  </button>
+                )}
               </div>
-            ))}
-          </div>
-        )}
+
+              <div className={styles.notifList}>
+                {notifications.length === 0 ? (
+                  <div className={styles.notifEmpty}>
+                    <Bell size={22} className={styles.notifEmptyIcon} />
+                    <span>Нет уведомлений</span>
+                  </div>
+                ) : notifications.map(n => {
+                  const Icon = TYPE_ICON[n.type] ?? Bell;
+                  const desc = notifDescription(n.type, n.payload);
+                  const isUnread = !n.readAt;
+                  return (
+                    <button
+                      key={n.id}
+                      className={`${styles.notifItem} ${isUnread ? styles.notifItemUnread : ''}`}
+                      onClick={() => { void handleNotifClick(n.id, n.type); }}
+                    >
+                      <div className={`${styles.notifIconWrap} ${isUnread ? styles.notifIconUnread : ''}`}>
+                        <Icon size={14} />
+                      </div>
+                      <div className={styles.notifBody}>
+                        <span className={styles.notifType}>{notifLabel(n.type)}</span>
+                        {desc && <span className={styles.notifDesc}>{desc}</span>}
+                        <span className={styles.notifTime}>{timeAgo(n.createdAt)}</span>
+                      </div>
+                      {isUnread && <span className={styles.notifDot} aria-hidden />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
 
         <Link to="/profile" className={styles.profile}>
           <UserAvatar user={user} size={34} />

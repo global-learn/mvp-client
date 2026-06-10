@@ -413,3 +413,36 @@
 .chevron.open {
   transform: rotate(180deg);
 }
+
+/* ── Дополнительный адаптив ─────────────────────────────── */
+
+@media (max-width: 680px) {
+  .title { font-size: 1.375rem; }
+
+  .tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex-shrink: 0; }
+
+  .viewSwitch { width: 100%; }
+  .viewBtn { flex: 1; text-align: center; }
+
+  .select { flex: 1 1 100%; box-sizing: border-box; }
+
+  .miniCounts { display: none; }
+}
+
+@media (max-width: 420px) {
+  .stats { grid-template-columns: 1fr; }
+
+  .summaryHeader { flex-wrap: wrap; gap: 0.625rem; }
+  .headerProgress { min-width: 100%; }
+
+  .expandedProgress { min-width: 80px; }
+  .expandedProgress .progressTrack { display: none; }
+
+  .expandedAvatar { width: 28px; height: 28px; font-size: 0.75rem; }
+}

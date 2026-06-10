@@ -43,7 +43,7 @@ export function CompletionModal({ courseTitle, certificate, onClose }: Props) {
               <Award size={20} className={styles.certIcon} />
               <div>
                 <div className={styles.certLabel}>Сертификат выдан</div>
-                <div className={styles.certName}>{certificate.courseTitle}</div>
+                <div className={styles.certName}>{certificate.courseName}</div>
               </div>
             </div>
           )}

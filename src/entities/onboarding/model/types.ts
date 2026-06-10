@@ -104,7 +104,7 @@ export interface OnboardingAssignment {
   completedSteps: string[];
   /** Обратная связь по шагам (одна запись на шаг) */
   feedbacks: StepFeedback[];
-  status: 'in_progress' | 'completed';
+  status: 'in_progress' | 'completed' | 'cancelled';
   startedAt: string;
   completedAt?: string;
   /** Переписка между назначившим и сотрудником */

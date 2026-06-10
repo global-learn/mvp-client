@@ -166,8 +166,3 @@ export function getStatsScope(user: User): StatsScope {
   return 'self';
 }
 
-export function canCreateCourses(user: User): boolean {
-  if (user.type !== 'EMPLOYEE') return false;
-  const role = user.employee?.role.name;
-  return role === 'admin' || role === 'manager';
-}

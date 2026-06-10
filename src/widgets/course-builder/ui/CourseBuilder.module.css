@@ -808,3 +808,34 @@
   border-radius: var(--radius);
   border: 1px solid var(--border);
 }
+
+/* ── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .builder { height: auto; min-height: calc(100vh - 6rem); }
+
+  .builderContent {
+    grid-template-columns: 1fr;
+    flex: none;
+  }
+
+  .structurePanel { height: auto; }
+  .modulesList { max-height: 320px; }
+  .editorPanel { min-height: 480px; }
+}
+
+@media (max-width: 600px) {
+  .header { flex-wrap: wrap; gap: 0.75rem; }
+  .saveBtn { width: 100%; text-align: center; }
+
+  .markdownEditor { grid-template-columns: 1fr; }
+
+  .editorPane {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    min-height: 200px;
+    max-height: 280px;
+  }
+
+  .previewPane { min-height: 200px; }
+}

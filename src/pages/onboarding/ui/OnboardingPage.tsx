@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CheckCircle2, ClipboardList, FileText, Video, BookOpen, Users, Send,
-  MessageSquare, ExternalLink, Clock, AlertCircle, Trophy, Calendar,
+  MessageSquare, ExternalLink, Clock, AlertCircle, Trophy, Calendar, XCircle,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
 import { useCourses } from '@entities/course/model/CoursesContext';
@@ -106,6 +106,11 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
   const { user } = useUser();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [assignment.messages.length]);
 
   const handleSend = async () => {
     const msg = text.trim();
@@ -131,7 +136,7 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
           <div className={styles.chatEmptyMsg}>Сообщений пока нет</div>
         ) : (
           assignment.messages.map(msg => {
-            const isMe = msg.senderId === user.id || msg.senderId === 'user-current';
+            const isMe = msg.senderId === user.id || msg.senderId === user.employee?.id;
             return (
               <div key={msg.id} className={`${styles.message} ${isMe ? styles.messageMe : styles.messageThem}`}>
                 {!isMe && <span className={styles.messageSender}>{msg.senderName}</span>}
@@ -143,6 +148,7 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
             );
           })
         )}
+        <div ref={bottomRef} />
       </div>
 
       <div className={styles.chatInput}>
@@ -166,15 +172,28 @@ function ChatPanel({ assignment }: { assignment: OnboardingAssignment }) {
 
 // ── Карточка назначения ──────────────────────────────────────────
 function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
-  const { completeStepWithFeedback } = useOnboarding();
+  const { completeStepWithFeedback, cancelAssignment } = useOnboarding();
   const { getEnrollment } = useCourses();
 
   const [expandedStepId, setExpandedStepId] = useState<string | null>(null);
   const [feedbackTexts, setFeedbackTexts] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelConfirm, setCancelConfirm] = useState(false);
 
   const progress = calcOnboardingProgress(assignment);
   const isDone = assignment.status === 'completed';
+  const isCancelled = assignment.status === 'cancelled';
+
+  const handleCancelConfirm = async () => {
+    setCancelling(true);
+    try {
+      await cancelAssignment(assignment.id);
+    } finally {
+      setCancelling(false);
+      setCancelConfirm(false);
+    }
+  };
 
   // Дедлайн онбординга
   const overallOverdue = assignment.dueDate && !isDone && isOverdue(assignment.dueDate);
@@ -203,6 +222,27 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
           {isDone && (
             <span className={styles.doneBadge}>
               <CheckCircle2 size={11} /> Завершён
+            </span>
+          )}
+          {isCancelled && (
+            <span className={styles.cancelledBadge}>
+              <XCircle size={11} /> Отменён
+            </span>
+          )}
+          {!isDone && !isCancelled && !cancelConfirm && (
+            <button className={styles.cancelBtn} onClick={() => setCancelConfirm(true)}>
+              Отменить онбординг
+            </button>
+          )}
+          {cancelConfirm && (
+            <span className={styles.cancelConfirmRow}>
+              <span style={{ fontSize: '0.8125rem', color: 'var(--muted-foreground)' }}>Отменить навсегда?</span>
+              <button className={styles.cancelBtnConfirm} onClick={() => void handleCancelConfirm()} disabled={cancelling}>
+                {cancelling ? '...' : 'Да, отменить'}
+              </button>
+              <button className={styles.cancelBtnAbort} onClick={() => setCancelConfirm(false)} disabled={cancelling}>
+                Нет
+              </button>
             </span>
           )}
         </div>
@@ -236,8 +276,13 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
         <span className={styles.progressLabel}>{progress}%</span>
       </div>
 
-      {/* ── Экран завершения ── */}
-      {isDone ? (
+      {/* ── Экран завершения / отмены ── */}
+      {isCancelled ? (
+        <div className={styles.cancelledScreen}>
+          <XCircle size={36} strokeWidth={1.5} style={{ opacity: 0.4 }} />
+          <p>Этот онбординг был отменён.</p>
+        </div>
+      ) : isDone ? (
         <CompletionScreen assignment={assignment} />
       ) : (
         <div className={styles.steps}>
@@ -377,12 +422,17 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
 
 // ── Главная страница ─────────────────────────────────────────────
 export function OnboardingPage() {
-  const { myAssignments, isLoading } = useOnboarding();
+  const { myAssignments, isLoading, loadMessages } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(null);
 
-  if (isLoading) return <div className={styles.empty}>Загрузка...</div>;
-
   const active = myAssignments.find(a => a.id === selected) ?? myAssignments[0] ?? null;
+
+  useEffect(() => {
+    if (active?.id) void loadMessages(active.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.id]);
+
+  if (isLoading) return <div className={styles.empty}>Загрузка...</div>;
 
   return (
     <div className={styles.page}>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
 import { employeeApi } from './employeeApi';
+import type { ManagerDashboardResponseDto, SubordinateTreeNodeDto } from '@shared/api/schemas';
 
 export function useEmployeesQuery(params: { page?: number; limit?: number; divisionId?: string } = {}) {
   const { page = 1, limit = 100, divisionId } = params;
@@ -22,6 +23,24 @@ export function useMySubordinatesQuery() {
   return useQuery({
     queryKey: queryKeys.employees.subordinates,
     queryFn:  employeeApi.getSubordinates,
+  });
+}
+
+export function useSubordinateTreeQuery(enabled = true) {
+  return useQuery<SubordinateTreeNodeDto[]>({
+    queryKey: queryKeys.employees.subordinateTree,
+    queryFn:  employeeApi.getSubordinateTree,
+    staleTime: 60_000,
+    enabled,
+  });
+}
+
+export function useTeamDashboardQuery(enabled = true) {
+  return useQuery<ManagerDashboardResponseDto>({
+    queryKey: queryKeys.employees.teamDashboard,
+    queryFn:  employeeApi.getTeamDashboard,
+    staleTime: 60_000,
+    enabled,
   });
 }
 

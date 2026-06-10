@@ -138,32 +138,6 @@ export function LoginPage() {
           </button>
         </form>
 
-        {/* Demo hint */}
-        <div className="mt-6 p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/60">
-          <p className="text-[10.5px] font-bold text-slate-300 uppercase tracking-widest text-center mb-3">
-            Демо-аккаунты
-          </p>
-          <div className="space-y-1.5 text-[12px] text-center">
-            {[
-              {role: 'Администратор', cred: 'admin@test.com / admin'},
-              {role: 'Рук. департамента', cred: 'depthead@test.com / test'},
-              {role: 'Рук. отдела', cred: 'divhead@test.com / test'},
-              {role: 'Старший менеджер', cred: 'senior@test.com / test'},
-              {role: 'Менеджер', cred: 'user@test.com / user'},
-              {role: 'Сервис', cred: 'service@test.com / test'},
-            ].map((d, i) => (
-              <p key={i}>
-                <span className="font-semibold text-slate-500">{d.role}:</span>{' '}
-                <span className="text-slate-400">{d.cred}</span>
-              </p>
-            ))}
-            <div className="h-px bg-slate-200 my-2" />
-            <p>
-              <span className="font-semibold text-blue-500">Клиент:</span>{' '}
-              <span className="text-slate-400">client@test.com / client</span>
-            </p>
-          </div>
-        </div>
       </motion.div>
     </div>
   );

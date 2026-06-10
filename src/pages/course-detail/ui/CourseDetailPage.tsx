@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { isAxiosError } from 'axios';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2, Trash2, Archive, ArchiveRestore, BarChart3, Pencil, ImagePlus, Wand2, X as XIcon } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -594,7 +595,7 @@ export function CourseDetailPage() {
     setGenTarget({ type: 'course' });
     setGenCount('');
     setGenPassing('80');
-    setGenModuleId(course?.modules?.[0]?.id ?? '');
+    setGenModuleId(course?.modules?.at(-1)?.id ?? '');
   };
 
   const openGenModule = (moduleId: string, moduleName: string) => {
@@ -635,7 +636,11 @@ export function CourseDetailPage() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(course.id) });
       setGenTarget(null);
     } catch (err) {
-      toast.apiError(err, 'Не удалось создать тест');
+      if (isAxiosError(err) && err.response?.data?.code === 'QUESTION_BANK_EMPTY') {
+        toast.error('Банк вопросов модуля пуст — добавьте уроки с контентом, чтобы сгенерировать тест');
+      } else {
+        toast.apiError(err, 'Не удалось создать тест');
+      }
     } finally {
       setGenerating(false);
     }
@@ -907,7 +912,7 @@ export function CourseDetailPage() {
                     onChange={e => setGenModuleId(e.target.value)}
                   >
                     <option value="">— выберите модуль —</option>
-                    {course.modules.map(m => (
+                    {course.modules?.map(m => (
                       <option key={m.id} value={m.id}>{m.title}</option>
                     ))}
                   </select>
@@ -967,7 +972,6 @@ export function CourseDetailPage() {
                 {course.modules.map((mod, mi) => {
                   const modTotal     = mod.totalSteps ?? mod.steps.length;
                   const modCompleted = mod.completedSteps ?? mod.steps.filter(s => s.isCompleted).length;
-                  const modPct       = modTotal > 0 ? Math.round((modCompleted / modTotal) * 100) : 0;
                   const modDone      = modTotal > 0 && modCompleted >= modTotal;
                   const isModOpen    = expandedModules.has(mod.id);
                   return (

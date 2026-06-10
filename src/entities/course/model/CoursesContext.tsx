@@ -20,11 +20,11 @@ import {
   enrollmentWriteApi,
   mapEnrollmentDto,
 } from '../api/courseRealApi';
-import { useCoursesQuery, useMyEnrollmentDtosQuery } from '../api/hooks';
+import { useCoursesQuery, useMyEnrollmentDtosQuery, useMyCertificatesQuery } from '../api/hooks';
 import { employeeApi } from '@entities/user/api/employeeApi';
 import { divisionApi } from '@entities/company/api/companyApi';
 import { useUser } from '@entities/user/model/UserContext';
-import { canCreateCourse, displayName, isAdmin, type User } from '@entities/user/model/types';
+import { canCreateCourse, type User } from '@entities/user/model/types';
 import { toast } from '@shared/lib/toast';
 import type { TestContent } from './types';
 
@@ -108,8 +108,9 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
   const { data: rawCourses = [], isLoading: coursesLoading } = useCoursesQuery(canCreateCourse(user));
   const { data: rawEnrollmentDtos = [], isLoading: enrollmentsLoading } = useMyEnrollmentDtosQuery();
+  const { data: rawCertificates = [] } = useMyCertificatesQuery();
 
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const certificates: Certificate[] = rawCertificates;
   // Local overrides for optimistic updates (cleared on query re-fetch)
   const [enrollmentOverrides, setEnrollmentOverrides] = useState<Enrollment[]>([]);
 
@@ -379,7 +380,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
     // Re-fetch to get server truth (updated progress + possible COMPLETED status)
     const updatedDto = await enrollmentWriteApi.getById(enrollmentId);
-    const totalSteps = getAllItems(courses.find(c => c.id === courseId) ?? { modules: [] } as Course).length;
+    const totalSteps = getAllItems(courses.find(c => c.id === courseId) ?? { modules: [] } as unknown as Course).length;
     const updated = mapEnrollmentDto(updatedDto, totalSteps);
 
     setEnrollmentOverrides(prev => [
@@ -387,25 +388,14 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       updated,
     ]);
 
-    if (updated.status === 'completed' && prevEnrollment?.status !== 'completed') {
-      const course = courses.find(c => c.id === courseId);
-      if (course) {
-        const cert: Certificate = {
-          id:          `cert-${courseId}-${user.id}`,
-          userId:      user.id,
-          courseId,
-          courseTitle: course.title,
-          userName:    displayName(user),
-          issuedAt:    new Date().toISOString(),
-        };
-        setCertificates(prev => [...prev.filter(c => c.id !== cert.id), cert]);
-      }
-    }
-
-    await Promise.all([
+    const invalidations = [
       queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') }),
       queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),
-    ]);
+    ];
+    if (updated.status === 'completed' && prevEnrollment?.status !== 'completed') {
+      invalidations.push(queryClient.invalidateQueries({ queryKey: queryKeys.certificates.mine() }));
+    }
+    await Promise.all(invalidations);
     return updated;
     } catch (err) {
       toast.apiError(err, 'Не удалось сохранить прогресс');

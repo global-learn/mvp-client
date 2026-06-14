@@ -53,7 +53,7 @@ export interface Module {
 // Типы для API (список курсов, записи)
 // ================================================================
 
-export type CourseStatus = 'draft' | 'pending' | 'published' | 'archived';
+export type CourseStatus = 'draft' | 'pending' | 'published' | 'rejected' | 'archived';
 
 export type EnrollmentStatus = 'not_enrolled' | 'pending_approval' | 'in_progress' | 'completed' | 'rejected';
 
@@ -73,6 +73,8 @@ export interface Course {
   authorName?: string;
   coverId?: string;
   status: CourseStatus;
+  /** Причина отклонения (заполнена, когда status === 'rejected') */
+  reviewNote?: string | null;
   courseType: CourseType;
   createdAt: string;
   lessonsCount: number;

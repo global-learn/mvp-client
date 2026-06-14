@@ -77,10 +77,14 @@ function scopeToType(scope?: string | null): 'all' | 'employee' {
 }
 
 function mapStatus(s?: string): CourseStatus {
-  if (s === 'archived') return 'archived';
-  if (s === 'draft')    return 'draft';
-  if (s === 'pending')  return 'pending';
-  return 'published';
+  // Backend sends the raw Prisma enum (UPPERCASE): DRAFT | PENDING_REVIEW | PUBLISHED | REJECTED.
+  switch (s?.toUpperCase()) {
+    case 'DRAFT':          return 'draft';
+    case 'PENDING_REVIEW': return 'pending';
+    case 'REJECTED':       return 'rejected';
+    case 'ARCHIVED':       return 'archived';
+    default:               return 'published';
+  }
 }
 
 export function mapCourse(dto: CourseDto): Course {
@@ -104,6 +108,7 @@ export function mapCourse(dto: CourseDto): Course {
     authorName,
     coverId:     dto.coverId ?? undefined,
     status:      dto.isArchived === true ? 'archived' : mapStatus(dto.status),
+    reviewNote:  dto.reviewNote ?? undefined,
     courseType:  scopeToType(dto.scopeInfo?.scope),
     createdAt:   dto.createdAt,
     lessonsCount,
@@ -127,6 +132,7 @@ export function mapCourseSummary(dto: CourseSummaryDto): Course {
     authorName,
     coverId:     dto.coverId ?? undefined,
     status:      dto.isArchived === true ? 'archived' : mapStatus(dto.status),
+    reviewNote:  dto.reviewNote ?? undefined,
     courseType:  scopeToType(dto.scopeInfo?.scope),
     createdAt:   dto.createdAt,
     lessonsCount: 0,
@@ -282,6 +288,19 @@ export const courseWriteApi = {
 
   async unarchive(courseId: string): Promise<void> {
     await api.patch(`/courses/${courseId}/unarchive`);
+  },
+
+  // ── Модерация (жизненный цикл DRAFT → PENDING_REVIEW → PUBLISHED / REJECTED) ──
+  async submitForReview(courseId: string): Promise<void> {
+    await api.patch(`/courses/${courseId}/submit`);
+  },
+
+  async publish(courseId: string): Promise<void> {
+    await api.patch(`/courses/${courseId}/publish`);
+  },
+
+  async reject(courseId: string, note?: string): Promise<void> {
+    await api.patch(`/courses/${courseId}/reject`, note ? { note } : {});
   },
 
   async update(id: string, dto: {
@@ -449,13 +468,30 @@ export const testAttemptApi = {
 // ── Enrollment step progress ──────────────────────────────────────
 
 export const enrollmentWriteApi = {
+  async startStep(enrollmentId: string, stepId: string): Promise<void> {
+    await api.post(`/enrollments/${enrollmentId}/steps/${stepId}/start`);
+  },
+
   async completeStep(enrollmentId: string, stepId: string): Promise<void> {
     await api.post(`/enrollments/${enrollmentId}/steps/${stepId}/complete`);
+  },
+
+  async cancel(enrollmentId: string): Promise<void> {
+    await api.delete(`/enrollments/${enrollmentId}`);
   },
 
   async getById(id: string): Promise<EnrollmentDto> {
     const { data } = await api.get(`/enrollments/${id}`);
     return EnrollmentDtoSchema.parse(data);
+  },
+};
+
+// ── My course applications ────────────────────────────────────────
+
+export const myApplicationApi = {
+  async getMine(): Promise<CourseApplicationDto[]> {
+    const { data } = await api.get('/me/applications', { params: { page: 1, limit: 200 } });
+    return paginatedSchema(CourseApplicationDtoSchema).parse(data).data;
   },
 };
 

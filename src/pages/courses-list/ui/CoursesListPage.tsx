@@ -1,4 +1,5 @@
 import { CourseList } from '@widgets/course-list/ui/CourseList';
+import { MyApplications } from '@widgets/my-applications/ui/MyApplications';
 import { CreateCourseButton } from '@features/create-course/ui/CreateCourseButton';
 import styles from './CoursesList.module.css';
 
@@ -17,6 +18,7 @@ export function CoursesListPage() {
         <CreateCourseButton />
       </div>
 
+      <MyApplications />
       <CourseList />
     </div>
   );

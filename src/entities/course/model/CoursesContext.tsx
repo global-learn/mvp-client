@@ -90,12 +90,17 @@ interface CoursesContextValue {
   deleteCourse: (courseId: string) => Promise<void>;
   archiveCourse: (courseId: string) => Promise<void>;
   unarchiveCourse: (courseId: string) => Promise<void>;
+  submitCourse: (courseId: string) => Promise<void>;
   approveCourse: (courseId: string) => Promise<void>;
-  rejectCourse: (courseId: string) => Promise<void>;
+  rejectCourse: (courseId: string, note?: string) => Promise<void>;
   getEnrollment: (courseId: string) => Enrollment | undefined;
   markItemComplete: (courseId: string, itemId: string) => Promise<Enrollment>;
   getCourseWithModules: (courseId: string) => Promise<Course | null>;
   completeStep: (courseId: string, stepId: string) => Promise<void>;
+  /** Отметить шаг начатым (best-effort, без тостов) */
+  startStep: (courseId: string, stepId: string) => Promise<void>;
+  /** Отменить запись на курс */
+  cancelEnrollment: (courseId: string) => Promise<void>;
   getAssignableEmployees: () => Promise<EmployeeForAssignment[]>;
 }
 
@@ -345,7 +350,10 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
       ...prev.filter(e => e.courseId !== courseId),
       optimistic,
     ]);
-    await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.courses.myApplications() }),
+    ]);
     toast.success('Заявка отправлена — ожидайте одобрения');
     } catch (err) {
       toast.apiError(err, 'Не удалось отправить заявку');
@@ -405,6 +413,37 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
 
   const completeStep = async (courseId: string, stepId: string): Promise<void> => {
     await markItemComplete(courseId, stepId);
+  };
+
+  // Отметить шаг начатым — best-effort: ставит startedAt в step_progress.
+  // Молча игнорируем ошибки (напр. 409 при прыжке вперёд / отсутствии записи).
+  const startStep = async (courseId: string, stepId: string): Promise<void> => {
+    const enrollmentId = getEnrollment(courseId)?.id;
+    if (!enrollmentId) return;
+    try {
+      await enrollmentWriteApi.startStep(enrollmentId, stepId);
+    } catch { /* best-effort */ }
+  };
+
+  const cancelEnrollment = async (courseId: string): Promise<void> => {
+    const enrollmentId = getEnrollment(courseId)?.id;
+    if (!enrollmentId) {
+      toast.error('Нет активной записи на курс');
+      return;
+    }
+    try {
+      await enrollmentWriteApi.cancel(enrollmentId);
+      // Optimistic: помечаем запись отменённой (бэк маппит CANCELLED → 'rejected')
+      setEnrollmentOverrides(prev => [
+        ...prev.filter(e => e.courseId !== courseId),
+        { id: enrollmentId, courseId, userId: employeeId ?? user.id, status: 'rejected', progress: 0, completedItems: [], enrolledAt: new Date().toISOString() },
+      ]);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
+      toast.success('Запись на курс отменена');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отменить запись');
+      throw err;
+    }
   };
 
   // ── Course requests / approve / reject ───────────────────────
@@ -467,12 +506,42 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     return dtos.map(dto => mapEnrollmentDto(dto, totalSteps));
   };
 
-  const approveCourse = async (_courseId: string): Promise<void> => {
-    // No dedicated endpoint for course status change yet — noop
+  const refreshCourse = (courseId: string) => Promise.all([
+    queryClient.invalidateQueries({ queryKey: queryKeys.courses.all }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),
+  ]);
+
+  const submitCourse = async (courseId: string): Promise<void> => {
+    try {
+      await courseWriteApi.submitForReview(courseId);
+      await refreshCourse(courseId);
+      toast.success('Курс отправлен на проверку');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отправить курс на проверку');
+      throw err;
+    }
   };
 
-  const rejectCourse = async (_courseId: string): Promise<void> => {
-    // No dedicated endpoint for course status change yet — noop
+  const approveCourse = async (courseId: string): Promise<void> => {
+    try {
+      await courseWriteApi.publish(courseId);
+      await refreshCourse(courseId);
+      toast.success('Курс опубликован');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось опубликовать курс');
+      throw err;
+    }
+  };
+
+  const rejectCourse = async (courseId: string, note?: string): Promise<void> => {
+    try {
+      await courseWriteApi.reject(courseId, note);
+      await refreshCourse(courseId);
+      toast.success('Курс отклонён');
+    } catch (err) {
+      toast.apiError(err, 'Не удалось отклонить курс');
+      throw err;
+    }
   };
 
   const getCourseWithModules = async (courseId: string): Promise<Course | null> => {
@@ -532,12 +601,15 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         deleteCourse,
         archiveCourse,
         unarchiveCourse,
+        submitCourse,
         approveCourse,
         rejectCourse,
         getEnrollment,
         markItemComplete,
         getCourseWithModules,
         completeStep,
+        startStep,
+        cancelEnrollment,
         getAssignableEmployees,
       }}
     >

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { isAxiosError } from 'axios';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Play, CheckCircle2, ChevronDown, ChevronUp, BookOpen, ClipboardList, Clock, XCircle, Users, Building2, Target, UserCircle2, Trash2, Archive, ArchiveRestore, BarChart3, Pencil, ImagePlus, Wand2, X as XIcon } from 'lucide-react';
@@ -19,34 +20,15 @@ import { CompletionModal } from './CompletionModal'
 import styles from './CourseDetail.module.css';
 
 // ─────────────────────────────────────────────────────────
-// Рендер текста урока: простой Markdown → HTML-like
+// Рендер текста урока: Markdown через react-markdown.
+// react-markdown по умолчанию экранирует сырой HTML и санитизирует
+// URL — авторский контент не может внедрить <script>/onerror (XSS).
 // ─────────────────────────────────────────────────────────
 function LessonText({ content }: { content: string }) {
-  const html = useMemo(() => {
-    let s = content
-      // code blocks
-      .replace(/```[\w]*\n([\s\S]*?)```/g, (_m, code: string) =>
-        `<pre><code>${code.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`)
-      // inline code
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-      // headers
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      // bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // list items
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      // double newline → paragraph break (skip inside pre)
-      .replace(/\n\n/g, '<br/><br/>');
-    return s;
-  }, [content]);
   return (
-    <div
-      className={styles.lessonContent}
-      // eslint-disable-next-line react/no-danger
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <div className={styles.lessonContent}>
+      <ReactMarkdown>{content}</ReactMarkdown>
+    </div>
   );
 }
 
@@ -380,6 +362,7 @@ export function CourseDetailPage() {
     getCourseRequests, approveEnrollmentRequest, rejectEnrollmentRequest,
     markItemComplete, certificates, isLoading, getCourseEnrollments,
     deleteCourse, archiveCourse, unarchiveCourse, updateCourse,
+    submitCourse, approveCourse, rejectCourse, cancelEnrollment,
   } = useCourses();
   const { user } = useUser();
 
@@ -396,6 +379,9 @@ export function CourseDetailPage() {
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [moderating, setModerating] = useState(false);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectNote, setRejectNote] = useState('');
 
   // Generate test modal state
   const [genTarget, setGenTarget] = useState<GenTestTarget | null>(null);
@@ -432,6 +418,9 @@ export function CourseDetailPage() {
   const isAuthor = course?.authorId === user.id || course?.authorId === user.employee?.id;
   const canDelete = isAdmin(user) || isAuthor;
   const isArchived = course?.status === 'archived';
+  // Модерация курса (жизненный цикл DRAFT → PENDING_REVIEW → PUBLISHED / REJECTED)
+  const canSubmit = (isAuthor || isAdmin(user)) && (course?.status === 'draft' || course?.status === 'rejected');
+  const canModerate = isAdmin(user) && course?.status === 'pending';
 
   const { data: analyticsData } = useCourseAnalyticsQuery(id ?? '', isController && !isLoading && !courseLoading && !!course);
 
@@ -505,6 +494,17 @@ export function CourseDetailPage() {
     setPlayerOpen(true);
   };
 
+  // ── Отмена записи на курс ─────────────────────────────────
+  const handleCancelEnrollment = async () => {
+    if (!window.confirm('Отменить запись на этот курс? Прогресс будет потерян.')) return;
+    setActionPending(true);
+    try {
+      await cancelEnrollment(course.id);
+      setPlayerOpen(false);
+    } catch { /* тост уже показан в контексте */ }
+    finally { setActionPending(false); }
+  };
+
   // ── Завершение элемента ───────────────────────────────────
   const handleItemComplete = async (itemId: string) => {
     const wasCompleted = enrollment?.status === 'completed';
@@ -543,6 +543,31 @@ export function CourseDetailPage() {
       }
     } finally {
       setArchiving(false);
+    }
+  };
+
+  // ── Модерация курса ───────────────────────────────────────
+  const handleSubmitForReview = async () => {
+    if (!course) return;
+    setModerating(true);
+    try { await submitCourse(course.id); } finally { setModerating(false); }
+  };
+
+  const handlePublish = async () => {
+    if (!course) return;
+    setModerating(true);
+    try { await approveCourse(course.id); } finally { setModerating(false); }
+  };
+
+  const handleReject = async () => {
+    if (!course) return;
+    setModerating(true);
+    try {
+      await rejectCourse(course.id, rejectNote.trim() || undefined);
+      setRejectOpen(false);
+      setRejectNote('');
+    } finally {
+      setModerating(false);
     }
   };
 
@@ -684,12 +709,75 @@ export function CourseDetailPage() {
                   <Archive size={12} /> Архив
                 </span>
               )}
+              {!isArchived && course.status !== 'published' && (
+                <span
+                  className={styles.archivedBadge}
+                  title={course.status === 'rejected' ? (course.reviewNote ?? 'Отклонён') : undefined}
+                >
+                  {course.status === 'draft' && 'Черновик'}
+                  {course.status === 'pending' && 'На проверке'}
+                  {course.status === 'rejected' && 'Отклонён'}
+                </span>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
-              {canAssignCourse(user) && !isArchived && (
+              {canAssignCourse(user) && !isArchived && course.status === 'published' && (
                 <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
                   Назначить сотрудникам
                 </button>
+              )}
+              {canSubmit && !isArchived && !editMode && (
+                <button
+                  className={styles.assignBtn}
+                  onClick={() => void handleSubmitForReview()}
+                  disabled={moderating}
+                  title="Отправить курс администратору на проверку"
+                >
+                  {moderating ? '...' : 'Отправить на проверку'}
+                </button>
+              )}
+              {canModerate && !rejectOpen && (
+                <>
+                  <button
+                    className={styles.assignBtn}
+                    onClick={() => void handlePublish()}
+                    disabled={moderating}
+                  >
+                    {moderating ? '...' : 'Опубликовать'}
+                  </button>
+                  <button
+                    className={styles.deleteBtn}
+                    onClick={() => setRejectOpen(true)}
+                    disabled={moderating}
+                  >
+                    Отклонить
+                  </button>
+                </>
+              )}
+              {canModerate && rejectOpen && (
+                <div style={{ display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+                  <input
+                    type="text"
+                    placeholder="Причина (необязательно)"
+                    value={rejectNote}
+                    onChange={e => setRejectNote(e.target.value)}
+                    style={{ fontSize: '0.8125rem', padding: '0.25rem 0.5rem' }}
+                  />
+                  <button
+                    className={styles.deleteBtnConfirm}
+                    onClick={() => void handleReject()}
+                    disabled={moderating}
+                  >
+                    {moderating ? '...' : 'Отклонить'}
+                  </button>
+                  <button
+                    className={styles.deleteBtnCancel}
+                    onClick={() => { setRejectOpen(false); setRejectNote(''); }}
+                    disabled={moderating}
+                  >
+                    Отмена
+                  </button>
+                </div>
               )}
               {canDelete && !isArchived && !editMode && (
                 <button className={styles.editBtn} onClick={handleOpenEdit}>
@@ -1234,10 +1322,15 @@ export function CourseDetailPage() {
 
           {/* Курс одобрен — начать/продолжить */}
           {isEnrolled && !isCompleted && !playerOpen && (
-            <button className={styles.startBtn} onClick={() => setPlayerOpen(true)}>
-              <Play size={18} />
-              {completedSet.size === 0 ? 'Начать курс' : 'Продолжить курс'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button className={styles.startBtn} onClick={() => setPlayerOpen(true)}>
+                <Play size={18} />
+                {completedSet.size === 0 ? 'Начать курс' : 'Продолжить курс'}
+              </button>
+              <button className={styles.deleteBtn} onClick={() => void handleCancelEnrollment()} disabled={actionPending}>
+                Отменить запись
+              </button>
+            </div>
           )}
         </>
       )}

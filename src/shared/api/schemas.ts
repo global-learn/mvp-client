@@ -337,6 +337,7 @@ export const CourseSummaryDtoSchema = z.object({
   scopeInfo:   CourseScopeInfoDtoSchema.optional(),
   moduleCount: z.number().optional(),
   status:      z.string().optional(),
+  reviewNote:  z.string().optional().nullable(),
   isArchived:  z.boolean().optional(),
   enrollment:  CourseEnrollmentProgressDtoSchema.optional().nullable(),
 });
@@ -357,6 +358,7 @@ export const CourseDtoSchema = z.object({
   totalSteps:     z.number().optional(),
   completedSteps: z.number().optional(),
   status:         z.string().optional(),
+  reviewNote:     z.string().optional().nullable(),
   isArchived:     z.boolean().optional(),
   enrollment:     CourseEnrollmentProgressDtoSchema.optional().nullable(),
 });

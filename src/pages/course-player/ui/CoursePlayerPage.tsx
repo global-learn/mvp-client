@@ -16,7 +16,7 @@ export function CoursePlayerPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { courses, getEnrollment, enroll, getCourseWithModules, completeStep } = useCourses();
+  const { courses, getEnrollment, enroll, getCourseWithModules, completeStep, startStep } = useCourses();
 
   const [fullCourse, setFullCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,6 +68,13 @@ export function CoursePlayerPage() {
       void enroll(course.id);
     }
   }, [loading, course, enrollment]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Отметить текущий непройденный шаг начатым (best-effort, фиксирует startedAt)
+  useEffect(() => {
+    if (loading || !course || !enrollment || !currentStep) return;
+    if (completedStepIds.includes(currentStep.id)) return;
+    void startStep(course.id, currentStep.id);
+  }, [loading, course?.id, enrollment?.id, currentStep?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <div className={styles.fullLoading}>Загрузка курса...</div>;
   if (!course || !fullCourse) return (

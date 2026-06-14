@@ -1,4 +1,4 @@
-import { Printer, X } from 'lucide-react';
+import { Download, Printer, X } from 'lucide-react';
 import type { Certificate } from '@entities/course/model/types';
 import styles from './CertificateModal.module.css';
 
@@ -19,6 +19,17 @@ export function CertificateModal({ certificate, onClose }: Props) {
       <div className={styles.wrapper} onClick={e => e.stopPropagation()}>
 
         <div className={styles.toolbar}>
+          {certificate.fileUrl && (
+            <a
+              className={styles.printBtn}
+              href={certificate.fileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Download size={14} />
+              Скачать PDF
+            </a>
+          )}
           <button className={styles.printBtn} onClick={() => window.print()}>
             <Printer size={14} />
             Распечатать

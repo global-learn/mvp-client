@@ -715,6 +715,7 @@ export const CertificateDtoSchema = z.object({
   courseId:     z.string(),
   courseName:   z.string(),
   issuedAt:     z.string(),
+  fileUrl:      z.string().optional().nullable(),
 });
 
 export type CertificateDto = z.infer<typeof CertificateDtoSchema>;

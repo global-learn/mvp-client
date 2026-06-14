@@ -153,4 +153,6 @@ export interface Certificate {
   courseId:     string;
   courseName:   string;
   issuedAt:     string;
+  /** Presigned URL of the generated PDF (when issued) */
+  fileUrl?:     string | null;
 }

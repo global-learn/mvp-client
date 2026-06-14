@@ -465,6 +465,14 @@ export const QuestionBankStatsDtoSchema = z.object({
 
 export type QuestionBankStatsDto = z.infer<typeof QuestionBankStatsDtoSchema>;
 
+export const BulkEnrollResponseSchema = z.object({
+  enrolled:        z.array(z.string()),
+  alreadyEnrolled: z.array(z.string()),
+  failed:          z.array(z.object({ employeeId: z.string(), reason: z.string() })),
+});
+
+export type BulkEnrollResponse = z.infer<typeof BulkEnrollResponseSchema>;
+
 export const TestDefinitionDtoSchema = z.object({
   id:             z.string(),
   createdAt:      z.string(),

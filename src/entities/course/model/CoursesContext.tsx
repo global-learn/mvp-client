@@ -21,6 +21,7 @@ import {
   mapEnrollmentDto,
 } from '../api/courseRealApi';
 import { useCoursesQuery, useMyEnrollmentDtosQuery, useMyCertificatesQuery } from '../api/hooks';
+import type { BulkEnrollResponse } from '@shared/api/schemas';
 import { employeeApi } from '@entities/user/api/employeeApi';
 import { divisionApi } from '@entities/company/api/companyApi';
 import { useUser } from '@entities/user/model/UserContext';
@@ -77,6 +78,8 @@ interface CoursesContextValue {
   approveEnrollmentRequest: (courseId: string, userId: string) => Promise<void>;
   rejectEnrollmentRequest: (courseId: string, userId: string) => Promise<void>;
   assignCourse: (courseId: string, userId: string) => Promise<void>;
+  /** Массовое назначение курса через bulk-эндпоинт; возвращает сводку */
+  assignCourseBulk: (courseId: string, employeeIds: string[]) => Promise<BulkEnrollResponse>;
   getCourseEnrollments: (courseId: string) => Promise<Enrollment[]>;
   /** coverFile — обложка курса (если передана — загружается через POST /files) */
   createCourse: (dto: Omit<CreateCourseDto, 'authorId'>, coverFile?: File) => Promise<Course>;
@@ -377,6 +380,23 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const assignCourseBulk = async (courseId: string, employeeIds: string[]): Promise<BulkEnrollResponse> => {
+    try {
+      const res = await courseWriteApi.enrollBulk(courseId, employeeIds);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses.enrollments('me') });
+      const parts = [`записано: ${res.enrolled.length}`];
+      if (res.alreadyEnrolled.length) parts.push(`уже были: ${res.alreadyEnrolled.length}`);
+      if (res.failed.length) parts.push(`ошибок: ${res.failed.length}`);
+      const summary = `Назначение — ${parts.join(', ')}`;
+      if (res.failed.length) toast.error(summary);
+      else toast.success(summary);
+      return res;
+    } catch (err) {
+      toast.apiError(err, 'Не удалось назначить курс');
+      throw err;
+    }
+  };
+
   // ── Step completion (real API) ────────────────────────────────
 
   const markItemComplete = async (courseId: string, itemId: string): Promise<Enrollment> => {
@@ -600,6 +620,7 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
         approveEnrollmentRequest,
         rejectEnrollmentRequest,
         assignCourse,
+        assignCourseBulk,
         getCourseEnrollments,
         createCourse,
         updateCourse,

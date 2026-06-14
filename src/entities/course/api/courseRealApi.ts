@@ -14,10 +14,12 @@ import {
   CertificateDtoSchema,
   CourseQuestionDtoSchema,
   QuestionBankStatsDtoSchema,
+  BulkEnrollResponseSchema,
   paginatedSchema,
   type CourseApplicationDto,
   type CourseQuestionDto,
   type QuestionBankStatsDto,
+  type BulkEnrollResponse,
   type CourseAnalyticsDto,
   type CourseDto,
   type CourseSummaryDto,
@@ -374,6 +376,11 @@ export const courseWriteApi = {
   async enrollEmployee(courseId: string, employeeId: string): Promise<string> {
     const { data } = await api.post(`/courses/${courseId}/enroll`, { employeeId });
     return IdResponseSchema.parse(data).id;
+  },
+
+  async enrollBulk(courseId: string, employeeIds: string[]): Promise<BulkEnrollResponse> {
+    const { data } = await api.post(`/courses/${courseId}/enroll/bulk`, { employeeIds });
+    return BulkEnrollResponseSchema.parse(data);
   },
 
   async applyForCourse(courseId: string): Promise<string> {

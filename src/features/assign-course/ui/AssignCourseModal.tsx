@@ -11,7 +11,7 @@ interface AssignCourseModalProps {
 }
 
 export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCourseModalProps) {
-  const { assignCourse, getAssignableEmployees } = useCourses();
+  const { assignCourseBulk, getAssignableEmployees } = useCourses();
 
   const [employees, setEmployees]     = useState<EmployeeForAssignment[]>([]);
   const [loadingEmps, setLoadingEmps] = useState(true);
@@ -53,9 +53,11 @@ export function AssignCourseModal({ courseId, courseTitle, onClose }: AssignCour
   const handleAssign = async () => {
     if (selected.size === 0) return;
     setIsAssigning(true);
-    await Promise.all([...selected].map(userId => assignCourse(courseId, userId)));
-    setIsAssigning(false);
-    setDone(true);
+    try {
+      await assignCourseBulk(courseId, [...selected]);
+      setDone(true);
+    } catch { /* тост уже показан в контексте */ }
+    finally { setIsAssigning(false); }
   };
 
   const successLabel = `Курс назначен ${selected.size} сотрудник${selected.size === 1 ? 'у' : 'ам'}`;

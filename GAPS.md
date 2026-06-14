@@ -22,11 +22,11 @@
 | `PATCH /courses/:id/reject` | Отклонить курс с примечанием (admin) | Нет отклонения на проверке | 🔴 высокий |
 | `POST /auth/forgot-password` | Запрос письма сброса пароля | **Нет UI восстановления пароля** (есть только смена в профиле) | 🔴 высокий |
 | `POST /auth/reset-password` | Сброс по токену из письма | Нет страницы сброса | 🔴 высокий |
-| `POST /courses/:id/enroll/bulk` | Групповое зачисление | Массовое назначение либо делается циклом одиночных, либо отсутствует | 🟡 средний |
+| ~~`POST /courses/:id/enroll/bulk`~~ | Групповое зачисление | ✅ ИСПРАВЛЕНО — `AssignCourseModal` шлёт один bulk-запрос вместо цикла одиночных; сводка enrolled/alreadyEnrolled/failed в тосте | ~~🟡~~ |
 | ~~`POST /enrollments/:id/steps/:stepId/start`~~ | Отметить шаг начатым | ✅ ИСПРАВЛЕНО — плеер вызывает `startStep` при открытии непройденного шага (best-effort) | ~~🟡~~ |
 | ~~`DELETE /enrollments/:id`~~ | Отменить зачисление | ✅ ИСПРАВЛЕНО — кнопка «Отменить запись» в `CourseDetailPage` | ~~🟡~~ |
 | ~~`GET /me/applications`~~ | Мои заявки на курсы | ✅ ИСПРАВЛЕНО — виджет «Мои заявки» на `/courses` (виден статус, вкл. REJECTED) | ~~🟡~~ |
-| `GET /attempts/:id` | Статус попытки теста | Состояние попытки тянется иначе/не тянется | 🟡 средний |
+| `GET /attempts/:id` | Статус попытки теста | ✅ ПРОВЕРЕНО — не нужен: поток теста самодостаточен (start→answer→finish в одной сессии, attemptId локально, resume не предусмотрен); `getAttempts` тоже не используется (прохождение — по enrollment/step-progress) | ✓ |
 | ~~Банк вопросов: `GET /courses/:id/questions(+/stats)`, `GET/PATCH/DELETE /questions/:id`~~ | Управление банком вопросов | ✅ ИСПРАВЛЕНО — модалка «Банк вопросов» в CourseDetailPage (список+ответы+used-count, статистика, редактирование, удаление). Осталось не выведено: `questions/bulk` (ручное добавление в тест), `PATCH /test-definitions/:id` (переименование теста/порог) — низкий приоритет | ~~🟡~~ |
 | `GET /courses/:id/modules/:moduleId/questions` | Банк вопросов модуля | Модуль виден в модалке банка как лейбл у вопроса; отдельный per-module эндпоинт не нужен | 🟢 низкий |
 | `GET /lessons/:id` | Урок отдельно | Контент урока приходит внутри курса — ок | 🟢 низкий |
@@ -127,6 +127,12 @@
   ✅ XSS в рендере урока закрыт; ⚠️ пагинация `limit:200` — осознанное ограничение (оставлено);
   ✅ банк вопросов (модалка: список/статистика/редактирование/удаление); ✅ `DELETE /files/:id`
   (чистка старой обложки при замене). См. журнал.
+- [x] 🟡 **bulk-enroll** (`AssignCourseModal` → один запрос + сводка). ✅ `GET /attempts/:id` —
+  проверено, не нужен. `questions/bulk`/`PATCH /test-definitions/:id` — не выводим (авто-генерация
+  теста из банка перекрывает).
+
+> **ТРЕК 1 (клиент ↔ бэк) фактически закрыт.** Остатки — серверные: безопасность @Roles на мутациях
+> + авторизация WS-подписки чата (это Трек 2 / бэкенд PLAN). Сертификат-PDF — зависит от бэка (P3).
 
 ## Журнал
 <!-- дата — что сделано -->
@@ -221,4 +227,13 @@
     удаляется best-effort (бэк SET NULL, осиротевший объект в MinIO чистится).
   tsc-b зелёный; eslint — новые файлы (`QuestionBankModal`, api/hooks/schemas) чисты, в
   CourseDetailPage/CoursesContext только предсуществующие `set-state-in-effect`/`react-refresh`.
+- 2026-06-15 — добивка Трека 1:
+  • bulk-enroll — схема `BulkEnrollResponse`, `courseWriteApi.enrollBulk`, `CoursesContext.
+    assignCourseBulk` (сводка enrolled/alreadyEnrolled/failed в тосте); `AssignCourseModal` шлёт
+    один bulk-запрос вместо `Promise.all` цикла одиночных enroll.
+  • `GET /attempts/:id` — проверено, не нужен (поток теста самодостаточен; resume не предусмотрен).
+  • `questions/bulk`/`PATCH /test-definitions/:id` — решено не выводить (авто-генерация перекрывает).
+  tsc-b зелёный; eslint — только предсуществующие (`react-refresh` в CoursesContext,
+  `no-unused-expressions` в старом тоггле AssignCourseModal стр.45 — не мои).
+  ⟶ Трек 1 закрыт. Дальше — Трек 2 (бэкенд PLAN, решение «максимум CODE», старт с P1 Redis-кэш).
 </content>

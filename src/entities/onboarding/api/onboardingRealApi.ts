@@ -7,6 +7,7 @@ import {
   OnboardingAssignmentDtoSchema,
   OnboardingAssignmentListSchema,
   ChatMessagesPageDtoSchema,
+  DivisionDtoSchema,
   type OnboardingAssignmentDto,
 } from '@shared/api/schemas';
 import type {
@@ -29,13 +30,7 @@ import type { EmployeeDto } from '@shared/api/schemas';
 // ── Type mappers ─────────────────────────────────────────────────
 
 function mapBackendStepType(type: string): OnboardingStepType {
-  switch (type) {
-    case 'COURSE':   return 'course';
-    case 'DOCUMENT': return 'document';
-    case 'MEETING':  return 'meeting';
-    case 'VIDEO':    return 'video';
-    default:         return 'task'; // TEXT, TASK
-  }
+  return type === 'COURSE' ? 'course' : 'text';
 }
 
 // Backend only accepts TEXT | COURSE — all non-course types map to TEXT
@@ -51,7 +46,6 @@ function mapTemplateStep(dto: OnboardingAssignmentDto['steps'][number]): Onboard
     title:       dto.name,
     description: dto.description,
     type:        mapBackendStepType(dto.type),
-    required:    true,
     order:       dto.position,
     courseId:    dto.courseId,
     dueDate:     dto.recommendedEndDate,
@@ -61,6 +55,7 @@ function mapTemplateStep(dto: OnboardingAssignmentDto['steps'][number]): Onboard
 function mapAssignmentDto(
   dto: OnboardingAssignmentDto,
   empMap: Map<string, EmployeeDto>,
+  divMap?: Map<string, string>,
 ): OnboardingAssignment {
   const assignedTo = empMap.get(dto.assignedToId);
   const assignedBy = empMap.get(dto.assignedById);
@@ -80,7 +75,7 @@ function mapAssignmentDto(
     assignedBy:     dto.assignedById,
     assignedByName: assignedBy?.fullname ?? dto.assignedById,
     divisionId:     assignedTo?.divisionId ?? '',
-    divisionName:   '',
+    divisionName:   divMap?.get(assignedTo?.divisionId ?? '') ?? '',
     departmentId:   assignedTo?.department?.id ?? '',
     departmentName: assignedTo?.department?.name ?? '',
     steps:          dto.steps.map(mapTemplateStep),
@@ -106,10 +101,21 @@ async function fetchEmployeeMap(ids: string[]): Promise<Map<string, EmployeeDto>
   return map;
 }
 
+// id → название отдела (для отображения в списках онбординга)
+async function fetchDivisionMap(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  try {
+    const { data } = await api.get('/divisions', { params: { page: 1, limit: 200 } });
+    const divisions = paginatedSchema(DivisionDtoSchema).parse(data).data;
+    divisions.forEach(d => map.set(d.id, d.name));
+  } catch { /* non-critical — отдел просто не отобразится */ }
+  return map;
+}
+
 async function mapAssignmentList(dtos: OnboardingAssignmentDto[]): Promise<OnboardingAssignment[]> {
   const ids = dtos.flatMap(d => [d.assignedToId, d.assignedById]);
-  const empMap = await fetchEmployeeMap(ids);
-  return dtos.map(dto => mapAssignmentDto(dto, empMap));
+  const [empMap, divMap] = await Promise.all([fetchEmployeeMap(ids), fetchDivisionMap()]);
+  return dtos.map(dto => mapAssignmentDto(dto, empMap, divMap));
 }
 
 // ── Write operations ─────────────────────────────────────────────
@@ -190,7 +196,6 @@ export const onboardingRealApi = {
         title:                      s.name,
         description:                s.description,
         type:                       mapBackendStepType(s.type),
-        required:                   true,
         order:                      s.position,
         courseId:                   s.courseId,
         recommendedStartOffsetDays: s.recommendedStartOffsetDays,
@@ -229,8 +234,11 @@ export const onboardingRealApi = {
   getOnboardingById: async (id: string): Promise<OnboardingAssignment> => {
     const { data } = await api.get(`/onboardings/${id}`);
     const dto = OnboardingAssignmentDtoSchema.parse(data);
-    const empMap = await fetchEmployeeMap([dto.assignedToId, dto.assignedById]);
-    return mapAssignmentDto(dto, empMap);
+    const [empMap, divMap] = await Promise.all([
+      fetchEmployeeMap([dto.assignedToId, dto.assignedById]),
+      fetchDivisionMap(),
+    ]);
+    return mapAssignmentDto(dto, empMap, divMap);
   },
 
   getChatMessages: async (

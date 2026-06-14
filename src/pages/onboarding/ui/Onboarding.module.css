@@ -235,16 +235,7 @@
 }
 
 .typeBadgeTask     { background: var(--secondary);          color: var(--muted-foreground); }
-.typeBadgeDocument { background: #eff6ff;                   color: #1d4ed8; }
-.typeBadgeMeeting  { background: #faf5ff;                   color: #7c3aed; }
-.typeBadgeVideo    { background: #fff7ed;                   color: #c2410c; }
 .typeBadgeCourse   { background: var(--primary-light, #eff6ff); color: var(--primary); }
-
-.requiredMark {
-  font-size: 0.6875rem;
-  color: var(--destructive);
-  font-weight: 700;
-}
 
 /* ── Course link ── */
 .courseLink {

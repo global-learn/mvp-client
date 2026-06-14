@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  CheckCircle2, ClipboardList, FileText, Video, BookOpen, Users, Send,
+  CheckCircle2, ClipboardList, FileText, BookOpen, Send,
   MessageSquare, ExternalLink, Clock, AlertCircle, Trophy, Calendar, XCircle,
 } from 'lucide-react';
 import { useOnboarding } from '@entities/onboarding/model/OnboardingContext';
@@ -13,21 +13,12 @@ import styles from './Onboarding.module.css';
 
 // ── Иконка типа шага ─────────────────────────────────────────────
 function StepIcon({ type, size = 14 }: { type: OnboardingStepType; size?: number }) {
-  switch (type) {
-    case 'document': return <FileText size={size} />;
-    case 'meeting':  return <Users size={size} />;
-    case 'video':    return <Video size={size} />;
-    case 'course':   return <BookOpen size={size} />;
-    default:         return <ClipboardList size={size} />;
-  }
+  return type === 'course' ? <BookOpen size={size} /> : <FileText size={size} />;
 }
 
 const TYPE_CSS: Record<OnboardingStepType, string> = {
-  task:     styles.typeBadgeTask,
-  document: styles.typeBadgeDocument,
-  meeting:  styles.typeBadgeMeeting,
-  video:    styles.typeBadgeVideo,
-  course:   styles.typeBadgeCourse,
+  text:   styles.typeBadgeTask,
+  course: styles.typeBadgeCourse,
 };
 
 // ── Форматирование даты дедлайна ─────────────────────────────────
@@ -318,9 +309,6 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
                       <StepIcon type={step.type} size={10} />
                       {STEP_TYPE_LABELS[step.type]}
                     </span>
-                    {step.required && !done && (
-                      <span className={styles.requiredMark}>обязательно</span>
-                    )}
                     {step.dueDate && !done && (
                       <span className={`${styles.dueBadge} ${stepOverdue ? styles.dueBadgeOverdue : ''}`}>
                         {stepOverdue
@@ -422,13 +410,15 @@ function AssignmentCard({ assignment }: { assignment: OnboardingAssignment }) {
 
 // ── Главная страница ─────────────────────────────────────────────
 export function OnboardingPage() {
-  const { myAssignments, isLoading, loadMessages } = useOnboarding();
+  const { myAssignments, isLoading, loadMessages, subscribeToChat } = useOnboarding();
   const [selected, setSelected] = useState<string | null>(null);
 
   const active = myAssignments.find(a => a.id === selected) ?? myAssignments[0] ?? null;
 
   useEffect(() => {
-    if (active?.id) void loadMessages(active.id);
+    if (!active?.id) return;
+    void loadMessages(active.id);
+    return subscribeToChat(active.id);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active?.id]);
 

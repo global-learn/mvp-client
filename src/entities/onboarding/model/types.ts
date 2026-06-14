@@ -4,14 +4,12 @@ import type { EmployeeRole } from '@entities/user/model/types';
 // Шаг онбординга
 // ================================================================
 
-export type OnboardingStepType = 'task' | 'document' | 'meeting' | 'video' | 'course';
+// Бэкенд (и ТЗ, docs/first.md §2 «шаги типа TEXT или COURSE») поддерживает ровно два типа шага.
+export type OnboardingStepType = 'text' | 'course';
 
 export const STEP_TYPE_LABELS: Record<OnboardingStepType, string> = {
-  task:     'Задача',
-  document: 'Документ',
-  meeting:  'Встреча',
-  video:    'Видео',
-  course:   'Курс',
+  text:   'Текст',
+  course: 'Курс',
 };
 
 export interface OnboardingStep {
@@ -19,7 +17,6 @@ export interface OnboardingStep {
   title: string;
   description: string;
   type: OnboardingStepType;
-  required: boolean;
   order: number;
   /** Если type === 'course', можно прикрепить courseId */
   courseId?: string;

@@ -199,8 +199,7 @@ interface StepFormModalProps {
 const EMPTY_STEP_DRAFT: Omit<OnboardingStep, 'id' | 'order'> = {
   title: '',
   description: '',
-  type: 'task',
-  required: false,
+  type: 'text',
   dueDate: undefined,
   recommendedStartOffsetDays: 0,
   recommendedEndOffsetDays: 7,
@@ -214,7 +213,6 @@ function StepFormModal({ step, templateMode, publishedCourses, onSave, onClose }
           title:                      step.title,
           description:                step.description,
           type:                       step.type,
-          required:                   step.required,
           dueDate:                    step.dueDate,
           courseId:                   step.courseId,
           recommendedStartOffsetDays: step.recommendedStartOffsetDays ?? 0,
@@ -255,14 +253,6 @@ function StepFormModal({ step, templateMode, publishedCourses, onSave, onClose }
                   <option key={t} value={t}>{STEP_TYPE_LABELS[t]}</option>
                 ))}
               </select>
-            </label>
-            <label className={styles.stepFormCheckbox} style={{ flexShrink: 0, alignSelf: 'flex-end', paddingBottom: '0.5625rem' }}>
-              <input
-                type="checkbox"
-                checked={draft.required}
-                onChange={e => setDraft(d => ({ ...d, required: e.target.checked }))}
-              />
-              Обязательный
             </label>
           </div>
 
@@ -405,7 +395,6 @@ function StepEditor({ steps, onChange, templateMode = false, headerless = false 
               <span className={styles.stepEditorOrder}>{idx + 1}.</span>
               <span className={styles.stepEditorTitle}>{step.title}</span>
               <span className={styles.stepEditorType}>{STEP_TYPE_LABELS[step.type]}</span>
-              {step.required && <span className={styles.stepEditorRequired}>обяз.</span>}
               <div className={styles.stepEditorActions}>
                 <button className={styles.stepMoveBtn} disabled={idx === 0} onClick={() => moveStep(step.id, -1)}>
                   <ChevronUp size={13} />
@@ -975,7 +964,7 @@ function TemplatesTab() {
 
 // ── Вкладка «Назначения» ─────────────────────────────────────────
 function AssignmentsTab() {
-  const { allAssignments, loadMessages } = useOnboarding();
+  const { allAssignments, loadMessages, subscribeToChat } = useOnboarding();
   const { data: divPage }  = useDivisionsQuery({ limit: 200 });
   const divisions          = divPage?.data ?? [];
 
@@ -985,7 +974,9 @@ function AssignmentsTab() {
   const [filterDivId, setFilterDivId]   = useState('');
 
   useEffect(() => {
-    if (selected) void loadMessages(selected);
+    if (!selected) return;
+    void loadMessages(selected);
+    return subscribeToChat(selected);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
 

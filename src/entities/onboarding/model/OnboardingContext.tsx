@@ -4,8 +4,10 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
   type ReactNode,
 } from 'react';
+import { io, type Socket } from 'socket.io-client';
 import { isAxiosError } from 'axios';
 import type {
   OnboardingTemplate,
@@ -15,7 +17,7 @@ import type {
 } from './types';
 import { onboardingRealApi, mapFrontendStepType } from '../api/onboardingRealApi';
 import { useUser } from '@entities/user/model/UserContext';
-import { displayName, isAdmin, canControl } from '@entities/user/model/types';
+import { displayName, isAdmin, canControl, canCreateCourse } from '@entities/user/model/types';
 import { toast } from '@shared/lib/toast';
 
 interface OnboardingContextValue {
@@ -34,6 +36,8 @@ interface OnboardingContextValue {
   sendMessage: (assignmentId: string, text: string) => Promise<void>;
   /** Загрузить историю чата и пометить сообщения прочитанными */
   loadMessages: (assignmentId: string) => Promise<void>;
+  /** Подписаться на realtime-сообщения чата онбординга. Возвращает функцию отписки. */
+  subscribeToChat: (assignmentId: string) => () => void;
   /** Назначить шаблон сотруднику */
   assign: (
     templateId: string,
@@ -69,15 +73,19 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [managedAssignments, setManagedAssignments] = useState<OnboardingAssignment[]>([]);
   const [allAssignments, setAllAssignments] = useState<OnboardingAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const chatSocketRef = useRef<Socket | null>(null);
 
   const load = useCallback(async () => {
     setIsLoading(true);
     try {
       const controller = canControl(user);
+      const canEditTemplates = canCreateCourse(user);
       const admin = isAdmin(user);
 
       const [tmplsResult, mineResult, managedResult] = await Promise.allSettled([
-        onboardingRealApi.getTemplates(),
+        canEditTemplates
+          ? onboardingRealApi.getTemplates()
+          : Promise.resolve({ data: [], count: 0 }),
         onboardingRealApi.getMyOnboardings(),
         controller ? onboardingRealApi.getManagedOnboardings() : Promise.resolve([]),
       ]);
@@ -127,6 +135,67 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     setManagedAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
     setAllAssignments(prev => prev.map(a => a.id === updated.id ? updated : a));
   };
+
+  // ── Realtime-чат (socket.io, namespace /chat) ────────────────
+  const subscribedChatsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const subscribedChats = subscribedChatsRef.current;
+    const apiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+    // Strip trailing /api segment to get the server root for Socket.IO
+    const url = apiUrl.replace(/\/api\/?$/, '') || '/';
+    const socket: Socket = io(`${url}/chat`, {
+      withCredentials: true,
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+
+    // Re-join rooms after a reconnect — server-side membership is lost on drop.
+    socket.on('connect', () => {
+      subscribedChats.forEach(id =>
+        socket.emit('subscribe', { onboardingId: id }),
+      );
+    });
+
+    socket.on('message:created', (raw: unknown) => {
+      const m = raw as {
+        onboardingId: string; id: string; senderId: string; body: string; createdAt: string;
+      };
+      if (!m?.onboardingId) return;
+      const append = (list: OnboardingAssignment[]) =>
+        list.map(a => {
+          if (a.id !== m.onboardingId) return a;
+          if (a.messages.some(x => x.id === m.id)) return a; // dedup эха своего же сообщения
+          const senderName =
+            m.senderId === a.employeeId ? (a.employeeName || a.employeeId)
+            : m.senderId === a.assignedBy ? (a.assignedByName || a.assignedBy)
+            : m.senderId;
+          const msg: OnboardingMessage = {
+            id: m.id, senderId: m.senderId, senderName, text: m.body, sentAt: m.createdAt,
+          };
+          return { ...a, messages: [...a.messages, msg] };
+        });
+      setMyAssignments(append);
+      setManagedAssignments(append);
+      setAllAssignments(append);
+    });
+
+    chatSocketRef.current = socket;
+    return () => {
+      socket.disconnect();
+      chatSocketRef.current = null;
+      subscribedChats.clear();
+    };
+  }, []);
+
+  const subscribeToChat = useCallback((assignmentId: string) => {
+    subscribedChatsRef.current.add(assignmentId);
+    chatSocketRef.current?.emit('subscribe', { onboardingId: assignmentId });
+    return () => {
+      subscribedChatsRef.current.delete(assignmentId);
+    };
+  }, []);
 
   const completeStepWithFeedback = async (assignmentId: string, stepId: string, feedbackText: string) => {
     try {
@@ -309,6 +378,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         completeStepWithFeedback,
         sendMessage,
         loadMessages,
+        subscribeToChat,
         assign,
         cancelAssignment,
         updateSteps,

@@ -12,8 +12,9 @@ import { OnboardingPage }           from '@pages/onboarding/ui/OnboardingPage';
 import { OnboardingManagePage }     from '@pages/onboarding-manage/ui/OnboardingManagePage';
 import { TeamPage }                 from '@pages/team/ui/TeamPage';
 import { LoginPage }                    from '@pages/login/ui/LoginPage';
-import { RegisterPage }                from '@pages/register/ui/RegisterPage';
-import { VerifyEmailPage }             from '@pages/verify-email/ui/VerifyEmailPage';
+import { CompleteRegistrationPage }    from '@pages/complete-registration/ui/CompleteRegistrationPage';
+import { ForgotPasswordPage }          from '@pages/forgot-password/ui/ForgotPasswordPage';
+import { ResetPasswordPage }           from '@pages/reset-password/ui/ResetPasswordPage';
 import { LandingPage }                 from '@pages/landing/ui/LandingPage';
 
 export function AppRouter() {
@@ -22,8 +23,9 @@ export function AppRouter() {
       {/* Публичные маршруты (без AppLayout и авторизации) */}
       <Route path="/"                        element={<LandingPage />} />
       <Route path="/login"                   element={<LoginPage />} />
-      <Route path="/register"                element={<RegisterPage />} />
-      <Route path="/verify-email"            element={<VerifyEmailPage />} />
+      <Route path="/complete-registration"   element={<CompleteRegistrationPage />} />
+      <Route path="/forgot-password"         element={<ForgotPasswordPage />} />
+      <Route path="/reset-password"          element={<ResetPasswordPage />} />
 
       {/* Защищённые маршруты */}
       <Route element={<ProtectedRoute />}>

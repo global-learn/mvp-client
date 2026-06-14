@@ -68,10 +68,6 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   updateAvatar: (avatar: UserAvatar | undefined) => void;
-  /** @deprecated Admin registers employees — stub for old mock pages */
-  register: (fullname: string, email: string, password: string) => Promise<string>;
-  /** @deprecated Part of mock flow — stub for old mock pages */
-  verifyEmail: (token: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -115,10 +111,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         login,
         logout,
         updateAvatar,
-        register: async (_fullname: string, _email: string, _password: string): Promise<string> => {
-          throw new Error('Регистрация выполняется администратором');
-        },
-        verifyEmail: (_token: string): boolean => false,
       }}
     >
       {children}

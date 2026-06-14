@@ -30,8 +30,8 @@ export const authApi = {
     return IdResponseSchema.parse(data);
   },
 
-  completeRegistration: async (email: string, newPassword: string) => {
-    await api.post('/auth/complete-registration', { email, newPassword });
+  completeRegistration: async (token: string, email: string, newPassword: string) => {
+    await api.post('/auth/complete-registration', { token, email, newPassword });
   },
 
   logout: async (): Promise<void> => {
@@ -45,6 +45,15 @@ export const authApi = {
 
   changePassword: async (oldPassword: string, newPassword: string): Promise<void> => {
     await api.post('/auth/change-password', { oldPassword, newPassword });
+  },
+
+  // Восстановление пароля по e-mail
+  forgotPassword: async (email: string): Promise<void> => {
+    await api.post('/auth/forgot-password', { email });
+  },
+
+  resetPassword: async (token: string, email: string, newPassword: string): Promise<void> => {
+    await api.post('/auth/reset-password', { token, email, newPassword });
   },
 
   getUserById: async (id: string): Promise<UserDto> => {

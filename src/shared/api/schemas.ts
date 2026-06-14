@@ -443,12 +443,27 @@ export const CourseAnswerDtoSchema = z.object({
 });
 
 export const CourseQuestionDtoSchema = z.object({
-  id:       z.string(),
-  question: z.string(),
-  courseId: z.string(),
-  moduleId: z.string().optional(),
-  answers:  z.array(CourseAnswerDtoSchema),
+  id:               z.string(),
+  question:         z.string(),
+  courseId:         z.string(),
+  moduleId:         z.string().optional(),
+  usedInTestsCount: z.number().optional(),
+  answers:          z.array(CourseAnswerDtoSchema),
 });
+
+export type CourseQuestionDto = z.infer<typeof CourseQuestionDtoSchema>;
+
+export const QuestionBankStatsDtoSchema = z.object({
+  total:       z.number(),
+  usedInTests: z.number(),
+  unused:      z.number(),
+  byModule:    z.array(z.object({
+    moduleId: z.string().nullable().optional(),
+    count:    z.number(),
+  })),
+});
+
+export type QuestionBankStatsDto = z.infer<typeof QuestionBankStatsDtoSchema>;
 
 export const TestDefinitionDtoSchema = z.object({
   id:             z.string(),

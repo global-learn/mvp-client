@@ -12,8 +12,12 @@ import {
   TestAttemptResultSchema,
   TestAttemptSummarySchema,
   CertificateDtoSchema,
+  CourseQuestionDtoSchema,
+  QuestionBankStatsDtoSchema,
   paginatedSchema,
   type CourseApplicationDto,
+  type CourseQuestionDto,
+  type QuestionBankStatsDto,
   type CourseAnalyticsDto,
   type CourseDto,
   type CourseSummaryDto,
@@ -234,6 +238,10 @@ export const fileApi = {
     const { data } = await api.get(`/files/${id}`);
     return FileResponseDtoSchema.parse(data).url;
   },
+
+  async delete(id: string): Promise<void> {
+    await api.delete(`/files/${id}`);
+  },
 };
 
 // ── Course write operations ───────────────────────────────────────
@@ -432,13 +440,38 @@ export const testDefApi = {
 
 // ── Course question bank ──────────────────────────────────────────
 
+type QuestionAnswerInput = { answer: string; isCorrect: boolean };
+
 export const questionApi = {
   async create(
     courseId: string,
-    dto: { question: string; moduleId?: string; answers: { answer: string; isCorrect: boolean }[] },
+    dto: { question: string; moduleId?: string; answers: QuestionAnswerInput[] },
   ): Promise<string> {
     const { data } = await api.post(`/courses/${courseId}/questions`, dto);
     return IdResponseSchema.parse(data).id;
+  },
+
+  async list(courseId: string, moduleId?: string): Promise<CourseQuestionDto[]> {
+    const { data } = await api.get(`/courses/${courseId}/questions`, {
+      params: moduleId ? { moduleId } : undefined,
+    });
+    return z.array(CourseQuestionDtoSchema).parse(data);
+  },
+
+  async stats(courseId: string): Promise<QuestionBankStatsDto> {
+    const { data } = await api.get(`/courses/${courseId}/questions/stats`);
+    return QuestionBankStatsDtoSchema.parse(data);
+  },
+
+  async update(
+    questionId: string,
+    dto: { question?: string; answers?: QuestionAnswerInput[] },
+  ): Promise<void> {
+    await api.patch(`/questions/${questionId}`, dto);
+  },
+
+  async delete(questionId: string): Promise<void> {
+    await api.delete(`/questions/${questionId}`);
   },
 };
 

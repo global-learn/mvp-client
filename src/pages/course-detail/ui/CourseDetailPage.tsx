@@ -17,6 +17,7 @@ import { queryKeys } from '@shared/lib/query/queryKeys';
 import { toast } from '@shared/lib/toast';
 import { AssignCourseModal } from '@features/assign-course/ui/AssignCourseModal';
 import { CompletionModal } from './CompletionModal'
+import { QuestionBankModal } from './QuestionBankModal';
 import styles from './CourseDetail.module.css';
 
 // ─────────────────────────────────────────────────────────
@@ -385,6 +386,7 @@ export function CourseDetailPage() {
 
   // Generate test modal state
   const [genTarget, setGenTarget] = useState<GenTestTarget | null>(null);
+  const [bankOpen, setBankOpen] = useState(false);
   const [genCount, setGenCount] = useState('');
   const [genPassing, setGenPassing] = useState('80');
   const [genModuleId, setGenModuleId] = useState('');
@@ -787,6 +789,11 @@ export function CourseDetailPage() {
               {canDelete && !isArchived && !editMode && (
                 <button className={styles.genTestBtn} onClick={openGenCourse}>
                   <Wand2 size={14} /> Создать итоговый тест
+                </button>
+              )}
+              {canDelete && !editMode && (
+                <button className={styles.genTestBtn} onClick={() => setBankOpen(true)}>
+                  <ClipboardList size={14} /> Банк вопросов
                 </button>
               )}
               {canDelete && (
@@ -1484,6 +1491,14 @@ export function CourseDetailPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {bankOpen && (
+        <QuestionBankModal
+          courseId={course.id}
+          modules={course.modules ?? []}
+          onClose={() => setBankOpen(false)}
+        />
       )}
     </div>
   );

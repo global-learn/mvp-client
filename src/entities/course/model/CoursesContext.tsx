@@ -256,12 +256,17 @@ export function CoursesProvider({ children }: { children: ReactNode }) {
     coverFile?: File,
   ): Promise<void> => {
     try {
+      const oldCoverId = courses.find(c => c.id === courseId)?.coverId;
       let coverId: string | null | undefined;
       if (coverFile) {
         const { id } = await fileApi.upload(coverFile);
         coverId = id;
       }
       await courseWriteApi.update(courseId, { ...dto, ...(coverId !== undefined ? { coverId } : {}) });
+      // Заменили обложку — старый файл осиротел, чистим его (best-effort)
+      if (coverId && oldCoverId && oldCoverId !== coverId) {
+        void fileApi.delete(oldCoverId).catch(() => {});
+      }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: queryKeys.courses.all }),
         queryClient.invalidateQueries({ queryKey: queryKeys.courses.detail(courseId) }),

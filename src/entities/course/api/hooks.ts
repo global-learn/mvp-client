@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
-import { courseRealApi, fileApi, testDefApi, certificateApi, myApplicationApi, mapTestDefinitionToQuestions } from './courseRealApi';
-import type { CourseAnalyticsDto, EnrollmentDto, CertificateDto, CourseApplicationDto } from '@shared/api/schemas';
+import { courseRealApi, fileApi, testDefApi, certificateApi, myApplicationApi, questionApi, mapTestDefinitionToQuestions } from './courseRealApi';
+import type { CourseAnalyticsDto, EnrollmentDto, CertificateDto, CourseApplicationDto, CourseQuestionDto, QuestionBankStatsDto } from '@shared/api/schemas';
 import type { TestQuestion } from '../model/types';
 
 export function useCoursesQuery(includeArchived = false) {
@@ -33,6 +33,24 @@ export function useMyEnrollmentDtosQuery() {
   return useQuery<EnrollmentDto[]>({
     queryKey: queryKeys.courses.enrollments('me'),
     queryFn:  () => courseRealApi.getMyEnrollmentDtos(),
+    staleTime: 30_000,
+  });
+}
+
+export function useCourseQuestionsQuery(courseId: string, enabled = true) {
+  return useQuery<CourseQuestionDto[]>({
+    queryKey: queryKeys.courses.questions(courseId),
+    queryFn:  () => questionApi.list(courseId),
+    enabled:  enabled && !!courseId,
+    staleTime: 30_000,
+  });
+}
+
+export function useQuestionBankStatsQuery(courseId: string, enabled = true) {
+  return useQuery<QuestionBankStatsDto>({
+    queryKey: queryKeys.courses.questionStats(courseId),
+    queryFn:  () => questionApi.stats(courseId),
+    enabled:  enabled && !!courseId,
     staleTime: 30_000,
   });
 }

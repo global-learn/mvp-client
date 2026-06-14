@@ -27,10 +27,10 @@
 | ~~`DELETE /enrollments/:id`~~ | Отменить зачисление | ✅ ИСПРАВЛЕНО — кнопка «Отменить запись» в `CourseDetailPage` | ~~🟡~~ |
 | ~~`GET /me/applications`~~ | Мои заявки на курсы | ✅ ИСПРАВЛЕНО — виджет «Мои заявки» на `/courses` (виден статус, вкл. REJECTED) | ~~🟡~~ |
 | `GET /attempts/:id` | Статус попытки теста | Состояние попытки тянется иначе/не тянется | 🟡 средний |
-| Банк вопросов: `PATCH /test-definitions/:id`, `.../questions/bulk`, `.../generate`, `DELETE .../questions/:qid`, `GET /courses/:id/questions(+/stats)`, `GET/PATCH/DELETE /questions/:id` | Полноценное управление банком вопросов и тестами | В UI только создание вопроса + генерация теста; редактирования/удаления/статистики банка нет | 🟡 средний |
-| `GET /courses/:id/modules/:moduleId/questions` | Банк вопросов модуля | Нет просмотра вопросов по модулю | 🟢 низкий |
+| ~~Банк вопросов: `GET /courses/:id/questions(+/stats)`, `GET/PATCH/DELETE /questions/:id`~~ | Управление банком вопросов | ✅ ИСПРАВЛЕНО — модалка «Банк вопросов» в CourseDetailPage (список+ответы+used-count, статистика, редактирование, удаление). Осталось не выведено: `questions/bulk` (ручное добавление в тест), `PATCH /test-definitions/:id` (переименование теста/порог) — низкий приоритет | ~~🟡~~ |
+| `GET /courses/:id/modules/:moduleId/questions` | Банк вопросов модуля | Модуль виден в модалке банка как лейбл у вопроса; отдельный per-module эндпоинт не нужен | 🟢 низкий |
 | `GET /lessons/:id` | Урок отдельно | Контент урока приходит внутри курса — ок | 🟢 низкий |
-| `DELETE /files/:id` | Удаление файла | Загруженные/осиротевшие файлы не чистятся | 🟢 низкий |
+| ~~`DELETE /files/:id`~~ | Удаление файла | ✅ ИСПРАВЛЕНО — при замене обложки курса старый файл удаляется (best-effort) в `updateCourse` | ~~🟢~~ |
 | Роли: `POST /roles`, `GET /roles/:id`, `DELETE /roles/:id` | CRUD ролей | Роли управляются seed-ом, UI не нужен | 🟢 низкий |
 | `POST /user`, `GET /user` (list) | Создание/список users | Дублируется `/employees` — не нужно | 🟢 низкий |
 
@@ -122,10 +122,11 @@
 - [x] 🟡 **B3 — типы шагов онбординга урезаны до TEXT/COURSE** (по `first.md` стр.291). См. журнал.
 - [x] 🔴 **B8 — завершение регистрации по приглашению** (см. ниже).
 - [x] 🟡 **A — start-step / cancel-enrollment / me/applications**. См. журнал.
-- [~] 🟢 Остальное: ✅ чистка mock-кода/мёртвого self-register флоу + CSS; ✅ модельные фикции
+- [x] 🟢 Остальное: ✅ чистка mock-кода/мёртвого self-register флоу + CSS; ✅ модельные фикции
   (`required` убран, `divisionName` резолвится); ✅ C-scope проверен (багов нет);
   ✅ XSS в рендере урока закрыт; ⚠️ пагинация `limit:200` — осознанное ограничение (оставлено);
-  осталось — банк вопросов (редактирование/статистика), `DELETE /files/:id`.
+  ✅ банк вопросов (модалка: список/статистика/редактирование/удаление); ✅ `DELETE /files/:id`
+  (чистка старой обложки при замене). См. журнал.
 
 ## Журнал
 <!-- дата — что сделано -->
@@ -208,4 +209,16 @@
     отдельная фича, оставлено как есть.
   tsc-b зелёный; eslint CourseDetailPage — только предсуществующие `set-state-in-effect`/
   `exhaustive-deps` (прежняя ошибка `react/no-danger` на стр.47 исчезла — опасный код удалён).
+- 2026-06-14 — 🟢 банк вопросов + `DELETE /files/:id`:
+  • Банк вопросов — `questionApi` расширен (`list`/`stats`/`update`/`delete`); схемы
+    `CourseQuestionDto`(+`usedInTestsCount`)/`QuestionBankStatsDto`; хуки
+    `useCourseQuestionsQuery`/`useQuestionBankStatsQuery` + query-keys. Модалка `QuestionBankModal`
+    (CourseDetailPage, кнопка «Банк вопросов» в авторских действиях): статистика (всего/в тестах/
+    не используются), список вопросов с ответами/модулем/used-count, инлайн-редактирование
+    (текст + варианты, тоггл правильного, добавить/удалить вариант), удаление с предупреждением
+    про used-in-tests. Не выводил: `questions/bulk`, `PATCH /test-definitions/:id` — низкий приоритет.
+  • `DELETE /files/:id` — `fileApi.delete`; в `updateCourse` при замене обложки старый `coverId`
+    удаляется best-effort (бэк SET NULL, осиротевший объект в MinIO чистится).
+  tsc-b зелёный; eslint — новые файлы (`QuestionBankModal`, api/hooks/schemas) чисты, в
+  CourseDetailPage/CoursesContext только предсуществующие `set-state-in-effect`/`react-refresh`.
 </content>

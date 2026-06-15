@@ -142,8 +142,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const subscribedChats = subscribedChatsRef.current;
     const apiUrl = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
-    // Strip trailing /api segment to get the server root for Socket.IO
-    const url = apiUrl.replace(/\/api\/?$/, '') || '/';
+    // Strip trailing /api segment to get the server root for Socket.IO.
+    // Fall back to the current origin (NOT '/', which socket.io parses as a
+    // protocol-relative URL and turns the namespace into the host → ws://chat).
+    const url = apiUrl.replace(/\/api\/?$/, '') || window.location.origin;
     const socket: Socket = io(`${url}/chat`, {
       withCredentials: true,
       transports: ['websocket'],

@@ -20,12 +20,15 @@ export function LoginPage() {
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  if (!isLoading && isAuthenticated) {
-    navigate('/dashboard', {replace: true});
-    return null;
-  }
+  // Redirect in an effect, not during render — calling navigate() in the render
+  // body updates the Router while LoginPage is rendering (the BrowserRouter warning).
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate('/dashboard', {replace: true});
+    }
+  }, [isLoading, isAuthenticated, navigate]);
 
-  if (isLoading) return null;
+  if (isLoading || isAuthenticated) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

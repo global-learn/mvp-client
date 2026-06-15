@@ -367,3 +367,65 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* ── Адаптив ── */
+
+/* Планшет */
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Телефон */
+@media (max-width: 640px) {
+  .greeting {
+    font-size: 1.5rem;
+  }
+
+  .courseCard {
+    flex-direction: column;
+    gap: 1.25rem;
+    padding: 1.25rem 1.25rem;
+  }
+
+  .courseCardProgress {
+    width: 100%;
+  }
+
+  .courseActions {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .stats {
+    gap: 0.625rem;
+  }
+
+  .statItem {
+    padding: 1rem 1.125rem;
+  }
+
+  .statValue {
+    font-size: 1.5rem;
+  }
+
+  .panel {
+    padding: 1.125rem 1.25rem;
+  }
+
+  .noCourseCard {
+    padding: 1.25rem 1.25rem;
+  }
+}
+
+/* Узкий телефон */
+@media (max-width: 380px) {
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}

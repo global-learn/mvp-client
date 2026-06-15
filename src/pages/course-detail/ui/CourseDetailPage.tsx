@@ -730,7 +730,7 @@ export function CourseDetailPage() {
                 </span>
               )}
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexShrink: 0 }}>
+            <div className={styles.titleActions}>
               {canAssignCourse(user) && !isArchived && course.status === 'published' && (
                 <button className={styles.assignBtn} onClick={() => setAssignOpen(true)}>
                   Назначить сотрудникам

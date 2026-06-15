@@ -10,7 +10,7 @@ import { isAdmin, canControl, canAssignCourse } from '@entities/user/model/types
 import { employeeApi } from '@entities/user/api/employeeApi';
 import type { Course, LessonContent, TestContent, EnrollmentRequest, Enrollment } from '@entities/course/model/types';
 import { getAllItems, COURSE_TYPE_LABELS } from '@entities/course/model/types';
-import { useCourseQuery, useCoverUrl, useTestDefinitionQuery, useCourseAnalyticsQuery } from '@entities/course/api/hooks';
+import { useCourseQuery, useCoverUrl, useTestForAttemptQuery, useCourseAnalyticsQuery } from '@entities/course/api/hooks';
 import { useDepartmentsQuery, useDivisionsQuery } from '@entities/company/api/hooks';
 import { testAttemptApi, courseWriteApi } from '@entities/course/api/courseRealApi';
 import { queryKeys } from '@shared/lib/query/queryKeys';
@@ -83,10 +83,19 @@ function TestPlayer({
   onComplete: () => Promise<void>;
 }) {
   const needsLoad = item.questions.length === 0 && !!item.testId;
-  const { data: testDef, isLoading: questionsLoading } = useTestDefinitionQuery(
+  const { data: testDef, isLoading: questionsLoading } = useTestForAttemptQuery(
     needsLoad ? item.testId : undefined,
   );
-  const questions = needsLoad ? (testDef?.questions ?? []) : item.questions;
+  // Normalize to a taker shape: { id, question, options: { id, text }[] } —
+  // never carries isCorrect, so correct answers aren't revealed to the taker.
+  const questions: { id: string; question: string; options: { id: string; text: string }[] }[] =
+    needsLoad
+      ? (testDef?.questions ?? [])
+      : item.questions.map(q => ({
+          id: q.id,
+          question: q.question,
+          options: q.options.map(o => ({ id: o.id, text: o.text })),
+        }));
   const passingPercent = (needsLoad && testDef) ? testDef.passingPercent : item.passingPercent;
 
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -172,10 +181,9 @@ function TestPlayer({
               {q.options.map(opt => {
                 const selected = answers[q.id] === opt.id;
                 let cls = styles.testOption;
-                if (isSubmitted) {
-                  if (opt.isCorrect) cls += ' ' + styles.optionCorrect;
-                  else if (selected && !opt.isCorrect) cls += ' ' + styles.optionWrong;
-                } else if (selected) {
+                // Don't reveal which option is correct — only keep the user's
+                // own choice highlighted (grading is server-side).
+                if (selected) {
                   cls += ' ' + styles.optionSelected;
                 }
                 return (

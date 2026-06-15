@@ -483,6 +483,19 @@ export const TestDefinitionDtoSchema = z.object({
 
 export type TestDefinitionDto = z.infer<typeof TestDefinitionDtoSchema>;
 
+// Taker-facing test: options carry NO isCorrect flag (server grades on finish).
+export const TestForAttemptSchema = z.object({
+  testId:         z.string(),
+  passingPercent: z.number().default(80),
+  questions: z.array(z.object({
+    id:       z.string(),
+    question: z.string(),
+    options:  z.array(z.object({ id: z.string(), text: z.string() })),
+  })),
+});
+
+export type TestForAttempt = z.infer<typeof TestForAttemptSchema>;
+
 // ── Files ─────────────────────────────────────────────────────────
 
 export const FileResponseDtoSchema = z.object({
@@ -631,6 +644,7 @@ export const SubordinateTreeEmployeeDtoSchema = z.object({
   avatarId:    z.string().nullable().optional(),
   divisionId:  z.string(),
   divisionName: z.string(),
+  departmentId: z.string(),
 });
 
 export type SubordinateTreeEmployeeDto = z.infer<typeof SubordinateTreeEmployeeDtoSchema>;

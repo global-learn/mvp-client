@@ -126,21 +126,34 @@ function TreeNode({ node, depth, dashMap, onSelect }: TreeNodeProps) {
 // ── Drawer: назначить курс ────────────────────────────────────────
 
 interface AssignCourseDialogProps {
-  employeeId: string;
-  onClose:    () => void;
+  employee: SubordinateTreeEmployeeDto;
+  onClose:  () => void;
 }
 
-function AssignCourseDialog({ employeeId, onClose }: AssignCourseDialogProps) {
+// Can this course be assigned to this employee? Mirrors the course scope:
+// ALL → anyone; DIVISION → same division; DEPARTMENT → same department.
+function courseInScopeForEmployee(
+  course: { targetDepartmentId?: string | null; targetDivisionId?: string | null },
+  emp: SubordinateTreeEmployeeDto,
+): boolean {
+  if (!course.targetDepartmentId && !course.targetDivisionId) return true;
+  if (course.targetDivisionId) return course.targetDivisionId === emp.divisionId;
+  return course.targetDepartmentId === emp.departmentId;
+}
+
+function AssignCourseDialog({ employee, onClose }: AssignCourseDialogProps) {
+  const employeeId = employee.id;
   const { courses, assignCourse } = useCourses();
   const [search, setSearch] = useState('');
   const [assigning, setAssigning] = useState<string | null>(null);
   const [done, setDone] = useState<Set<string>>(new Set());
 
   const published = useMemo(
-    () => courses.filter(c => c.status === 'published').filter(c =>
-      !search || c.title.toLowerCase().includes(search.toLowerCase()),
-    ),
-    [courses, search],
+    () => courses
+      .filter(c => c.status === 'published')
+      .filter(c => courseInScopeForEmployee(c, employee))
+      .filter(c => !search || c.title.toLowerCase().includes(search.toLowerCase())),
+    [courses, employee, search],
   );
 
   const handleAssign = async (courseId: string) => {
@@ -399,7 +412,7 @@ function EmployeeDrawer({ emp, dash, onClose }: EmployeeDrawerProps) {
       </aside>
 
       {assignCourseOpen && (
-        <AssignCourseDialog employeeId={emp.id} onClose={() => setAssignCourseOpen(false)} />
+        <AssignCourseDialog employee={emp} onClose={() => setAssignCourseOpen(false)} />
       )}
       {assignOnbOpen && (
         <AssignOnboardingDialog employee={emp} onClose={() => setAssignOnbOpen(false)} />

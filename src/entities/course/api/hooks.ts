@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@shared/lib/query/queryKeys';
-import { courseRealApi, fileApi, testDefApi, certificateApi, myApplicationApi, questionApi, mapTestDefinitionToQuestions } from './courseRealApi';
-import type { CourseAnalyticsDto, EnrollmentDto, CertificateDto, CourseApplicationDto, CourseQuestionDto, QuestionBankStatsDto } from '@shared/api/schemas';
+import { courseRealApi, fileApi, testDefApi, testAttemptApi, certificateApi, myApplicationApi, questionApi, mapTestDefinitionToQuestions } from './courseRealApi';
+import type { CourseAnalyticsDto, EnrollmentDto, CertificateDto, CourseApplicationDto, CourseQuestionDto, QuestionBankStatsDto, TestForAttempt } from '@shared/api/schemas';
 import type { TestQuestion } from '../model/types';
 
 export function useCoursesQuery(includeArchived = false) {
@@ -90,6 +90,16 @@ export function useTestDefinitionQuery(testId?: string) {
         passingPercent: dto.passingPercent ?? 80,
       };
     },
+    enabled:  !!testId,
+    staleTime: 300_000,
+  });
+}
+
+// Taker-facing: questions without the isCorrect flag (used when taking a test).
+export function useTestForAttemptQuery(testId?: string) {
+  return useQuery<TestForAttempt>({
+    queryKey: queryKeys.courses.testForAttempt(testId ?? ''),
+    queryFn:  () => testAttemptApi.getQuestions(testId!),
     enabled:  !!testId,
     staleTime: 300_000,
   });

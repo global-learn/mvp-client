@@ -221,8 +221,13 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         text,
         sentAt:     new Date().toISOString(),
       };
-      const patch = (a: OnboardingAssignment) =>
-        a.id === assignmentId ? { ...a, messages: [...a.messages, msg] } : a;
+      // Dedup: the socket 'message:created' echo can land before this POST
+      // resolves and already append our message — don't add it twice.
+      const patch = (a: OnboardingAssignment) => {
+        if (a.id !== assignmentId) return a;
+        if (a.messages.some(x => x.id === msg.id)) return a;
+        return { ...a, messages: [...a.messages, msg] };
+      };
       setMyAssignments(prev => prev.map(patch));
       setManagedAssignments(prev => prev.map(patch));
       setAllAssignments(prev => prev.map(patch));

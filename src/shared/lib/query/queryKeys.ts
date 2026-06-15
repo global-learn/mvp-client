@@ -48,6 +48,7 @@ export const queryKeys = {
     requests:          (courseId: string) => ['courses', 'requests', courseId] as const,
     assignable:        ['courses', 'assignable-employees'] as const,
     testDefinition:    (id: string) => ['courses', 'test-definition', id] as const,
+    testForAttempt:    (id: string) => ['courses', 'test-for-attempt', id] as const,
     myApplications:    () => ['courses', 'applications', 'mine'] as const,
     questions:         (courseId: string) => ['courses', 'questions', courseId] as const,
     questionStats:     (courseId: string) => ['courses', 'questions', 'stats', courseId] as const,

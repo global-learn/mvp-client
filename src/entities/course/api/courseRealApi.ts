@@ -11,6 +11,7 @@ import {
   TestDefinitionDtoSchema,
   TestAttemptResultSchema,
   TestAttemptSummarySchema,
+  TestForAttemptSchema,
   CertificateDtoSchema,
   CourseQuestionDtoSchema,
   QuestionBankStatsDtoSchema,
@@ -28,6 +29,7 @@ import {
   type TestDefinitionDto,
   type TestAttemptResult,
   type TestAttemptSummary,
+  type TestForAttempt,
   type CertificateDto,
 } from '@shared/api/schemas';
 import type { Course, CourseStatus, Enrollment, EnrollmentStatus, Module, Step, StepItem, TestQuestion } from '../model/types';
@@ -502,6 +504,12 @@ export const testAttemptApi = {
   async getAttempts(testId: string): Promise<TestAttemptSummary[]> {
     const { data } = await api.get(`/tests/${testId}/attempts`);
     return z.array(TestAttemptSummarySchema).parse(data);
+  },
+
+  // Taker-facing questions — no isCorrect flag is ever sent to the client.
+  async getQuestions(testId: string): Promise<TestForAttempt> {
+    const { data } = await api.get(`/tests/${testId}/questions`);
+    return TestForAttemptSchema.parse(data);
   },
 };
 

@@ -63,7 +63,7 @@ export function LoginPage() {
       {/* Back to landing */}
       <Link
         to="/"
-        className="fixed top-6 left-8 z-20 flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-700 transition-colors"
+        className="fixed top-4 left-4 sm:top-6 sm:left-8 z-20 flex items-center gap-1.5 text-[13px] font-medium text-slate-400 hover:text-slate-700 transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         На главную
@@ -74,7 +74,7 @@ export function LoginPage() {
         initial={{opacity: 0, y: 24}}
         animate={{opacity: 1, y: 0}}
         transition={{duration: 0.65, ease: [0.16, 1, 0.3, 1]}}
-        className="relative z-20 w-full max-w-[420px] bg-white border border-slate-200/80 rounded-2xl shadow-[0_8px_48px_rgba(0,0,0,0.08)] p-10"
+        className="relative z-20 w-full max-w-[420px] bg-white border border-slate-200/80 rounded-2xl shadow-[0_8px_48px_rgba(0,0,0,0.08)] p-7 sm:p-10"
       >
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -145,6 +145,20 @@ export function LoginPage() {
             {submitting ? 'Входим...' : 'Войти'}
           </button>
         </form>
+
+        {/* Согласие с политикой конфиденциальности */}
+        <p className="mt-6 text-center text-[12.5px] leading-relaxed text-slate-400">
+          Входя в систему, вы соглашаетесь с{' '}
+          <Link
+            to="/privacy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-blue-600 hover:text-blue-700 transition-colors underline underline-offset-2 decoration-blue-300 hover:decoration-blue-500"
+          >
+            политикой конфиденциальности
+          </Link>
+          .
+        </p>
 
       </motion.div>
     </div>

@@ -16,6 +16,7 @@ import { CompleteRegistrationPage }    from '@pages/complete-registration/ui/Com
 import { ForgotPasswordPage }          from '@pages/forgot-password/ui/ForgotPasswordPage';
 import { ResetPasswordPage }           from '@pages/reset-password/ui/ResetPasswordPage';
 import { LandingPage }                 from '@pages/landing/ui/LandingPage';
+import { PrivacyPolicyPage }           from '@pages/privacy/ui/PrivacyPolicyPage';
 
 export function AppRouter() {
   return (
@@ -26,6 +27,7 @@ export function AppRouter() {
       <Route path="/complete-registration"   element={<CompleteRegistrationPage />} />
       <Route path="/forgot-password"         element={<ForgotPasswordPage />} />
       <Route path="/reset-password"          element={<ResetPasswordPage />} />
+      <Route path="/privacy"                 element={<PrivacyPolicyPage />} />
 
       {/* Защищённые маршруты */}
       <Route element={<ProtectedRoute />}>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, UserPlus, X, Users, PlusCircle, Building2, Briefcase, ChevronRight, Pencil, Trash2 } from 'lucide-react';
 import { useUser } from '@entities/user/model/UserContext';
-import { isAdmin, canCreateCourse, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
+import { isAdmin, ROLE_LABELS, type EmployeeRole } from '@entities/user/model/types';
 import type { Department, EmployeeListItem } from '@entities/company/model/types';
 import { DepartmentList } from '@widgets/department-list/ui/DepartmentList';
 import { departmentApi, divisionApi, positionApi } from '@entities/company/api/companyApi';
@@ -679,7 +679,7 @@ export function CompanyPage() {
   const [form, setForm] = useState(defaultForm);
 
   useEffect(() => {
-    if (!canCreateCourse(user)) navigate('/dashboard', { replace: true });
+    if (!isAdmin(user)) navigate('/dashboard', { replace: true });
   }, [user, navigate]);
 
   const load = useCallback(async () => {
@@ -706,7 +706,7 @@ export function CompanyPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  if (!canCreateCourse(user)) return null;
+  if (!isAdmin(user)) return null;
 
   // ── Maps for fast lookups ────────────────────────────────────────
   const divMap = useMemo(() => new Map(rawDivisions.map(d => [d.id, d])), [rawDivisions]);

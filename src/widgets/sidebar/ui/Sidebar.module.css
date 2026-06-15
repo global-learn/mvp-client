@@ -387,6 +387,7 @@
     top: 0;
     left: 0;
     height: 100vh;
+    height: 100dvh; /* реальная видимая высота на мобиле — иначе футер с «Выйти» уезжает за экран */
     z-index: 300;
     transform: translateX(-100%);
     transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
